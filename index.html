@@ -1,0 +1,992 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>職安衛乙級讀書計畫</title>
+<script src="./questions.js"></script>
+</head>
+<body>
+<div id="app"></div>
+<style>
+  * { box-sizing: border-box; }
+  #app { font-family: "Noto Sans TC", -apple-system, BlinkMacSystemFont, "PingFang TC", "Microsoft JhengHei", sans-serif; background:#FAF7F0; color:#2B2620; min-height:100vh; max-width:480px; margin:0 auto; padding-bottom:74px; }
+  button{font-family:inherit;cursor:pointer;}
+  input,select,textarea{font-family:inherit;}
+  ::placeholder{color:#b9b2a3;}
+  .header{ background:#2B2620; color:#FAF7F0; padding:20px 18px 14px; position:sticky; top:0; z-index:10; }
+  .header-top{ display:flex; justify-content:space-between; align-items:flex-start; }
+  .kicker{ font-size:11px; letter-spacing:1px; color:#C9A876; margin-bottom:4px; }
+  .h1{ font-size:19px; font-weight:700; }
+  .exam-badge{ background:rgba(255,255,255,0.08); border-radius:12px; padding:8px 14px; text-align:center; min-width:72px; cursor:pointer; }
+  .exam-num{ font-size:20px; font-weight:700; color:#C9A876; }
+  .exam-label{ font-size:10px; color:#cfc8b8; }
+  .exam-edit{ display:flex; gap:8px; margin-top:10px; align-items:center; }
+  .progress-outer{ margin-top:14px; height:5px; border-radius:4px; background:rgba(255,255,255,0.12); overflow:hidden; }
+  .progress-inner{ height:100%; background:linear-gradient(90deg,#A8631F,#C9A876); }
+  main{ padding:16px 16px 8px; display:flex; flex-direction:column; gap:14px; }
+  .section-title{ font-size:16px; font-weight:700; margin-top:4px; }
+  .section-desc{ font-size:13px; color:#6b6356; line-height:1.5; margin-top:-8px;}
+  .sub-title{ font-size:14px; font-weight:700; margin-top:8px; color:#4a4538; }
+  .card-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .stat-card{ background:#fff; border-radius:14px; padding:14px 12px; border:1px solid #E7E1D4; }
+  .stat-card.accent{ border-color:#A8631F; background:#FBF0E4; }
+  .stat-label{ font-size:11px; color:#9a9488; }
+  .stat-value{ font-size:22px; font-weight:700; margin-top:2px; }
+  .stat-sub{ font-size:11px; color:#9a9488; }
+  .suggestion-card{ background:#FBF6EC; border:1px solid #E7E1D4; border-radius:14px; padding:16px; }
+  .suggestion-title{ font-size:13px; font-weight:700; color:#A8631F; margin-bottom:6px; }
+  .suggestion-body{ font-size:13.5px; line-height:1.6; }
+  .primary-btn{ background:#2B2620; color:#fff; border:none; border-radius:10px; padding:11px 18px; font-size:14px; font-weight:600; width:100%; }
+  .primary-btn:disabled{ opacity:.5; }
+  .quick-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  .quick-btn{ background:#fff; border:1px solid #E7E1D4; border-radius:12px; padding:14px 6px; font-size:12px; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .quick-icon{ font-size:18px; color:#A8631F; }
+  .tip-box{ background:#F1EFE9; border-radius:14px; padding:16px; }
+  .tip-title{ font-size:13px; font-weight:700; margin-bottom:8px; }
+  .tip-list{ margin:0; padding-left:18px; font-size:13.5px; line-height:1.8; }
+  .chapter-card{ background:#fff; border:1px solid #E7E1D4; border-radius:14px; padding:14px; margin-bottom:10px; }
+  .chapter-top{ display:flex; justify-content:space-between; align-items:center; }
+  .chapter-idx{ font-size:12px; color:#9a9488; font-weight:600; }
+  .status-pill{ border:none; border-radius:20px; padding:4px 12px; font-size:12px; font-weight:600; }
+  .chapter-title{ font-size:14.5px; font-weight:600; margin-top:6px; line-height:1.4; }
+  .chapter-pages{ font-size:11px; color:#9a9488; margin-top:2px; }
+  .notes-area{ width:100%; margin-top:8px; border:1px solid #E7E1D4; border-radius:8px; padding:8px; font-size:13px; min-height:40px; resize:vertical; background:#FCFBF8; }
+  .toggle-row{ display:flex; gap:8px; }
+  .toggle-btn{ flex:1; border:1px solid #E7E1D4; background:#fff; border-radius:10px; padding:9px 0; font-size:13px; font-weight:600; color:#6b6356; }
+  .toggle-btn.active{ background:#2B2620; color:#fff; border-color:#2B2620; }
+  .form-card{ background:#fff; border:1px solid #E7E1D4; border-radius:14px; padding:14px; }
+  .label{ font-size:12px; font-weight:600; color:#6b6356; display:block; margin-bottom:4px; margin-top:8px; }
+  select, .text-input{ width:100%; border:1px solid #E7E1D4; border-radius:8px; padding:8px 10px; font-size:13.5px; background:#fff; }
+  textarea.text-area{ width:100%; border:1px solid #E7E1D4; border-radius:8px; padding:10px; font-size:13.5px; min-height:70px; resize:vertical; }
+  .option-row{ display:flex; align-items:center; gap:8px; margin-top:6px; }
+  .option-input{ flex:1; border:1px solid #E7E1D4; border-radius:8px; padding:8px 10px; font-size:13.5px; }
+  .example-block{ background:#F1EFE9; border-radius:8px; padding:10px; font-size:12px; line-height:1.6; white-space:pre-wrap; color:#4a4538; }
+  .bulk-msg{ font-size:12.5px; margin-top:8px; color:#A8631F; white-space:pre-wrap; }
+  .empty-hint{ font-size:13px; color:#9a9488; padding:20px 0; text-align:center; }
+  .q-item{ background:#fff; border:1px solid #E7E1D4; border-radius:12px; padding:12px; margin-bottom:8px; position:relative; }
+  .q-chapter{ font-size:11px; color:#A8631F; font-weight:700; }
+  .q-text{ font-size:13.5px; margin-top:4px; line-height:1.5; }
+  .q-answer{ font-size:12.5px; color:#2F6B4F; margin-top:6px; font-weight:600; }
+  .delete-btn{ position:absolute; top:10px; right:10px; border:none; background:transparent; color:#b9554a; font-size:11px; }
+  .quiz-progress{ font-size:12.5px; color:#9a9488; font-weight:600; }
+  .quiz-card{ background:#fff; border:1px solid #E7E1D4; border-radius:16px; padding:16px; }
+  .quiz-chapter-tag{ font-size:11px; color:#A8631F; font-weight:700; margin-bottom:6px; }
+  .quiz-question{ font-size:15px; font-weight:600; line-height:1.6; margin-bottom:12px; }
+  .quiz-option{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1px solid #E7E1D4; background:#FCFBF8; border-radius:10px; padding:11px 12px; font-size:13.5px; margin-bottom:8px; }
+  .quiz-option.correct{ border-color:#2F6B4F; background:#E5F2EA; }
+  .quiz-option.wrong{ border-color:#B9554A; background:#FAEAE7; }
+  .quiz-option-label{ width:22px; height:22px; border-radius:50%; background:#EFEAE0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
+  .quiz-note{ font-size:12.5px; color:#6b6356; margin-top:4px; margin-bottom:10px; }
+  .result-card{ margin-top:10px; font-size:13px; color:#6b6356; background:#F1EFE9; border-radius:10px; padding:10px; text-align:center; }
+  .wrong-card{ background:#fff; border:1px solid #E7E1D4; border-radius:12px; padding:12px; margin-bottom:8px; }
+  .wrong-top{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .wrong-count{ font-size:11px; color:#B9554A; font-weight:600; }
+  .wrong-due{ font-size:11px; color:#9a9488; }
+  .mastered-btn{ margin-top:8px; border:1px solid #2F6B4F; color:#2F6B4F; background:transparent; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; }
+  .law-card{ background:#fff; border:1px solid #E7E1D4; border-radius:12px; padding:12px; margin-bottom:8px; }
+  .law-top{ display:flex; align-items:center; gap:8px; }
+  .law-article{ font-size:13px; font-weight:700; color:#A8631F; }
+  .law-name{ font-size:11.5px; color:#9a9488; }
+  .law-penalty{ font-size:13.5px; margin-top:6px; line-height:1.55; font-weight:600; }
+  .law-refs{ font-size:12.5px; color:#4a4538; margin-top:6px; line-height:1.5; }
+  .law-note{ font-size:12px; color:#9a9488; margin-top:4px; }
+  .search-input{ width:100%; border:1px solid #E7E1D4; border-radius:10px; padding:10px 12px; font-size:14px; background:#fff; }
+  .nav{ position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:#fff; border-top:1px solid #E7E1D4; display:flex; padding:6px 0 10px; }
+  .nav-btn{ flex:1; border:none; background:transparent; display:flex; flex-direction:column; align-items:center; color:#9a9488; padding:6px 0; }
+  .nav-btn.active{ color:#A8631F; }
+  .nav-icon{ font-size:18px; position:relative; }
+  .nav-badge{ position:absolute; top:-6px; right:-12px; background:#B9554A; color:#fff; font-size:9px; border-radius:8px; padding:1px 5px; font-weight:700; }
+  .loading{ min-height:100vh; display:flex; align-items:center; justify-content:center; color:#9a9488; font-size:14px; }
+</style>
+<script>
+(function(){
+
+  const CHAPTERS = [
+    {id:0,title:"職業安全概論（基礎概念）",pages:"-"},
+    {id:1,title:"勞動法簡介（含勞動檢查法規）",pages:"1-28"},
+    {id:2,title:"職業安全衛生法規",pages:"29-60"},
+    {id:3,title:"職業安全衛生設施規則",pages:"61-116"},
+    {id:4,title:"職業安全衛生管理辦法",pages:"117-144"},
+    {id:5,title:"職業安全衛生教育訓練規則",pages:"145-160"},
+    {id:6,title:"勞工健康法規簡介",pages:"161-186"},
+    {id:7,title:"危險性工作場所安全管理相關法規",pages:"187-200"},
+    {id:8,title:"營造安全衛生相關法規",pages:"201-232"},
+    {id:9,title:"危害性化學品標示及通識規則",pages:"233-258"},
+    {id:10,title:"缺氧症預防規則（含局限空間危害預防）",pages:"259-272"},
+    {id:11,title:"具有危險性之機械及設備安全相關法規簡介",pages:"273-302"},
+    {id:12,title:"機械設備器具安全相關管理法規",pages:"303-322"},
+    {id:13,title:"危害性化學品管理相關法規",pages:"323-344"},
+    {id:14,title:"有害物質危害預防法規",pages:"345-372"},
+    {id:15,title:"具有特殊危害之作業相關法規",pages:"373-388"},
+    {id:16,title:"勞工作業環境監測實施辦法及容許暴露標準",pages:"389-404"},
+    {id:17,title:"職業安全衛生管理系統",pages:"405-438"},
+    {id:18,title:"安全衛生工作守則之製定",pages:"439-462"},
+    {id:19,title:"安全衛生管理規章及職業安全衛生管理計畫之製定",pages:"463-478"},
+    {id:20,title:"工作安全分析與安全作業標準之製定",pages:"479-"},
+  ];
+
+  const STATUS = {
+    todo:{label:"未讀",color:"#9a9488",bg:"#f1efe9"},
+    reading:{label:"閱讀中",color:"#a8631f",bg:"#f6e9d8"},
+    done:{label:"已完成",color:"#2f6b4f",bg:"#e1efe5"},
+  };
+
+  const LAW_SEED = [
+    {id:"law-46",law:"職業安全衛生法",article:"第46條",penalty:"經通知限期改善，屆期未改善才罰；情節重大得加重罰鍰至法定最高額1/2",refs:"§6Ⅱ、§12Ⅳ、§20Ⅰ、§20Ⅱ、§21Ⅰ、§21Ⅱ、§22Ⅰ、§22-1Ⅱ後段、§22-2Ⅰ②、§22-2Ⅲ、§23Ⅰ、§32Ⅰ、§34Ⅰ、§38",note:"第一款：需先限期改善，屆期未改善才開罰",seed:true},
+    {id:"law-46-2",law:"職業安全衛生法",article:"第46條",penalty:"直接處罰，不須限期改善",refs:"§15-1Ⅰ~Ⅲ、§17、§18Ⅲ、§22-2Ⅰ①、§22-2Ⅱ、§22-2Ⅴ、§26、§27、§27-1Ⅰ、§27-1Ⅱ、§28、§29Ⅲ、§33、§39Ⅳ",note:"第二款：不用通知改善，直接處罰",seed:true},
+    {id:"law-46-3",law:"職業安全衛生法",article:"第46條第3款",penalty:"直接處罰",refs:"§36Ⅰ（應給付工資而不給付）",note:"",seed:true},
+    {id:"law-46-1",law:"職業安全衛生法",article:"第46條之一",penalty:"新臺幣1萬以上100萬以下罰鍰",refs:"最高負責人經認定有「職場霸凌」行為",note:"罰鍰級距最大",seed:true},
+    {id:"law-46-1b",law:"職業安全衛生法",article:"第46條之一",penalty:"新臺幣1萬以上20萬以下罰鍰，並應接受中央主管機關指定講習；拒不接受講習者按次處罰",refs:"違反§24Ⅲ，致發生§37Ⅱ之災害（重大職災）",note:"操作人員若係因雇主指示作業所致，不予處罰操作人員",seed:true},
+    {id:"law-46-1c",law:"職業安全衛生法",article:"第46條之一",penalty:"新臺幣3千元以下罰鍰（最輕）",refs:"§20Ⅵ、§32Ⅳ、§34Ⅱ",note:"裁處權時效自主管機關收受申訴人依§22-3Ⅰ但書提起申訴之日起算",seed:true},
+    {id:"law-47",law:"職業安全衛生法",article:"第47條",penalty:"新臺幣6萬以上30萬以下罰鍰；情節重大者得暫停或撤銷代行檢查職務",refs:"代行檢查機構執行職務違反本法或本法所發布之命令",note:"",seed:true},
+    {id:"law-48",law:"職業安全衛生法",article:"第48條",penalty:"警告或新臺幣6萬以上30萬以下罰鍰，得限期令改正；屆期未改正或情節重大得撤銷/廢止認可或定期停業",refs:"驗證機構違反§8Ⅴ子法、監測機構違反§12Ⅴ子法、醫療機構違反§20Ⅳ及§20Ⅴ子法、勞工健康服務專業機構違反§22Ⅲ規則、訓練單位違反§32Ⅲ規則、顧問服務機構違反§36Ⅲ規則",note:"共六類機構/單位適用",seed:true},
+    {id:"law-49",law:"職業安全衛生法",article:"第49條",penalty:"公布事業單位、雇主或各類機構名稱、負責人姓名；如經處罰鍰，並公布處分期日、違反條文及罰鍰金額",refs:"發生§37Ⅱ之災害、有§40~45/§47/§48之情形、發生職業病",note:"前兩款（重大職災、§40~48情形）須加公布職災發生日期、地點及罹災人數",seed:true},
+  ];
+
+  const QUESTION_SEED = [
+    {id:"s1-001",chapter:5,text:"雇主僱用勞工人數未滿30人者，擔任職業安全衛生業務主管者應接受何種教育訓練？",options:["甲種職業安全衛生業務主管","乙種職業安全衛生業務主管","丙種職業安全衛生業務主管","丁種職業安全衛生業務主管"],answer:2,note:""},
+    {id:"s1-002",chapter:5,text:"僱用勞工人數在30人以上未滿100人之事業，擔任職業安全衛生業務主管應接受何種教育訓練？",options:["甲種職業安全衛生業務主管","乙種職業安全衛生業務主管","丙種職業安全衛生業務主管","職業安全衛生管理員"],answer:1,note:""},
+    {id:"s1-003",chapter:5,text:"勞工人數在100人以上之營造業事業單位，擔任營造業職業安全衛生業務主管者應受何種營造業安全衛生業務主管教育訓練？",options:["甲種","乙種","丙種","丁種"],answer:0,note:""},
+    {id:"s1-004",chapter:5,text:"訓練單位辦理缺氧作業或有機溶劑作業等有害作業主管安全衛生教育訓練時，其訓練時數均不得少於多少小時？",options:["6小時","18小時","24小時","30小時"],answer:1,note:""},
+    {id:"s1-005",chapter:5,text:"操作下列何種機具不必接受具有危險性機械或設備操作人員訓練？",options:["鍋爐（小型鍋爐除外）","第一種壓力容器","吊升荷重在3公噸以上之起重機","荷重1公噸以上堆高機"],answer:3,note:""},
+    {id:"s1-006",chapter:5,text:"下列何者不是應接受特殊作業安全衛生教育訓練之對象？",options:["使用起重機具從事吊掛作業人員","荷重1公噸以上之堆高機操作人員","潛水作業人員","第一種壓力容器操作人員"],answer:3,note:""},
+    {id:"s1-007",chapter:5,text:"訓練單位辦理使用起重機具從事吊掛作業人員特殊作業安全衛生教育訓練時，其訓練時數不得少於多少小時？",options:["6小時","18小時","24小時","30小時"],answer:1,note:""},
+    {id:"s1-008",chapter:5,text:"以乙炔熔接裝置或氣體集合裝置從事金屬熔接、切斷或加熱作業人員應接受下列何種安全衛生教育訓練？",options:["一般作業","特殊作業","危險性機械操作人員","危險性設備操作人員"],answer:1,note:""},
+    {id:"s1-009",chapter:5,text:"雇主對擔任工作場所急救人員之勞工（除醫護人員外），應使其接受急救人員訓練，其訓練時數不得低於多少小時？",options:["12小時","18小時","30小時","60小時"],answer:1,note:""},
+    {id:"s1-010",chapter:5,text:"辦理新僱勞工一般安全衛生教育訓練時，其訓練時數依規則不得少於多少小時？",options:["3小時","6小時","12小時","18小時"],answer:0,note:""},
+    {id:"s1-011",chapter:5,text:"辦理調換作業之勞工一般安全衛生教育訓練時，其訓練時數不得少於多少小時？",options:["3小時","6小時","10小時","12小時"],answer:0,note:""},
+    {id:"s1-012",chapter:5,text:"職業安全衛生委員會成員之職業安全衛生在職教育訓練時數，為下列何者？",options:["每年2小時","每年3小時","每2年3小時","每3年3小時"],answer:3,note:""},
+    {id:"s1-013",chapter:5,text:"下列有關職業安全衛生教育訓練之辦理方式，何者有誤？",options:["事業單位不具辦理資格，應指派勞工至職業訓練機構受訓","對於已取得資格之不同職類勞工，應定期分別使其接受在職教育訓練","訓練單位辦理鍋爐操作人員教育訓練，應向當地主管機關報備","雇主對於小型鍋爐操作人員，應使其接受特殊作業安全衛生教育訓練"],answer:0,note:""},
+    {id:"s1-014",chapter:5,text:"辦理下列何種安全衛生教育訓練不必於事前報請當地主管機關核備？",options:["有害作業主管","職業安全衛生人員","危險性機械、設備操作人員","現場安全衛生監督人員"],answer:3,note:""},
+    {id:"s1-015",chapter:5,text:"訓練單位辦理特殊作業人員之安全衛生教育訓練後，應將其結業證書報請何單位備查？",options:["中央主管機關","直轄市主管機關","地方主管機關","當地勞動檢查機構"],answer:2,note:""},
+    {id:"s1-016",chapter:5,text:"擬定安全衛生教育，在分析需求時與下列何者無關？",options:["那個部門需要訓練","那些工作需要訓練","那些人員需要訓練","那些主管機關需要報備"],answer:3,note:""},
+    {id:"s1-017",chapter:5,text:"事業單位辦理急救人員安全衛生在職教育訓練，其計畫、講師概況、課程內容等文件應於事前報請何者備查？",options:["當地主管機關","勞動檢查機構","中央主管機關","不須報備"],answer:0,note:""},
+    {id:"s1-018",chapter:5,text:"雇主對於擔任下列工作之勞工，應至少每2年施以12小時之安全衛生在職教育訓練？",options:["堆高機操作人員","施工安全評估人員","急救人員","職業安全衛生管理員"],answer:3,note:""},
+    {id:"s1-019",chapter:5,text:"下列何者非規則規定，應接受有害作業教育訓練之對象？",options:["有機溶劑作業主管","缺氧作業主管","職業安全衛生業務主管","粉塵作業主管"],answer:2,note:""},
+    {id:"s1-020",chapter:5,text:"第一種壓力容器操作人員，應由下列何者擔任？",options:["國民中學以上畢業者","高級中學以上畢業者","經法定訓練合格或取得該項技能檢定資格者","國民小學畢業者"],answer:2,note:""},
+    {id:"s1-021",chapter:5,text:"雇主對新僱勞工或在職勞工於變更工作前，應使其接受適於各該工作必要之安全衛生教育訓練，並應將計畫、受訓人員名冊、簽到紀錄、課程內容等實施資料保存幾年？",options:["1年","2年","3年","4年"],answer:2,note:""},
+    {id:"s1-022",chapter:5,text:"下列何者不是應接受營造作業主管安全衛生教育訓練之對象？",options:["擋土支撐作業主管","模板支撐作業主管","鋼筋綁紮作業主管","施工架組配作業主管"],answer:2,note:""},
+    {id:"s1-023",chapter:5,text:"事業單位有荷重二公噸堆高機乙部，人員應接受何種安全衛生教育訓練？",options:["危險性機械","危險性設備","有害作業","特殊作業"],answer:3,note:""},
+  ];
+
+  const QUESTION_SEED_V2 = [
+    {id:"s2-001",chapter:5,text:"違反職業安全衛生法第24條（危險性機械操作人員未經認可訓練或檢定）規定，其處罰方式為下列何者？",options:["需通知限期改善，屆期未改善才處罰","逕予處罰新台幣3萬元以上30萬元以下罰鍰","逕予處罰新台幣3萬元以上15萬元以下罰鍰","免罰，僅予警告"],answer:1,note:""},
+    {id:"s2-002",chapter:5,text:"違反職業安全衛生法第32條（未對勞工施以安全衛生教育訓練）規定，其處罰方式為下列何者？",options:["逕予處罰新台幣3萬元以上30萬元以下罰鍰","經通知限期改善，屆期未改善者處新台幣3萬元以上15萬元以下罰鍰","經通知限期改善，屆期未改善者處新台幣3萬元以上30萬元以下罰鍰","免罰，僅予警告"],answer:1,note:""},
+    {id:"s2-003",chapter:3,text:"第一類事業勞工人數達多少人以上者，應置職業安全衛生管理員？",options:["50人","100人","300人","500人"],answer:1,note:""},
+    {id:"s2-004",chapter:3,text:"營造事業勞工人數在多少範圍內，應置職業安全衛生管理員？",options:["10~29人","30~99人","100~299人","300人以上"],answer:1,note:""},
+    {id:"s2-005",chapter:5,text:"職業安全管理師、職業衛生管理師之安全衛生教育訓練時數為多少小時？",options:["100小時","115小時","130小時","150小時"],answer:2,note:""},
+    {id:"s2-006",chapter:5,text:"職業安全衛生管理員之安全衛生教育訓練時數為多少小時？",options:["100小時","115小時","130小時","150小時"],answer:1,note:""},
+    {id:"s2-007",chapter:16,text:"勞工噪音暴露工作日八小時日時量平均音壓級在多少分貝以上之作業場所，應實施作業環境監測？",options:["80分貝","85分貝","90分貝","95分貝"],answer:1,note:""},
+    {id:"s2-008",chapter:16,text:"勞工噪音作業環境監測之測定期限為多久？",options:["3個月","6個月","1年","2年"],answer:1,note:""},
+    {id:"s2-009",chapter:16,text:"鉛中毒預防規則所稱鉛作業之作業場所，其作業環境監測測定期限為多久？",options:["3個月","6個月","1年","2年"],answer:2,note:""},
+    {id:"s2-010",chapter:5,text:"建築物高度在多少公尺以上之建築工程，應實施施工安全評估？",options:["50公尺","60公尺","80公尺","100公尺"],answer:2,note:""},
+    {id:"s2-011",chapter:5,text:"吊升荷重在多少公噸以上之固定式起重機操作人員，應受38小時安全衛生教育訓練？",options:["1公噸","2公噸","3公噸","5公噸"],answer:2,note:""},
+    {id:"s2-012",chapter:5,text:"導軌或升降路之高度在多少公尺以上之營建用提升機操作人員，應受21小時安全衛生教育訓練？",options:["10公尺","15公尺","20公尺","25公尺"],answer:2,note:""},
+    {id:"s2-013",chapter:5,text:"乙級鍋爐操作人員安全衛生教育訓練合格者，可操作傳熱面積未滿多少平方公尺之鍋爐？",options:["300平方公尺","400平方公尺","500平方公尺","600平方公尺"],answer:2,note:""},
+    {id:"s2-014",chapter:5,text:"辦理缺氧作業特殊安全衛生教育訓練時，其時數不得低於多少小時？",options:["6小時","12小時","18小時","24小時"],answer:2,note:""},
+    {id:"s2-015",chapter:5,text:"訓練單位對受訓學員缺課時數達課程總時數多少以上者，應通知其退訓？",options:["二分之一","三分之一","四分之一","五分之一"],answer:3,note:""},
+    {id:"s2-016",chapter:5,text:"訓練單位對於專責輔導員，應使其接受中央主管機關指定之講習，每幾年至少6小時？",options:["每1年","每2年","每3年","每4年"],answer:1,note:""},
+    {id:"s2-017",chapter:5,text:"操作吊升荷重3公噸以上起重機，自民國幾年7月1日起須取得技術士證書才能操作？",options:["98年","99年","100年","101年"],answer:2,note:""},
+    {id:"s2-018",chapter:5,text:"職業安全衛生委員會成員在職教育訓練，每幾年至少3小時以上？",options:["每年","每2年","每3年","每4年"],answer:2,note:""},
+    {id:"s2-019",chapter:5,text:"職業安全衛生業務主管之在職教育訓練時數規定為何？",options:["每2年至少6小時","每2年至少12小時","每3年至少6小時","每3年至少12小時"],answer:0,note:""},
+    {id:"s2-020",chapter:5,text:"勞工健康服務護理人員之在職教育訓練時數規定為何？",options:["每2年至少6小時","每3年合計至少12小時","每3年至少6小時","每年至少12小時"],answer:1,note:""},
+    {id:"s2-021",chapter:5,text:"訓練單位辦理訓練之文件如有變動，應檢附變更事項，至遲於開訓前幾日報請當地主管機關備查？",options:["1日","3日","5日","7日"],answer:0,note:""},
+    {id:"s2-022",chapter:5,text:"訓練單位對於接受教育訓練期滿者，應於結訓後幾日內發給訓練期滿證明？",options:["7日","10日","15日","30日"],answer:2,note:""},
+    {id:"s2-023",chapter:5,text:"訓練單位辦理第3條至第16條之教育訓練結訓後，應將相關文件做成電子檔或光碟，至少保存幾年？",options:["3年","5年","10年","15年"],answer:2,note:""},
+    {id:"s2-024",chapter:5,text:"雇主辦理職業安全衛生教育訓練規則第17條及第18條之教育訓練，應將訓練計畫、受訓人員名冊、簽到紀錄等實施資料保存幾年？",options:["1年","2年","3年","5年"],answer:2,note:""},
+  ];
+
+  const QUESTION_SEED_V3 = [
+    {id:"s3-001",chapter:5,type:"multi",text:"依職業安全衛生教育訓練規則規定，雇主對下列哪些勞工，應使其接受特殊作業安全衛生教育訓練？（複選）",options:["小型鍋爐操作人員","高空工作車操作人員","火藥爆破作業人員","潛水作業人員"],answer:[0,1,2,3],note:"規則第14條所列特殊作業人員皆須受訓"},
+    {id:"s3-002",chapter:5,type:"multi",text:"依職業安全衛生教育訓練規則規定，雇主對擔任下列哪些工作性質之勞工，應每3年至少3小時接受安全衛生在職教育訓練？（複選）",options:["職業安全衛生業務主管","急救人員","特殊作業人員","具有危險性之機械或設備操作人員"],answer:[1,2,3],note:"業務主管的在職訓練是每2年6小時，不是每3年3小時"},
+    {id:"s3-003",chapter:5,type:"fill",text:"勞工人數在【　】人以上之營造業事業單位，擔任營造業職業安全衛生業務主管者應受甲種營造業職業安全衛生業務主管教育訓練。",answer:"100",note:""},
+    {id:"s3-004",chapter:5,type:"fill",text:"依規定，勞工人數在30人以上未滿【　】人之事業，擔任職業安全衛生業務主管者，應受乙種職業安全衛生業務主管安全衛生教育訓練。",answer:"100",note:""},
+    {id:"s3-005",chapter:5,type:"fill",text:"吊升荷重在【　】公噸以上之固定式起重機操作人員，應受38小時安全衛生教育訓練。",answer:"3",note:""},
+    {id:"s3-006",chapter:5,type:"fill",text:"依規定，乙級鍋爐操作人員安全衛生教育訓練合格者，可操作傳熱面積未滿【　】平方公尺之鍋爐。",answer:"500",note:""},
+    {id:"s3-007",chapter:5,type:"fill",text:"辦理缺氧作業特殊安全衛生訓練時，其時數不得低於【　】小時。",answer:"18",note:""},
+    {id:"s3-008",chapter:5,type:"fill",text:"操作吊升荷重3公噸以上起重機自【　】年7月1日以後，取得技術士證書，才能操作。（請填民國年）",answer:"100",note:""},
+    {id:"s3-009",chapter:5,type:"fill",text:"勞工參加有關之職業安全衛生教育訓練，缺課時數達課程總時數【　】以上時，訓練單位應通知其退訓。",answer:"1/5",note:"也可寫成「五分之一」"},
+    {id:"s3-010",chapter:5,type:"fill",text:"職業安全衛生委員會成員在職訓練，每【　】年至少3小時以上。",answer:"3",note:""},
+    {id:"s3-011",chapter:5,type:"fill",text:"辦理訓練文件如有變動，應檢附變更事項於開訓前【　】日，報請當地主管機關備查。",answer:"1",note:""},
+  ];
+
+  const uid = () => Math.random().toString(36).slice(2,10);
+  const todayStr = () => new Date().toISOString().slice(0,10);
+  function daysUntil(dateStr){
+    if(!dateStr) return null;
+    const target = new Date(dateStr+"T00:00:00");
+    const now = new Date(); now.setHours(0,0,0,0);
+    return Math.ceil((target-now)/86400000);
+  }
+  function toChinese(n){
+    if(n===0) return "○";
+    const digits="〇一二三四五六七八九";
+    if(n<=10) return ["十","一","二","三","四","五","六","七","八","九","十"][n];
+    if(n<20) return "十"+digits[n-10];
+    return digits[Math.floor(n/10)]+"十"+(n%10?digits[n%10]:"");
+  }
+  function esc(s){
+    return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+
+  /* ---------- storage (localStorage) ---------- */
+  const NS = "ohs_";
+  function loadData(key, fallback){
+    try{
+      const v = localStorage.getItem(NS+key);
+      if(v !== null) return JSON.parse(v);
+      return fallback;
+    }catch(e){ return fallback; }
+  }
+  function saveData(key, value){
+    try{ localStorage.setItem(NS+key, JSON.stringify(value)); }catch(e){ console.error(e); }
+  }
+
+  /* ---------- state ---------- */
+  let state = {
+    loaded:false, tab:"dashboard",
+    examDate:"",
+    chapterState: Object.fromEntries(CHAPTERS.map(c=>[c.id,{status:"todo",notes:""}])),
+    questions: [],
+    wrongMap: {},
+    studyLog: {},
+    laws: LAW_SEED,
+    bankMode:"manual",
+    bankDraft:{chapter:1,text:"",options:["","","",""],answer:0,note:""},
+    bankBulkText:"", bankBulkMsg:"", bankFilterChapter:"all",
+    quizChapterFilter:"all", quizPool:[], quizIdx:0, quizSelected:null, quizRevealed:false, quizStats:{correct:0,total:0},
+    quizMultiSelected:[], quizFillInput:"", quizFillCorrect:false,
+    lawQuery:"", lawShowForm:false, lawDraft:{law:"職業安全衛生法",article:"",penalty:"",refs:"",note:""},
+    headerEditing:false,
+    syncMsg:"",
+  };
+
+  const root = document.getElementById("app");
+
+  async function init(){
+    state.examDate = (loadData("meta",{examDate:""}).examDate) || "";
+    const seedFlag = loadData("questionSeedV1Applied", false);
+    state.chapterState = loadData("chapterState", state.chapterState);
+    if(!seedFlag && state.chapterState[5] && state.chapterState[5].status==="todo"){
+      state.chapterState[5] = {...state.chapterState[5], status:"reading", notes: state.chapterState[5].notes || "張木原講師教材，已匯入23題歷屆考古題"};
+      saveData("chapterState", state.chapterState);
+    }
+    state.questions = loadData("questions", []);
+    if(!seedFlag){
+      const existIds = new Set(state.questions.map(q=>q.id));
+      const newQs = QUESTION_SEED.filter(q=>!existIds.has(q.id));
+      state.questions = [...state.questions, ...newQs];
+      saveData("questions", state.questions);
+      saveData("questionSeedV1Applied", true);
+    }
+    const seedFlagV2 = loadData("questionSeedV2Applied", false);
+    if(!seedFlagV2){
+      const existIds = new Set(state.questions.map(q=>q.id));
+      const newQs = QUESTION_SEED_V2.filter(q=>!existIds.has(q.id));
+      state.questions = [...state.questions, ...newQs];
+      saveData("questions", state.questions);
+      saveData("questionSeedV2Applied", true);
+    }
+    const seedFlagV3 = loadData("questionSeedV3Applied", false);
+    if(!seedFlagV3){
+      const existIds = new Set(state.questions.map(q=>q.id));
+      const newQs = QUESTION_SEED_V3.filter(q=>!existIds.has(q.id));
+      state.questions = [...state.questions, ...newQs];
+      saveData("questions", state.questions);
+      saveData("questionSeedV3Applied", true);
+    }
+
+    // 從 questions.js 載入額外題目（Claude Code 解析 PDF 後寫入）
+    if(Array.isArray(window.EXTERNAL_QUESTIONS) && window.EXTERNAL_QUESTIONS.length > 0){
+      const existIds = new Set(state.questions.map(q=>q.id));
+      const newQs = window.EXTERNAL_QUESTIONS.filter(q=>q.id && !existIds.has(q.id));
+      if(newQs.length > 0){
+        state.questions = [...state.questions, ...newQs];
+        saveData("questions", state.questions);
+      }
+    }
+
+    state.wrongMap = loadData("wrongMap", {});
+    state.studyLog = loadData("studyLog", {});
+    state.laws = loadData("laws", LAW_SEED);
+    state.loaded = true;
+    render();
+  }
+
+  function persist(key){
+    if(!state.loaded) return;
+    const map = {
+      meta: ()=>saveData("meta",{examDate:state.examDate}),
+      chapterState: ()=>saveData("chapterState",state.chapterState),
+      questions: ()=>saveData("questions",state.questions),
+      wrongMap: ()=>saveData("wrongMap",state.wrongMap),
+      studyLog: ()=>saveData("studyLog",state.studyLog),
+      laws: ()=>saveData("laws",state.laws),
+    };
+    if(map[key]) map[key]();
+  }
+
+  function markStudiedToday(){
+    state.studyLog[todayStr()] = true;
+    persist("studyLog");
+  }
+
+  /* ---------- render ---------- */
+  function render(){
+    if(!state.loaded){
+      root.innerHTML = '<div class="loading">讀取中…</div>';
+      return;
+    }
+    const doneCount = Object.values(state.chapterState).filter(c=>c.status==="done").length;
+    const progressPct = Math.round((doneCount/CHAPTERS.length)*100);
+
+    root.innerHTML = `
+      ${renderHeader(progressPct)}
+      <main>${renderTab(doneCount,progressPct)}</main>
+      ${renderNav()}
+    `;
+    bindEvents();
+  }
+
+  function renderHeader(progressPct){
+    const d = daysUntil(state.examDate);
+    return `
+      <div class="header">
+        <div class="header-top">
+          <div>
+            <div class="kicker">職業安全衛生管理員乙級技術士</div>
+            <div class="h1">讀書進度管理</div>
+          </div>
+          <div class="exam-badge" id="examBadge">
+            ${state.examDate ? `<div class="exam-num">${d>=0?d:0}</div><div class="exam-label">天後應考</div>` : `<div style="font-size:12px;color:#C9A876;">設定考試日期</div>`}
+          </div>
+        </div>
+        ${state.headerEditing ? `
+          <div class="exam-edit">
+            <input type="date" id="examDateInput" value="${state.examDate}" style="border-radius:8px;border:none;padding:6px 8px;font-size:13px;">
+            <button class="primary-btn" id="examDoneBtn" style="background:#C9A876;color:#2B2620;width:auto;padding:6px 12px;font-size:12px;">完成</button>
+          </div>` : ``}
+        <div class="progress-outer"><div class="progress-inner" style="width:${progressPct}%"></div></div>
+      </div>
+    `;
+  }
+
+  function renderNav(){
+    const dueWrongCount = computeWrongQuestions().filter(q=>!q.meta.dueDate||q.meta.dueDate<=todayStr()).length;
+    const items = [
+      ["dashboard","◆","總覽"],["chapters","▤","章節"],["bank","✎","題庫"],
+      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["laws","§","法規"],["sync","⇅","備份"],
+    ];
+    return `<nav class="nav">${items.map(it=>{
+      const [key,icon,label,badge] = it;
+      return `<button class="nav-btn ${state.tab===key?'active':''}" data-tab="${key}">
+        <span class="nav-icon">${icon}${badge?`<span class="nav-badge">${badge}</span>`:''}</span>
+        <span style="font-size:11px;margin-top:2px;">${label}</span>
+      </button>`;
+    }).join("")}</nav>`;
+  }
+
+  function renderTab(doneCount,progressPct){
+    if(state.tab==="dashboard") return renderDashboard(doneCount,progressPct);
+    if(state.tab==="chapters") return renderChapters();
+    if(state.tab==="bank") return renderBank();
+    if(state.tab==="quiz") return renderQuiz();
+    if(state.tab==="wrong") return renderWrong();
+    if(state.tab==="laws") return renderLaws();
+    if(state.tab==="sync") return renderSync();
+    return "";
+  }
+
+  /* ---------- Dashboard ---------- */
+  function renderDashboard(doneCount,progressPct){
+    const d = daysUntil(state.examDate);
+    const studiedToday = !!state.studyLog[todayStr()];
+    let streak=0, cursor=new Date();
+    while(true){
+      const key=cursor.toISOString().slice(0,10);
+      if(state.studyLog[key]){ streak++; cursor.setDate(cursor.getDate()-1); } else break;
+    }
+    const remaining = CHAPTERS.length - doneCount;
+    let suggestion;
+    if(!state.examDate) suggestion = "先在上方設定考試日期，才能算出每日進度建議。";
+    else if(d<=0) suggestion = "考試日已到或已過，請依現況調整。";
+    else if(remaining>0){
+      const perDay = Math.max(1, Math.ceil(remaining/Math.max(1,d-14)));
+      suggestion = `建議扣除考前 14 天衝刺期，剩餘 ${Math.max(d-14,1)} 天讀完 ${remaining} 個章節，平均每 ${perDay} 天完成 1 章。`;
+    } else suggestion = "章節已全部讀完，接下來請把每天的時間集中在「練習」與「錯題本」上。";
+
+    const dueWrongCount = computeWrongQuestions().filter(q=>!q.meta.dueDate||q.meta.dueDate<=todayStr()).length;
+
+    return `
+      <div class="card-row">
+        ${statCard("章節進度", `${doneCount} / ${CHAPTERS.length}`, `${progressPct}%`)}
+        ${statCard("題庫題數", state.questions.length, "累積收錄")}
+        ${statCard("待複習錯題", dueWrongCount, "今天到期", dueWrongCount>0)}
+        ${statCard("連續讀書", streak, "天")}
+      </div>
+      <div class="suggestion-card">
+        <div class="suggestion-title">今日讀書建議</div>
+        <div class="suggestion-body">${esc(suggestion)}</div>
+        <button class="primary-btn" id="markTodayBtn" style="margin-top:12px;" ${studiedToday?'disabled':''}>${studiedToday?'今天已打卡 ✓':'今天讀完了，打卡'}</button>
+      </div>
+      <div class="quick-row">
+        <button class="quick-btn" data-goto="chapters"><div class="quick-icon">▤</div><div>章節清單</div></button>
+        <button class="quick-btn" data-goto="bank"><div class="quick-icon">✎</div><div>輸入考古題</div></button>
+        <button class="quick-btn" data-goto="quiz"><div class="quick-icon">▶</div><div>開始練習</div></button>
+      </div>
+      <div class="tip-box">
+        <div class="tip-title">建議讀書節奏（每天 1 小時內）</div>
+        <ul class="tip-list">
+          <li>30 分鐘：讀新章節 / 複習筆記</li>
+          <li>20 分鐘：在「題庫」做該章節的練習題</li>
+          <li>10 分鐘：複習「錯題本」中今天到期的題目</li>
+        </ul>
+        <div style="margin-top:10px;font-size:13px;color:#6b6356;">
+          考古題來源建議：勞動部勞動力發展署技能檢定中心「學科題庫下載」
+          （techbank.wdasec.gov.tw，職類代碼 22200 職業安全衛生管理乙級）。
+          下載 PDF 後，把題目逐題貼到「題庫」分頁即可建立你自己的練習庫。
+        </div>
+      </div>
+    `;
+  }
+  function statCard(label,value,sub,accent){
+    return `<div class="stat-card ${accent?'accent':''}">
+      <div class="stat-label">${esc(label)}</div>
+      <div class="stat-value">${esc(String(value))}</div>
+      <div class="stat-sub">${esc(sub)}</div>
+    </div>`;
+  }
+
+  /* ---------- Chapters ---------- */
+  function renderChapters(){
+    return `
+      <div class="section-title">章節清單（共 20 章）</div>
+      <div class="section-desc">點一下狀態標籤可循環切換：未讀 → 閱讀中 → 已完成</div>
+      ${CHAPTERS.map(c=>{
+        const st = state.chapterState[c.id]?.status||"todo";
+        const s = STATUS[st];
+        const notes = state.chapterState[c.id]?.notes||"";
+        return `<div class="chapter-card">
+          <div class="chapter-top">
+            <div class="chapter-idx">第${toChinese(c.id)}章</div>
+            <button class="status-pill" data-cycle="${c.id}" style="color:${s.color};background:${s.bg};">${s.label}</button>
+          </div>
+          <div class="chapter-title">${esc(c.title)}</div>
+          <div class="chapter-pages">P.${c.pages}</div>
+          <textarea class="notes-area" placeholder="重點筆記（選填）" data-notes="${c.id}">${esc(notes)}</textarea>
+        </div>`;
+      }).join("")}
+    `;
+  }
+
+  function answerDisplay(q){
+    const t = q.type||"single";
+    if(t==="single") return q.options[q.answer];
+    if(t==="multi") return q.answer.map(i=>q.options[i]).join("、");
+    return q.answer;
+  }
+
+  /* ---------- Bank ---------- */
+  function renderBank(){
+    const fc = state.bankFilterChapter;
+    const filtered = fc==="all" ? state.questions : state.questions.filter(q=>q.chapter===fc);
+    return `
+      <div class="section-title">題庫管理</div>
+      <div class="section-desc">把考古題（學科選擇題）整理成這裡的格式，之後就能在「練習」分頁隨機作答，答錯會自動進「錯題本」。</div>
+      <div class="toggle-row">
+        <button class="toggle-btn ${state.bankMode==='manual'?'active':''}" data-bankmode="manual">單題輸入</button>
+        <button class="toggle-btn ${state.bankMode==='bulk'?'active':''}" data-bankmode="bulk">批次貼上</button>
+      </div>
+      ${state.bankMode==='manual' ? renderBankManual() : renderBankBulk()}
+      <div class="section-title">已收錄題目（${filtered.length}）</div>
+      <select id="bankFilterSelect" class="text-input">
+        <option value="all" ${fc==='all'?'selected':''}>全部章節</option>
+        ${CHAPTERS.map(c=>`<option value="${c.id}" ${fc===c.id?'selected':''}>${c.id===0?'概論':('第'+toChinese(c.id)+'章')} ${esc(c.title)}</option>`).join("")}
+      </select>
+      ${filtered.length===0 ? `<div class="empty-hint">目前還沒有題目，先用上面的方式新增吧。</div>` : ""}
+      ${filtered.map(q=>`<div class="q-item">
+        <div class="q-chapter">${q.chapter===0?'概論':('第'+toChinese(q.chapter)+'章')}</div>
+        <div class="q-text">${esc(q.text)}</div>
+        <div class="q-answer">正解：${esc(answerDisplay(q))}</div>
+        <button class="delete-btn" data-delq="${q.id}">刪除</button>
+      </div>`).join("")}
+    `;
+  }
+  function renderBankManual(){
+    const d = state.bankDraft;
+    return `<div class="form-card">
+      <label class="label">章節</label>
+      <select id="draftChapter" class="text-input">
+        ${CHAPTERS.map(c=>`<option value="${c.id}" ${d.chapter===c.id?'selected':''}>第${c.id}章 ${esc(c.title)}</option>`).join("")}
+      </select>
+      <label class="label">題目</label>
+      <textarea id="draftText" class="text-area" placeholder="貼上題目文字">${esc(d.text)}</textarea>
+      ${d.options.map((opt,i)=>`<div class="option-row">
+        <input type="radio" name="draftAnswer" ${d.answer===i?'checked':''} data-draftans="${i}">
+        <input class="option-input" data-draftopt="${i}" placeholder="選項 ${'ABCD'[i]}" value="${esc(opt)}">
+      </div>`).join("")}
+      <div style="font-size:12px;color:#9a9488;margin-bottom:8px;">點選圓圈標記正確答案</div>
+      <button class="primary-btn" id="addManualBtn">新增到題庫</button>
+    </div>`;
+  }
+  function renderBankBulk(){
+    const fc = state.bankFilterChapter==='all'?1:state.bankFilterChapter;
+    return `<div class="form-card">
+      <label class="label">匯入到章節</label>
+      <select id="bulkChapterSelect" class="text-input">
+        ${CHAPTERS.map(c=>`<option value="${c.id}" ${fc===c.id?'selected':''}>第${c.id}章 ${esc(c.title)}</option>`).join("")}
+      </select>
+      <div style="font-size:13px;color:#6b6356;margin:8px 0;">每題一段，題目與選項各佔一行，最後一行寫答案（1-4 或 A-D），題與題之間空一行。例如：</div>
+      <pre class="example-block">下列何者非屬危險性機械？
+1) 固定式起重機
+2) 升降機
+3) 堆高機
+4) 鍋爐
+3</pre>
+      <textarea id="bulkText" class="text-area" style="min-height:160px;" placeholder="把多題考古題貼在這裡">${esc(state.bankBulkText)}</textarea>
+      <button class="primary-btn" id="bulkImportBtn">批次匯入</button>
+      ${state.bankBulkMsg ? `<div class="bulk-msg">${esc(state.bankBulkMsg)}</div>` : ""}
+    </div>`;
+  }
+
+  /* ---------- Quiz ---------- */
+  function renderQuiz(){
+    if(state.questions.length===0){
+      return `<div class="empty-hint">題庫目前是空的，請先到「題庫」分頁新增考古題再來練習。</div>`;
+    }
+    if(state.quizPool.length===0){
+      return `
+        <div class="section-title">開始練習</div>
+        <label class="label">選擇範圍</label>
+        <select id="quizChapterSelect" class="text-input">
+          <option value="all">全部章節（${state.questions.length} 題）</option>
+          ${CHAPTERS.map(c=>{
+            const n = state.questions.filter(q=>q.chapter===c.id).length;
+            return `<option value="${c.id}" ${n===0?'disabled':''} ${state.quizChapterFilter===c.id?'selected':''}>${c.id===0?'概論':('第'+toChinese(c.id)+'章')} ${esc(c.title)}（${n} 題）</option>`;
+          }).join("")}
+        </select>
+        <button class="primary-btn" id="startQuizBtn">開始隨機練習</button>
+        ${state.quizStats.total>0 ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : ""}
+      `;
+    }
+    const current = state.quizPool[state.quizIdx];
+    const qtype = current.type || "single";
+    return `
+      <div class="quiz-progress">第 ${state.quizIdx+1} / ${state.quizPool.length} 題 · 答對 ${state.quizStats.correct}</div>
+      <div class="quiz-card">
+        <div class="quiz-chapter-tag">${current.chapter===0?'概論':('第'+toChinese(current.chapter)+'章')}${qtype==='multi'?' · 複選題':qtype==='fill'?' · 填空題':''}</div>
+        <div class="quiz-question">${esc(current.text)}</div>
+        ${qtype==='single' ? renderSingleOptions(current) : ""}
+        ${qtype==='multi' ? renderMultiOptions(current) : ""}
+        ${qtype==='fill' ? renderFillInput(current) : ""}
+        ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
+        ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
+      </div>
+    `;
+  }
+  function renderSingleOptions(current){
+    return current.options.map((opt,i)=>{
+      let cls="quiz-option";
+      if(state.quizRevealed){
+        if(i===current.answer) cls+=" correct";
+        else if(i===state.quizSelected) cls+=" wrong";
+      }
+      return `<button class="${cls}" data-choose="${i}" ${state.quizRevealed?'disabled':''}>
+        <span class="quiz-option-label">${'ABCD'[i]}</span>${esc(opt)}
+      </button>`;
+    }).join("");
+  }
+  function renderMultiOptions(current){
+    const opts = current.options.map((opt,i)=>{
+      let cls="quiz-option";
+      const picked = state.quizMultiSelected.includes(i);
+      if(state.quizRevealed){
+        if(current.answer.includes(i)) cls+=" correct";
+        else if(picked) cls+=" wrong";
+      }
+      return `<button class="${cls}" data-multitoggle="${i}" ${state.quizRevealed?'disabled':''}>
+        <span class="quiz-option-label">${picked&&!state.quizRevealed?'✓':'ABCD'[i]}</span>${esc(opt)}
+      </button>`;
+    }).join("");
+    const submit = !state.quizRevealed ? `<button class="primary-btn" id="multiSubmitBtn" style="margin-bottom:10px;">提交答案</button>` : "";
+    return opts + submit;
+  }
+  function renderFillInput(current){
+    const input = `<input class="text-input" id="fillInput" placeholder="輸入答案" value="${esc(state.quizFillInput)}" ${state.quizRevealed?'disabled':''} style="margin-bottom:10px;">`;
+    const submit = !state.quizRevealed ? `<button class="primary-btn" id="fillSubmitBtn" style="margin-bottom:10px;">提交答案</button>` : "";
+    const result = state.quizRevealed ? `<div class="q-answer" style="margin-bottom:10px;">正確答案：${esc(current.answer)}　${state.quizFillCorrect?'（你答對了 ✓）':'（你的答案：'+esc(state.quizFillInput||'（空白）')+'）'}</div>` : "";
+    return input + submit + result;
+  }
+
+  /* ---------- Wrong book ---------- */
+  function computeWrongQuestions(){
+    return state.questions
+      .filter(q=>state.wrongMap[q.id] && !state.wrongMap[q.id].mastered)
+      .map(q=>({...q, meta:state.wrongMap[q.id]}))
+      .sort((a,b)=>(a.meta.dueDate||"").localeCompare(b.meta.dueDate||""));
+  }
+  function renderWrong(){
+    const wq = computeWrongQuestions();
+    const today = todayStr();
+    const due = wq.filter(q=>!q.meta.dueDate||q.meta.dueDate<=today);
+    const upcoming = wq.filter(q=>q.meta.dueDate && q.meta.dueDate>today);
+    function card(q,dim){
+      return `<div class="wrong-card" style="opacity:${dim?0.6:1}">
+        <div class="wrong-top">
+          <span class="q-chapter">${q.chapter===0?'概論':('第'+toChinese(q.chapter)+'章')}</span>
+          <span class="wrong-count">錯過 ${q.meta.wrongCount} 次</span>
+          ${q.meta.dueDate?`<span class="wrong-due">複習日 ${q.meta.dueDate}</span>`:""}
+        </div>
+        <div class="q-text">${esc(q.text)}</div>
+        <button class="toggle-btn" data-showans="${q.id}" style="width:auto;display:inline-block;padding:6px 12px;">顯示答案</button>
+        <div class="q-answer" data-ansbox="${q.id}" style="display:none;">正解：${esc(answerDisplay(q))}</div>
+        <button class="mastered-btn" data-mastered="${q.id}">已熟記，移出錯題本</button>
+      </div>`;
+    }
+    return `
+      <div class="section-title">錯題本</div>
+      <div class="section-desc">答錯的題目會依錯誤次數安排複習間隔（1 / 3 / 7 / 14 天），到期的題目會列在「今天該複習」。</div>
+      <div class="sub-title">今天該複習（${due.length}）</div>
+      ${due.length===0?`<div class="empty-hint">太好了，今天沒有需要複習的錯題。</div>`:""}
+      ${due.map(q=>card(q,false)).join("")}
+      ${upcoming.length>0?`<div class="sub-title">之後排程（${upcoming.length}）</div>${upcoming.map(q=>card(q,true)).join("")}`:""}
+    `;
+  }
+
+  /* ---------- Sync / Backup ---------- */
+  function renderSync(){
+    const syncMsg = state.syncMsg||"";
+    return `
+      <div class="section-title">⇅ 資料備份與還原</div>
+      <div class="section-desc">把進度匯出成 JSON 備份，存到 OneDrive 或傳給自己即可換裝置。</div>
+
+      <div class="tip-box">
+        <div class="tip-title">OneDrive 跨裝置流程</div>
+        <ul class="tip-list">
+          <li>電腦：按「匯出並下載」，把下載的 JSON 存到 OneDrive 資料夾</li>
+          <li>手機：在 OneDrive App 找到該 JSON 檔，複製內容</li>
+          <li>手機：打開這個頁面，到「匯入」貼上後按匯入</li>
+        </ul>
+      </div>
+
+      <button class="primary-btn" id="shareExportBtn" style="margin-top:4px;">📤 匯出並下載</button>
+
+      ${syncMsg ? `<div style="font-size:13px;margin-top:8px;padding:10px;border-radius:8px;background:${syncMsg.startsWith('✓')?'#e1efe5':'#faeae7'};color:${syncMsg.startsWith('✓')?'#2f6b4f':'#b9554a'};">${esc(syncMsg)}</div>` : ""}
+
+      <div style="margin-top:20px;border-top:1px solid #E7E1D4;padding-top:16px;">
+        <div class="sub-title">📥 匯入進度</div>
+        <div class="section-desc">把另一台匯出的 JSON 內容貼在這裡：</div>
+        <textarea id="importText" class="text-area" style="min-height:100px;font-size:10px;font-family:monospace;" placeholder="貼上備份 JSON 內容"></textarea>
+        <button class="primary-btn" id="importBtn" style="margin-top:8px;background:#a8631f;">匯入並覆蓋</button>
+        <div id="importMsg" style="font-size:13px;margin-top:6px;"></div>
+      </div>
+    `;
+  }
+
+  /* ---------- Laws ---------- */
+  function renderLaws(){
+    const q = state.lawQuery.trim().toLowerCase();
+    const filtered = !q ? state.laws : state.laws.filter(l=>
+      [l.law,l.article,l.penalty,l.refs,l.note].join(" ").toLowerCase().includes(q));
+    const d = state.lawDraft;
+    return `
+      <div class="section-title">法規速查</div>
+      <div class="section-desc">輸入條號、關鍵字或罰鍰金額皆可搜尋，例如「46條之一」「職場霸凌」「20萬」「§22-2」。</div>
+      <input class="search-input" id="lawSearchInput" placeholder="搜尋條號 / 關鍵字" value="${esc(state.lawQuery)}">
+      <button class="toggle-btn" id="lawToggleForm">${state.lawShowForm?'取消新增':'+ 新增一筆法規'}</button>
+      ${state.lawShowForm ? `<div class="form-card">
+        <label class="label">法規名稱</label>
+        <input class="option-input" id="lawDraftLaw" value="${esc(d.law)}">
+        <label class="label">條號</label>
+        <input class="option-input" id="lawDraftArticle" placeholder="例：第50條" value="${esc(d.article)}">
+        <label class="label">罰則 / 處分內容</label>
+        <textarea class="text-area" id="lawDraftPenalty">${esc(d.penalty)}</textarea>
+        <label class="label">違反條文對照</label>
+        <textarea class="text-area" id="lawDraftRefs" placeholder="例：§6Ⅱ、§12Ⅳ…">${esc(d.refs)}</textarea>
+        <label class="label">備註（選填）</label>
+        <input class="option-input" id="lawDraftNote" value="${esc(d.note)}">
+        <button class="primary-btn" id="lawAddBtn" style="margin-top:10px;">新增</button>
+      </div>` : ""}
+      <div class="sub-title">共 ${filtered.length} 筆</div>
+      ${filtered.length===0?`<div class="empty-hint">找不到符合的條文。</div>`:""}
+      ${filtered.map(l=>`<div class="law-card">
+        <div class="law-top">
+          <span class="law-article">${esc(l.article)}</span>
+          <span class="law-name">${esc(l.law)}</span>
+          ${!l.seed?`<button class="delete-btn" style="position:static;margin-left:auto;" data-dellaw="${l.id}">刪除</button>`:""}
+        </div>
+        <div class="law-penalty">${esc(l.penalty)}</div>
+        ${l.refs?`<div class="law-refs">違反條文：${esc(l.refs)}</div>`:""}
+        ${l.note?`<div class="law-note">${esc(l.note)}</div>`:""}
+      </div>`).join("")}
+    `;
+  }
+
+  /* ---------- events ---------- */
+  function bindEvents(){
+    root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.tab; render(); }));
+    root.querySelectorAll("[data-goto]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.goto; render(); }));
+
+    const examBadge = document.getElementById("examBadge");
+    if(examBadge) examBadge.addEventListener("click",()=>{ state.headerEditing=true; render(); });
+    const examDateInput = document.getElementById("examDateInput");
+    if(examDateInput) examDateInput.addEventListener("change",(e)=>{ state.examDate=e.target.value; persist("meta"); });
+    const examDoneBtn = document.getElementById("examDoneBtn");
+    if(examDoneBtn) examDoneBtn.addEventListener("click",()=>{ state.headerEditing=false; render(); });
+
+    const markBtn = document.getElementById("markTodayBtn");
+    if(markBtn) markBtn.addEventListener("click",()=>{ markStudiedToday(); render(); });
+
+    root.querySelectorAll("[data-cycle]").forEach(el=>el.addEventListener("click",()=>{
+      const id = parseInt(el.dataset.cycle,10);
+      const cur = state.chapterState[id]?.status||"todo";
+      const next = cur==="todo"?"reading":cur==="reading"?"done":"todo";
+      state.chapterState[id] = {...state.chapterState[id], status:next};
+      persist("chapterState"); render();
+    }));
+    root.querySelectorAll("[data-notes]").forEach(el=>el.addEventListener("change",()=>{
+      const id = parseInt(el.dataset.notes,10);
+      state.chapterState[id] = {...state.chapterState[id], notes:el.value};
+      persist("chapterState");
+    }));
+
+    root.querySelectorAll("[data-bankmode]").forEach(el=>el.addEventListener("click",()=>{
+      state.bankMode = el.dataset.bankmode; render();
+    }));
+
+    const draftChapter = document.getElementById("draftChapter");
+    if(draftChapter) draftChapter.addEventListener("change",e=>{ state.bankDraft.chapter=parseInt(e.target.value,10); });
+    const draftText = document.getElementById("draftText");
+    if(draftText) draftText.addEventListener("input",e=>{ state.bankDraft.text=e.target.value; });
+    root.querySelectorAll("[data-draftopt]").forEach(el=>el.addEventListener("input",e=>{
+      const i = parseInt(el.dataset.draftopt,10);
+      state.bankDraft.options[i] = e.target.value;
+    }));
+    root.querySelectorAll("[data-draftans]").forEach(el=>el.addEventListener("change",()=>{
+      state.bankDraft.answer = parseInt(el.dataset.draftans,10);
+    }));
+    const addManualBtn = document.getElementById("addManualBtn");
+    if(addManualBtn) addManualBtn.addEventListener("click",()=>{
+      const d = state.bankDraft;
+      if(!d.text.trim() || d.options.some(o=>!o.trim())){ alert("請完整填寫題目與四個選項"); return; }
+      state.questions.push({id:uid(), ...d, options:[...d.options]});
+      state.bankDraft = {chapter:1,text:"",options:["","","",""],answer:0,note:""};
+      persist("questions"); render();
+    });
+
+    const bulkChapterSelect = document.getElementById("bulkChapterSelect");
+    if(bulkChapterSelect) bulkChapterSelect.addEventListener("change",e=>{ state.bankFilterChapter=parseInt(e.target.value,10); });
+    const bulkText = document.getElementById("bulkText");
+    if(bulkText) bulkText.addEventListener("input",e=>{ state.bankBulkText=e.target.value; });
+    const bulkImportBtn = document.getElementById("bulkImportBtn");
+    if(bulkImportBtn) bulkImportBtn.addEventListener("click",()=>{
+      const blocks = state.bankBulkText.split(/\n\s*\n/).map(b=>b.trim()).filter(Boolean);
+      const parsed=[]; const errors=[];
+      const targetChapter = state.bankFilterChapter==='all'?1:state.bankFilterChapter;
+      blocks.forEach((block,idx)=>{
+        const lines = block.split("\n").map(l=>l.trim()).filter(Boolean);
+        if(lines.length<6){ errors.push(`第 ${idx+1} 段格式不足（需要題目+4選項+答案，共6行）`); return; }
+        const text = lines[0].replace(/^\d+[\.、]\s*/,"");
+        const options = lines.slice(1,5).map(l=>l.replace(/^[\(（]?[1234ABCD][\)）\.、]\s*/,""));
+        const ansRaw = lines[5].replace(/[^0-9ABCDabcd]/g,"");
+        let answer=-1;
+        if(/^[1-4]$/.test(ansRaw)) answer=parseInt(ansRaw,10)-1;
+        else if(/^[A-Da-d]$/.test(ansRaw)) answer="ABCD".indexOf(ansRaw.toUpperCase());
+        if(answer===-1){ errors.push(`第 ${idx+1} 段答案無法判讀：「${lines[5]}」`); return; }
+        parsed.push({id:uid(), chapter:targetChapter, text, options, answer, note:""});
+      });
+      if(parsed.length) state.questions.push(...parsed);
+      state.bankBulkMsg = `已匯入 ${parsed.length} 題${errors.length?`，${errors.length} 段失敗：\n`+errors.join("\n"):"。"}`;
+      if(parsed.length) state.bankBulkText="";
+      persist("questions"); render();
+    });
+
+    const bankFilterSelect = document.getElementById("bankFilterSelect");
+    if(bankFilterSelect) bankFilterSelect.addEventListener("change",e=>{
+      state.bankFilterChapter = e.target.value==="all"?"all":parseInt(e.target.value,10);
+      render();
+    });
+    root.querySelectorAll("[data-delq]").forEach(el=>el.addEventListener("click",()=>{
+      state.questions = state.questions.filter(q=>q.id!==el.dataset.delq);
+      persist("questions"); render();
+    }));
+
+    const quizChapterSelect = document.getElementById("quizChapterSelect");
+    if(quizChapterSelect) quizChapterSelect.addEventListener("change",e=>{
+      state.quizChapterFilter = e.target.value==="all"?"all":parseInt(e.target.value,10);
+    });
+    const startQuizBtn = document.getElementById("startQuizBtn");
+    if(startQuizBtn) startQuizBtn.addEventListener("click",()=>{
+      const src = state.quizChapterFilter==="all" ? state.questions : state.questions.filter(q=>q.chapter===state.quizChapterFilter);
+      state.quizPool = [...src].sort(()=>Math.random()-0.5);
+      state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
+      state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      render();
+    });
+    function recordAnswer(current, correct){
+      markStudiedToday();
+      state.quizStats = {correct: state.quizStats.correct+(correct?1:0), total: state.quizStats.total+1};
+      const m = state.wrongMap;
+      if(!correct){
+        const existing = m[current.id]||{wrongCount:0};
+        const wrongCount = existing.wrongCount+1;
+        const intervalDays = [1,3,7,14][Math.min(wrongCount-1,3)];
+        const due = new Date(); due.setDate(due.getDate()+intervalDays);
+        m[current.id] = {wrongCount, lastSeen:todayStr(), dueDate:due.toISOString().slice(0,10), mastered:false};
+      } else if(m[current.id]){
+        if(m[current.id].wrongCount<=1){ m[current.id] = {...m[current.id], mastered:true}; }
+        else{
+          const due = new Date(); due.setDate(due.getDate()+14);
+          m[current.id] = {...m[current.id], dueDate:due.toISOString().slice(0,10)};
+        }
+      }
+      persist("wrongMap");
+    }
+    root.querySelectorAll("[data-choose]").forEach(el=>el.addEventListener("click",()=>{
+      if(state.quizRevealed) return;
+      const i = parseInt(el.dataset.choose,10);
+      const current = state.quizPool[state.quizIdx];
+      state.quizSelected = i; state.quizRevealed = true;
+      recordAnswer(current, i===current.answer);
+      render();
+    }));
+    root.querySelectorAll("[data-multitoggle]").forEach(el=>el.addEventListener("click",()=>{
+      if(state.quizRevealed) return;
+      const i = parseInt(el.dataset.multitoggle,10);
+      const idx = state.quizMultiSelected.indexOf(i);
+      if(idx>=0) state.quizMultiSelected.splice(idx,1); else state.quizMultiSelected.push(i);
+      render();
+    }));
+    const multiSubmitBtn = document.getElementById("multiSubmitBtn");
+    if(multiSubmitBtn) multiSubmitBtn.addEventListener("click",()=>{
+      const current = state.quizPool[state.quizIdx];
+      const a = [...state.quizMultiSelected].sort();
+      const b = [...current.answer].sort();
+      const correct = a.length===b.length && a.every((v,i2)=>v===b[i2]);
+      state.quizRevealed = true;
+      recordAnswer(current, correct);
+      render();
+    });
+    const fillInputEl = document.getElementById("fillInput");
+    if(fillInputEl) fillInputEl.addEventListener("input",e=>{ state.quizFillInput = e.target.value; });
+    const fillSubmitBtn = document.getElementById("fillSubmitBtn");
+    if(fillSubmitBtn) fillSubmitBtn.addEventListener("click",()=>{
+      const current = state.quizPool[state.quizIdx];
+      const norm = s => (s||"").toString().trim().toLowerCase().replace(/\s+/g,"");
+      const correct = norm(state.quizFillInput) === norm(current.answer);
+      state.quizFillCorrect = correct;
+      state.quizRevealed = true;
+      recordAnswer(current, correct);
+      render();
+    });
+    const nextQuizBtn = document.getElementById("nextQuizBtn");
+    if(nextQuizBtn) nextQuizBtn.addEventListener("click",()=>{
+      if(state.quizIdx+1<state.quizPool.length){
+        state.quizIdx++; state.quizSelected=null; state.quizRevealed=false;
+        state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      } else {
+        state.quizPool=[];
+      }
+      render();
+    });
+
+    root.querySelectorAll("[data-showans]").forEach(el=>el.addEventListener("click",()=>{
+      const box = root.querySelector(`[data-ansbox="${el.dataset.showans}"]`);
+      if(box){ box.style.display="block"; el.style.display="none"; }
+    }));
+    root.querySelectorAll("[data-mastered]").forEach(el=>el.addEventListener("click",()=>{
+      const id = el.dataset.mastered;
+      state.wrongMap[id] = {...state.wrongMap[id], mastered:true};
+      persist("wrongMap"); render();
+    }));
+
+    const lawSearchInput = document.getElementById("lawSearchInput");
+    if(lawSearchInput){
+      lawSearchInput.addEventListener("input",e=>{ state.lawQuery=e.target.value; render(); });
+      lawSearchInput.focus();
+      lawSearchInput.selectionStart = lawSearchInput.selectionEnd = lawSearchInput.value.length;
+    }
+    const lawToggleForm = document.getElementById("lawToggleForm");
+    if(lawToggleForm) lawToggleForm.addEventListener("click",()=>{ state.lawShowForm=!state.lawShowForm; render(); });
+    const bindLawField = (id,field)=>{
+      const el = document.getElementById(id);
+      if(el) el.addEventListener("input",e=>{ state.lawDraft[field]=e.target.value; });
+    };
+    bindLawField("lawDraftLaw","law"); bindLawField("lawDraftArticle","article");
+    bindLawField("lawDraftPenalty","penalty"); bindLawField("lawDraftRefs","refs"); bindLawField("lawDraftNote","note");
+    const lawAddBtn = document.getElementById("lawAddBtn");
+    if(lawAddBtn) lawAddBtn.addEventListener("click",()=>{
+      const d = state.lawDraft;
+      if(!d.article.trim() || !d.penalty.trim()){ alert("至少要填條號與罰則內容"); return; }
+      state.laws.unshift({id:uid(), ...d, seed:false});
+      state.lawDraft = {law:"職業安全衛生法",article:"",penalty:"",refs:"",note:""};
+      state.lawShowForm=false;
+      persist("laws"); render();
+    });
+    root.querySelectorAll("[data-dellaw]").forEach(el=>el.addEventListener("click",()=>{
+      state.laws = state.laws.filter(l=>l.id!==el.dataset.dellaw);
+      persist("laws"); render();
+    }));
+
+    /* --- 備份/還原 --- */
+    function getExportPayload(){
+      return {
+        v:1, examDate:state.examDate, chapterState:state.chapterState,
+        questions:state.questions, wrongMap:state.wrongMap,
+        studyLog:state.studyLog, laws:state.laws,
+        exportedAt:new Date().toISOString()
+      };
+    }
+    function applyImportPayload(data){
+      if(!data.v||!data.chapterState) throw new Error("格式錯誤");
+      state.examDate = data.examDate||"";
+      state.chapterState = data.chapterState;
+      state.questions = data.questions||[];
+      state.wrongMap = data.wrongMap||{};
+      state.studyLog = data.studyLog||{};
+      state.laws = data.laws||LAW_SEED;
+      saveData("meta",{examDate:state.examDate});
+      saveData("chapterState",state.chapterState);
+      saveData("questions",state.questions);
+      saveData("wrongMap",state.wrongMap);
+      saveData("studyLog",state.studyLog);
+      saveData("laws",state.laws);
+    }
+
+    const shareExportBtn = document.getElementById("shareExportBtn");
+    if(shareExportBtn) shareExportBtn.addEventListener("click",()=>{
+      const json = JSON.stringify(getExportPayload(), null, 2);
+      const blob = new Blob([json], {type:"application/json"});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "職安衛讀書進度_" + todayStr() + ".json";
+      a.click();
+      URL.revokeObjectURL(url);
+      state.syncMsg = "✓ 已下載備份檔案";
+      render();
+    });
+
+    const importBtn = document.getElementById("importBtn");
+    if(importBtn) importBtn.addEventListener("click",()=>{
+      const ta = document.getElementById("importText");
+      const msg = document.getElementById("importMsg");
+      if(!ta||!msg) return;
+      try{
+        const data = JSON.parse(ta.value.trim());
+        if(!confirm("確定匯入並覆蓋這台裝置的所有進度？")) return;
+        applyImportPayload(data);
+        msg.style.color="#2F6B4F"; msg.textContent="✓ 匯入成功！";
+        setTimeout(()=>{ state.tab="dashboard"; render(); }, 1000);
+      } catch(e){
+        msg.style.color="#b9554a"; msg.textContent="失敗："+e.message;
+      }
+    });
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
