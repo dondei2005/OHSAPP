@@ -658,28 +658,28 @@
   function renderSync(){
     const syncMsg = state.syncMsg||"";
     return `
-      <div class="section-title">⇅ 資料備份與還原</div>
-      <div class="section-desc">把進度匯出成 JSON 備份，存到 OneDrive 或傳給自己即可換裝置。</div>
+      <div class="section-title">⇅ 進度同步</div>
+      <div class="section-desc">在一台裝置匯出，傳到另一台匯入，即可同步讀書進度。</div>
 
       <div class="tip-box">
-        <div class="tip-title">OneDrive 跨裝置流程</div>
+        <div class="tip-title">跨裝置同步流程（利用 OneDrive）</div>
         <ul class="tip-list">
-          <li>電腦：按「匯出並下載」，把下載的 JSON 存到 OneDrive 資料夾</li>
-          <li>手機：在 OneDrive App 找到該 JSON 檔，複製內容</li>
-          <li>手機：打開這個頁面，到「匯入」貼上後按匯入</li>
+          <li>電腦：按「匯出進度」→ 下載的 JSON 移到 OneDrive 資料夾</li>
+          <li>手機：按「選擇進度檔案」→ 從 OneDrive 選取該 JSON → 自動匯入</li>
+          <li>反向操作同理（手機匯出 → 電腦匯入）</li>
         </ul>
       </div>
 
-      <button class="primary-btn" id="shareExportBtn" style="margin-top:4px;">📤 匯出並下載</button>
+      <button class="primary-btn" id="shareExportBtn" style="margin-top:8px;">📤 匯出進度</button>
 
       ${syncMsg ? `<div style="font-size:13px;margin-top:8px;padding:10px;border-radius:8px;background:${syncMsg.startsWith('✓')?'#e1efe5':'#faeae7'};color:${syncMsg.startsWith('✓')?'#2f6b4f':'#b9554a'};">${esc(syncMsg)}</div>` : ""}
 
       <div style="margin-top:20px;border-top:1px solid #E7E1D4;padding-top:16px;">
         <div class="sub-title">📥 匯入進度</div>
-        <div class="section-desc">把另一台匯出的 JSON 內容貼在這裡：</div>
-        <textarea id="importText" class="text-area" style="min-height:100px;font-size:10px;font-family:monospace;" placeholder="貼上備份 JSON 內容"></textarea>
-        <button class="primary-btn" id="importBtn" style="margin-top:8px;background:#a8631f;">匯入並覆蓋</button>
-        <div id="importMsg" style="font-size:13px;margin-top:6px;"></div>
+        <div class="section-desc">選取另一台裝置匯出的 JSON 檔案：</div>
+        <label for="importFileInput" class="primary-btn" style="display:block;text-align:center;margin-top:8px;padding:11px 18px;background:#a8631f;cursor:pointer;">選擇進度檔案</label>
+        <input type="file" id="importFileInput" accept=".json" style="display:none;">
+        <div id="importMsg" style="font-size:13px;margin-top:8px;"></div>
       </div>
     `;
   }
@@ -968,20 +968,24 @@
       render();
     });
 
-    const importBtn = document.getElementById("importBtn");
-    if(importBtn) importBtn.addEventListener("click",()=>{
-      const ta = document.getElementById("importText");
+    const importFileInput = document.getElementById("importFileInput");
+    if(importFileInput) importFileInput.addEventListener("change", e=>{
+      const file = e.target.files[0];
+      if(!file) return;
       const msg = document.getElementById("importMsg");
-      if(!ta||!msg) return;
-      try{
-        const data = JSON.parse(ta.value.trim());
-        if(!confirm("確定匯入並覆蓋這台裝置的所有進度？")) return;
-        applyImportPayload(data);
-        msg.style.color="#2F6B4F"; msg.textContent="✓ 匯入成功！";
-        setTimeout(()=>{ state.tab="dashboard"; render(); }, 1000);
-      } catch(e){
-        msg.style.color="#b9554a"; msg.textContent="失敗："+e.message;
-      }
+      const reader = new FileReader();
+      reader.onload = evt=>{
+        try{
+          const data = JSON.parse(evt.target.result);
+          if(!confirm("確定匯入並覆蓋這台裝置的所有進度？")) return;
+          applyImportPayload(data);
+          if(msg){ msg.style.color="#2F6B4F"; msg.textContent="✓ 匯入成功！"; }
+          setTimeout(()=>{ state.tab="dashboard"; render(); }, 1000);
+        } catch(err){
+          if(msg){ msg.style.color="#b9554a"; msg.textContent="失敗："+err.message; }
+        }
+      };
+      reader.readAsText(file);
     });
   }
 
