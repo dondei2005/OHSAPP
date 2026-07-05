@@ -575,11 +575,12 @@
     return `
       <div class="quiz-progress">第 ${state.quizIdx+1} / ${state.quizPool.length} 題 · 答對 ${state.quizStats.correct}</div>
       <div class="quiz-card">
-        <div class="quiz-chapter-tag">${current.chapter===0?'概論':('第'+toChinese(current.chapter)+'章')}${qtype==='multi'?' · 複選題':qtype==='fill'?' · 填空題':''}</div>
+        <div class="quiz-chapter-tag">${current.chapter===0?'概論':('第'+toChinese(current.chapter)+'章')}${qtype==='multi'?' · 複選題':qtype==='fill'?' · 填空題':qtype==='truefalse'?' · 是非題':''}</div>
         <div class="quiz-question">${esc(current.text)}</div>
         ${qtype==='single' ? renderSingleOptions(current) : ""}
         ${qtype==='multi' ? renderMultiOptions(current) : ""}
         ${qtype==='fill' ? renderFillInput(current) : ""}
+        ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
         ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
         ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
@@ -617,6 +618,19 @@
     const submit = !state.quizRevealed ? `<button class="primary-btn" id="fillSubmitBtn" style="margin-bottom:10px;">提交答案</button>` : "";
     const result = state.quizRevealed ? `<div class="q-answer" style="margin-bottom:10px;">正確答案：${esc(current.answer)}　${state.quizFillCorrect?'（你答對了 ✓）':'（你的答案：'+esc(state.quizFillInput||'（空白）')+'）'}</div>` : "";
     return input + submit + result;
+  }
+  function renderTrueFalseOptions(current){
+    const choices = [{label:"○ 正確", value:"true"}, {label:"✕ 錯誤", value:"false"}];
+    return choices.map(c=>{
+      let cls="quiz-option";
+      if(state.quizRevealed){
+        if(c.value===current.answer) cls+=" correct";
+        else if(c.value===state.quizSelected) cls+=" wrong";
+      }
+      return `<button class="${cls}" data-choose="${c.value}" ${state.quizRevealed?'disabled':''}>
+        <span class="quiz-option-label" style="font-size:15px;">${c.value==="true"?"○":"✕"}</span>${c.label.split(" ").slice(1).join(" ")}
+      </button>`;
+    }).join("");
   }
 
   /* ---------- Wrong book ---------- */
@@ -662,10 +676,10 @@
       <div class="section-desc">在一台裝置匯出，傳到另一台匯入，即可同步讀書進度。</div>
 
       <div class="tip-box">
-        <div class="tip-title">跨裝置同步流程（利用 OneDrive）</div>
+        <div class="tip-title">跨裝置同步流程（利用 Google Drive）</div>
         <ul class="tip-list">
-          <li>電腦：按「匯出進度」→ 下載的 JSON 移到 OneDrive 資料夾</li>
-          <li>手機：按「選擇進度檔案」→ 從 OneDrive 選取該 JSON → 自動匯入</li>
+          <li>電腦：按「匯出進度」→ 下載的 JSON 上傳到 Google Drive</li>
+          <li>手機：按「選擇進度檔案」→ 從 Google Drive 選取該 JSON → 自動匯入</li>
           <li>反向操作同理（手機匯出 → 電腦匯入）</li>
         </ul>
       </div>
@@ -845,10 +859,11 @@
     }
     root.querySelectorAll("[data-choose]").forEach(el=>el.addEventListener("click",()=>{
       if(state.quizRevealed) return;
-      const i = parseInt(el.dataset.choose,10);
+      const raw = el.dataset.choose;
+      const val = (raw==="true"||raw==="false") ? raw : parseInt(raw,10);
       const current = state.quizPool[state.quizIdx];
-      state.quizSelected = i; state.quizRevealed = true;
-      recordAnswer(current, i===current.answer);
+      state.quizSelected = val; state.quizRevealed = true;
+      recordAnswer(current, val===current.answer);
       render();
     }));
     root.querySelectorAll("[data-multitoggle]").forEach(el=>el.addEventListener("click",()=>{
