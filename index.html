@@ -71,13 +71,13 @@
   .delete-btn{ position:absolute; top:10px; right:10px; border:none; background:transparent; color:#b9554a; font-size:11px; }
   .quiz-progress{ font-size:12.5px; color:#9a9488; font-weight:600; }
   .quiz-card{ background:#fff; border:1px solid #E7E1D4; border-radius:16px; padding:16px; }
-  .quiz-chapter-tag{ font-size:11px; color:#A8631F; font-weight:700; margin-bottom:6px; }
-  .quiz-question{ font-size:15px; font-weight:600; line-height:1.6; margin-bottom:12px; }
-  .quiz-option{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1px solid #E7E1D4; background:#FCFBF8; border-radius:10px; padding:11px 12px; font-size:13.5px; margin-bottom:8px; }
+  .quiz-chapter-tag{ font-size:12px; color:#A8631F; font-weight:700; margin-bottom:6px; }
+  .quiz-question{ font-size:18px; font-weight:600; line-height:1.6; margin-bottom:12px; }
+  .quiz-option{ display:flex; align-items:center; gap:10px; width:100%; text-align:left; border:1px solid #E7E1D4; background:#FCFBF8; border-radius:10px; padding:11px 12px; font-size:16px; margin-bottom:8px; }
   .quiz-option.correct{ border-color:#2F6B4F; background:#E5F2EA; }
   .quiz-option.wrong{ border-color:#B9554A; background:#FAEAE7; }
-  .quiz-option-label{ width:22px; height:22px; border-radius:50%; background:#EFEAE0; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:700; flex-shrink:0; }
-  .quiz-note{ font-size:12.5px; color:#6b6356; margin-top:4px; margin-bottom:10px; }
+  .quiz-option-label{ width:24px; height:24px; border-radius:50%; background:#EFEAE0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
+  .quiz-note{ font-size:14.5px; color:#6b6356; margin-top:4px; margin-bottom:10px; }
   .result-card{ margin-top:10px; font-size:13px; color:#6b6356; background:#F1EFE9; border-radius:10px; padding:10px; text-align:center; }
   .wrong-card{ background:#fff; border:1px solid #E7E1D4; border-radius:12px; padding:12px; margin-bottom:8px; }
   .wrong-top{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
@@ -275,7 +275,7 @@
     bankDraft:{chapter:1,text:"",options:["","","",""],answer:0,note:""},
     bankBulkText:"", bankBulkMsg:"", bankFilterChapter:"all",
     quizChapterFilter:"all", quizPool:[], quizIdx:0, quizSelected:null, quizRevealed:false, quizStats:{correct:0,total:0},
-    quizMultiSelected:[], quizFillInput:"", quizFillCorrect:false,
+    quizMultiSelected:[], quizFillInput:"", quizFillCorrect:false, quizMode:"chapter", quizHistory:[],
     lawQuery:"", lawShowForm:false, lawDraft:{law:"職業安全衛生法",article:"",penalty:"",refs:"",note:""},
     headerEditing:false,
     syncMsg:"",
@@ -329,6 +329,7 @@
     state.wrongMap = loadData("wrongMap", {});
     state.studyLog = loadData("studyLog", {});
     state.laws = loadData("laws", LAW_SEED);
+    state.quizHistory = loadData("quizHistory", []);
     state.loaded = true;
     render();
   }
@@ -342,6 +343,7 @@
       wrongMap: ()=>saveData("wrongMap",state.wrongMap),
       studyLog: ()=>saveData("studyLog",state.studyLog),
       laws: ()=>saveData("laws",state.laws),
+      quizHistory: ()=>saveData("quizHistory",state.quizHistory),
     };
     if(map[key]) map[key]();
   }
@@ -586,7 +588,9 @@
           }).join("")}
         </select>
         <button class="primary-btn" id="startQuizBtn">開始隨機練習</button>
+        <button class="primary-btn" id="startRandom20Btn" style="margin-top:8px;background:#2f6b4f;">🎲 綜合隨機 20 題（跨章節測驗）</button>
         ${state.quizStats.total>0 ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : ""}
+        ${renderQuizHistory()}
       `;
     }
     const current = state.quizPool[state.quizIdx];
@@ -604,6 +608,17 @@
         ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
     `;
+  }
+  function renderQuizHistory(){
+    if(state.quizHistory.length===0) return "";
+    const rows = state.quizHistory.slice(0,10).map(h=>{
+      const pct = h.total>0 ? Math.round(h.correct/h.total*100) : 0;
+      return `<div class="wrong-top" style="justify-content:space-between;">
+        <span class="q-chapter">${esc(h.date)}</span>
+        <span>${h.correct} / ${h.total} 答對（${pct}%）</span>
+      </div>`;
+    }).join("");
+    return `<div class="section-title" style="margin-top:18px;">綜合隨機測驗成績記錄</div>${rows}`;
   }
   function renderSingleOptions(current){
     return current.options.map((opt,i)=>{
@@ -653,6 +668,44 @@
   }
 
   /* ---------- Wrong book ---------- */
+  function computeWrongStats(){
+    const idToChapter = {};
+    state.questions.forEach(q=>{ idToChapter[q.id] = q.chapter; });
+    const byChapter = {};
+    let totalAll=0, masteredAll=0;
+    Object.keys(state.wrongMap).forEach(qid=>{
+      const c = idToChapter[qid];
+      if(c===undefined) return;
+      const meta = state.wrongMap[qid];
+      if(!byChapter[c]) byChapter[c] = {total:0, mastered:0};
+      byChapter[c].total++; totalAll++;
+      if(meta.mastered){ byChapter[c].mastered++; masteredAll++; }
+    });
+    return {byChapter, totalAll, masteredAll};
+  }
+  function renderWrongStats(){
+    const {byChapter, totalAll, masteredAll} = computeWrongStats();
+    if(totalAll===0) return "";
+    const overallPct = Math.round(masteredAll/totalAll*100);
+    const rows = Object.keys(byChapter)
+      .map(c=>parseInt(c,10))
+      .sort((a,b)=>(byChapter[a].mastered/byChapter[a].total)-(byChapter[b].mastered/byChapter[b].total))
+      .map(c=>{
+        const s = byChapter[c];
+        const pct = Math.round(s.mastered/s.total*100);
+        const title = c===0 ? "概論（基礎概念）" : ((CHAPTERS.find(ch=>ch.id===c)||{}).title || "");
+        const label = c===0?'概論':('第'+toChinese(c)+'章');
+        return `<div class="wrong-top" style="justify-content:space-between;">
+          <span class="q-chapter">${label} ${esc(title)}</span>
+          <span>${s.mastered} / ${s.total} 已熟記（${pct}%）</span>
+        </div>`;
+      }).join("");
+    return `
+      <div class="section-desc" style="margin-top:4px;">整體錯題完成率：${masteredAll} / ${totalAll}（${overallPct}%）已熟記</div>
+      <div class="sub-title">各章節完成率（由弱到強排序，方便針對不熟章節加強）</div>
+      ${rows}
+    `;
+  }
   function computeWrongQuestions(){
     return state.questions
       .filter(q=>state.wrongMap[q.id] && !state.wrongMap[q.id].mastered)
@@ -680,6 +733,7 @@
     return `
       <div class="section-title">錯題本</div>
       <div class="section-desc">答錯的題目會依錯誤次數安排複習間隔（1 / 3 / 7 / 14 天），到期的題目會列在「今天該複習」。</div>
+      ${renderWrongStats()}
       <div class="sub-title">今天該複習（${due.length}）</div>
       ${due.length===0?`<div class="empty-hint">太好了，今天沒有需要複習的錯題。</div>`:""}
       ${due.map(q=>card(q,false)).join("")}
@@ -853,6 +907,15 @@
     if(startQuizBtn) startQuizBtn.addEventListener("click",()=>{
       const src = state.quizChapterFilter==="all" ? state.questions : state.questions.filter(q=>q.chapter===state.quizChapterFilter);
       state.quizPool = [...src].sort(()=>Math.random()-0.5);
+      state.quizMode = "chapter";
+      state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
+      state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      render();
+    });
+    const startRandom20Btn = document.getElementById("startRandom20Btn");
+    if(startRandom20Btn) startRandom20Btn.addEventListener("click",()=>{
+      state.quizPool = [...state.questions].sort(()=>Math.random()-0.5).slice(0,20);
+      state.quizMode = "random20";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       render();
@@ -920,6 +983,10 @@
         state.quizIdx++; state.quizSelected=null; state.quizRevealed=false;
         state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       } else {
+        if(state.quizMode==="random20"){
+          state.quizHistory = [{date:todayStr(), correct:state.quizStats.correct, total:state.quizStats.total}, ...state.quizHistory].slice(0,50);
+          persist("quizHistory");
+        }
         state.quizPool=[];
       }
       render();
@@ -968,7 +1035,7 @@
       return {
         v:1, examDate:state.examDate, chapterState:state.chapterState,
         questions:state.questions, wrongMap:state.wrongMap,
-        studyLog:state.studyLog, laws:state.laws,
+        studyLog:state.studyLog, laws:state.laws, quizHistory:state.quizHistory,
         exportedAt:new Date().toISOString()
       };
     }
@@ -980,12 +1047,14 @@
       state.wrongMap = data.wrongMap||{};
       state.studyLog = data.studyLog||{};
       state.laws = data.laws||LAW_SEED;
+      state.quizHistory = data.quizHistory||[];
       saveData("meta",{examDate:state.examDate});
       saveData("chapterState",state.chapterState);
       saveData("questions",state.questions);
       saveData("wrongMap",state.wrongMap);
       saveData("studyLog",state.studyLog);
       saveData("laws",state.laws);
+      saveData("quizHistory",state.quizHistory);
     }
 
     const shareExportBtn = document.getElementById("shareExportBtn");
