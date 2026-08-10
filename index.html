@@ -232,6 +232,7 @@
     {id:"s3-011",chapter:5,type:"fill",text:"辦理訓練文件如有變動，應檢附變更事項於開訓前【　】日，報請當地主管機關備查。",answer:"1",note:""},
   ];
 
+  const CLOUD_SYNC_URL = "";
   const uid = () => Math.random().toString(36).slice(2,10);
   const todayStr = () => new Date().toISOString().slice(0,10);
   function daysUntil(dateStr){
@@ -283,6 +284,7 @@
     lawQuery:"", lawShowForm:false, lawDraft:{law:"職業安全衛生法",article:"",penalty:"",refs:"",note:""},
     headerEditing:false,
     syncMsg:"",
+    cloudSyncMsg:"",
   };
 
   const root = document.getElementById("app");
@@ -836,31 +838,110 @@
   }
 
   /* ---------- Sync / Backup ---------- */
+  function getCloudSyncPayload(){
+    return {
+      v:1,
+      examDate: state.examDate,
+      chapterState: state.chapterState,
+      wrongMap: state.wrongMap,
+      studyLog: state.studyLog,
+      quizHistory: state.quizHistory,
+      examAHistory: state.examAHistory,
+      examASeenIds: state.examASeenIds,
+      syncedAt: new Date().toISOString()
+    };
+  }
+  const CHAPTER_STATUS_RANK = {todo:0, reading:1, done:2};
+  function mergeProgress(local, cloud){
+    cloud = cloud || {};
+    const merged = {};
+    merged.examDate = local.examDate || cloud.examDate || "";
+
+    merged.chapterState = {...(cloud.chapterState||{}), ...(local.chapterState||{})};
+    Object.keys(merged.chapterState).forEach(id=>{
+      const l = (local.chapterState||{})[id], c = (cloud.chapterState||{})[id];
+      if(l && c){
+        const status = (CHAPTER_STATUS_RANK[l.status]||0) >= (CHAPTER_STATUS_RANK[c.status]||0) ? l.status : c.status;
+        merged.chapterState[id] = {status, notes: l.notes || c.notes || ""};
+      }
+    });
+
+    merged.wrongMap = {...(cloud.wrongMap||{})};
+    Object.keys(local.wrongMap||{}).forEach(id=>{
+      const l = local.wrongMap[id], c = merged.wrongMap[id];
+      if(!c || (l.wrongCount||0) > (c.wrongCount||0) || (l.lastSeen||"") > (c.lastSeen||"")){
+        merged.wrongMap[id] = l;
+      }
+    });
+
+    merged.studyLog = {...(cloud.studyLog||{}), ...(local.studyLog||{})};
+    merged.examASeenIds = {...(cloud.examASeenIds||{}), ...(local.examASeenIds||{})};
+
+    function mergeHistory(a, b){
+      const combined = [...(a||[]), ...(b||[])];
+      const seen = new Set();
+      const deduped = combined.filter(h=>{
+        const key = h.date+'|'+h.correct+'|'+h.total;
+        if(seen.has(key)) return false;
+        seen.add(key); return true;
+      });
+      deduped.sort((x,y)=>(y.date||"").localeCompare(x.date||""));
+      return deduped.slice(0,50);
+    }
+    merged.quizHistory = mergeHistory(local.quizHistory, cloud.quizHistory);
+    merged.examAHistory = mergeHistory(local.examAHistory, cloud.examAHistory);
+
+    return merged;
+  }
+  function applyMergedProgress(merged){
+    state.examDate = merged.examDate;
+    state.chapterState = merged.chapterState;
+    state.wrongMap = merged.wrongMap;
+    state.studyLog = merged.studyLog;
+    state.examASeenIds = merged.examASeenIds;
+    state.quizHistory = merged.quizHistory;
+    state.examAHistory = merged.examAHistory;
+    saveData("meta", {examDate: state.examDate});
+    saveData("chapterState", state.chapterState);
+    saveData("wrongMap", state.wrongMap);
+    saveData("studyLog", state.studyLog);
+    saveData("examASeenIds", state.examASeenIds);
+    saveData("quizHistory", state.quizHistory);
+    saveData("examAHistory", state.examAHistory);
+  }
   function renderSync(){
     const syncMsg = state.syncMsg||"";
+    const cloudMsg = state.cloudSyncMsg||"";
     return `
-      <div class="section-title">⇅ 進度同步</div>
-      <div class="section-desc">在一台裝置匯出，傳到另一台匯入，即可同步讀書進度。</div>
-
-      <div class="tip-box">
-        <div class="tip-title">跨裝置同步流程（利用 Google Drive）</div>
-        <ul class="tip-list">
-          <li>電腦：按「匯出進度」→ 下載的 JSON 上傳到 Google Drive</li>
-          <li>手機：按「選擇進度檔案」→ 從 Google Drive 選取該 JSON → 自動匯入</li>
-          <li>反向操作同理（手機匯出 → 電腦匯入）</li>
-        </ul>
-      </div>
-
-      <button class="primary-btn" id="shareExportBtn" style="margin-top:8px;">📤 匯出進度</button>
-
-      ${syncMsg ? `<div style="font-size:13px;margin-top:8px;padding:10px;border-radius:8px;background:${syncMsg.startsWith('✓')?'#e1efe5':'#faeae7'};color:${syncMsg.startsWith('✓')?'#2f6b4f':'#b9554a'};">${esc(syncMsg)}</div>` : ""}
+      <div class="section-title">☁️ 雲端同步（推薦）</div>
+      <div class="section-desc">一鍵把這台裝置的錯題本、成績記錄、完成率跟雲端合併——不管在哪個裝置按，都會自動累加，不會互相覆蓋掉。</div>
+      <button class="primary-btn" id="cloudSyncBtn" style="margin-top:8px;background:#2f6b4f;">☁️ 同步進度到雲端</button>
+      ${cloudMsg ? `<div style="font-size:13px;margin-top:8px;padding:10px;border-radius:8px;background:${cloudMsg.startsWith('✓')?'#e1efe5':'#faeae7'};color:${cloudMsg.startsWith('✓')?'#2f6b4f':'#b9554a'};">${esc(cloudMsg)}</div>` : ""}
 
       <div style="margin-top:20px;border-top:1px solid #E7E1D4;padding-top:16px;">
-        <div class="sub-title">📥 匯入進度</div>
-        <div class="section-desc">選取另一台裝置匯出的 JSON 檔案：</div>
-        <label for="importFileInput" class="primary-btn" style="display:block;text-align:center;margin-top:8px;padding:11px 18px;background:#a8631f;cursor:pointer;">選擇進度檔案</label>
-        <input type="file" id="importFileInput" accept=".json" style="display:none;">
-        <div id="importMsg" style="font-size:13px;margin-top:8px;"></div>
+        <div class="section-title">⇅ 手動進度同步（備用）</div>
+        <div class="section-desc">在一台裝置匯出，傳到另一台匯入，即可同步讀書進度。</div>
+
+        <div class="tip-box">
+          <div class="tip-title">跨裝置同步流程（利用 Google Drive）</div>
+          <ul class="tip-list">
+            <li>電腦：按「匯出進度」→ 下載的 JSON 上傳到 Google Drive</li>
+            <li>手機：按「選擇進度檔案」→ 從 Google Drive 選取該 JSON → 自動匯入</li>
+            <li>反向操作同理（手機匯出 → 電腦匯入）</li>
+          </ul>
+        </div>
+
+        <button class="primary-btn" id="shareExportBtn" style="margin-top:8px;">📤 匯出進度</button>
+
+        ${syncMsg ? `<div style="font-size:13px;margin-top:8px;padding:10px;border-radius:8px;background:${syncMsg.startsWith('✓')?'#e1efe5':'#faeae7'};color:${syncMsg.startsWith('✓')?'#2f6b4f':'#b9554a'};">${esc(syncMsg)}</div>` : ""}
+
+        <div style="margin-top:20px;border-top:1px solid #E7E1D4;padding-top:16px;">
+          <div class="sub-title">📥 匯入進度</div>
+          <div class="section-desc">選取另一台裝置匯出的 JSON 檔案：</div>
+          <label for="importFileInput" class="primary-btn" style="display:block;text-align:center;margin-top:8px;padding:11px 18px;background:#a8631f;cursor:pointer;">選擇進度檔案</label>
+          <input type="file" id="importFileInput" accept=".json" style="display:none;">
+          <div id="importMsg" style="font-size:13px;margin-top:8px;"></div>
+        </div>
       </div>
     `;
   }
@@ -1201,6 +1282,45 @@
       saveData("examAHistory",state.examAHistory);
       saveData("examASeenIds",state.examASeenIds);
     }
+
+    const cloudSyncBtn = document.getElementById("cloudSyncBtn");
+    if(cloudSyncBtn) cloudSyncBtn.addEventListener("click",()=>{
+      if(!CLOUD_SYNC_URL){
+        state.cloudSyncMsg = "✕ 尚未設定雲端網址";
+        render();
+        return;
+      }
+      state.cloudSyncMsg = "同步中…";
+      render();
+      const cbName = "ohsCloudSync_" + Date.now();
+      const scriptEl = document.createElement("script");
+      window[cbName] = function(cloudData){
+        delete window[cbName];
+        scriptEl.remove();
+        try{
+          const local = getCloudSyncPayload();
+          const merged = mergeProgress(local, cloudData);
+          applyMergedProgress(merged);
+          fetch(CLOUD_SYNC_URL, {
+            method: "POST",
+            mode: "no-cors",
+            headers: {"Content-Type":"text/plain;charset=utf-8"},
+            body: JSON.stringify(merged)
+          }).catch(()=>{});
+          state.cloudSyncMsg = "✓ 已同步（" + new Date().toLocaleString('zh-TW') + "）";
+        } catch(err){
+          state.cloudSyncMsg = "✕ 同步失敗：" + err.message;
+        }
+        render();
+      };
+      scriptEl.onerror = ()=>{
+        delete window[cbName];
+        state.cloudSyncMsg = "✕ 無法連上雲端，請檢查網路連線";
+        render();
+      };
+      scriptEl.src = CLOUD_SYNC_URL + (CLOUD_SYNC_URL.includes('?')?'&':'?') + "callback=" + cbName;
+      document.body.appendChild(scriptEl);
+    });
 
     const shareExportBtn = document.getElementById("shareExportBtn");
     if(shareExportBtn) shareExportBtn.addEventListener("click",()=>{
