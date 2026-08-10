@@ -353,6 +353,7 @@
     state.examASeenIds = loadData("examASeenIds", {});
     state.loaded = true;
     render();
+    runCloudSync({silent:true});
   }
 
   function persist(key){
@@ -909,6 +910,41 @@
     saveData("quizHistory", state.quizHistory);
     saveData("examAHistory", state.examAHistory);
   }
+  function runCloudSync(opts){
+    opts = opts || {};
+    if(!CLOUD_SYNC_URL){
+      if(!opts.silent){ state.cloudSyncMsg = "✕ 尚未設定雲端網址"; render(); }
+      return;
+    }
+    if(!opts.silent){ state.cloudSyncMsg = "同步中…"; render(); }
+    const cbName = "ohsCloudSync_" + Date.now();
+    const scriptEl = document.createElement("script");
+    window[cbName] = function(cloudData){
+      delete window[cbName];
+      scriptEl.remove();
+      try{
+        const local = getCloudSyncPayload();
+        const merged = mergeProgress(local, cloudData);
+        applyMergedProgress(merged);
+        fetch(CLOUD_SYNC_URL, {
+          method: "POST",
+          mode: "no-cors",
+          headers: {"Content-Type":"text/plain;charset=utf-8"},
+          body: JSON.stringify(merged)
+        }).catch(()=>{});
+        state.cloudSyncMsg = "✓ 已同步（" + new Date().toLocaleString('zh-TW') + "）";
+      } catch(err){
+        state.cloudSyncMsg = "✕ 同步失敗：" + err.message;
+      }
+      render();
+    };
+    scriptEl.onerror = ()=>{
+      delete window[cbName];
+      if(!opts.silent){ state.cloudSyncMsg = "✕ 無法連上雲端，請檢查網路連線"; render(); }
+    };
+    scriptEl.src = CLOUD_SYNC_URL + (CLOUD_SYNC_URL.includes('?')?'&':'?') + "callback=" + cbName;
+    document.body.appendChild(scriptEl);
+  }
   function renderSync(){
     const syncMsg = state.syncMsg||"";
     const cloudMsg = state.cloudSyncMsg||"";
@@ -1284,43 +1320,7 @@
     }
 
     const cloudSyncBtn = document.getElementById("cloudSyncBtn");
-    if(cloudSyncBtn) cloudSyncBtn.addEventListener("click",()=>{
-      if(!CLOUD_SYNC_URL){
-        state.cloudSyncMsg = "✕ 尚未設定雲端網址";
-        render();
-        return;
-      }
-      state.cloudSyncMsg = "同步中…";
-      render();
-      const cbName = "ohsCloudSync_" + Date.now();
-      const scriptEl = document.createElement("script");
-      window[cbName] = function(cloudData){
-        delete window[cbName];
-        scriptEl.remove();
-        try{
-          const local = getCloudSyncPayload();
-          const merged = mergeProgress(local, cloudData);
-          applyMergedProgress(merged);
-          fetch(CLOUD_SYNC_URL, {
-            method: "POST",
-            mode: "no-cors",
-            headers: {"Content-Type":"text/plain;charset=utf-8"},
-            body: JSON.stringify(merged)
-          }).catch(()=>{});
-          state.cloudSyncMsg = "✓ 已同步（" + new Date().toLocaleString('zh-TW') + "）";
-        } catch(err){
-          state.cloudSyncMsg = "✕ 同步失敗：" + err.message;
-        }
-        render();
-      };
-      scriptEl.onerror = ()=>{
-        delete window[cbName];
-        state.cloudSyncMsg = "✕ 無法連上雲端，請檢查網路連線";
-        render();
-      };
-      scriptEl.src = CLOUD_SYNC_URL + (CLOUD_SYNC_URL.includes('?')?'&':'?') + "callback=" + cbName;
-      document.body.appendChild(scriptEl);
-    });
+    if(cloudSyncBtn) cloudSyncBtn.addEventListener("click",()=>{ runCloudSync(); });
 
     const shareExportBtn = document.getElementById("shareExportBtn");
     if(shareExportBtn) shareExportBtn.addEventListener("click",()=>{
