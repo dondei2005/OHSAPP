@@ -6,6 +6,7 @@
 <title>職安衛乙級讀書計畫</title>
 <script src="./questions.js"></script>
 <script src="./examA_questions.js"></script>
+<script src="./examA_questions_2.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -278,6 +279,7 @@
     quizChapterFilter:"all", quizPool:[], quizIdx:0, quizSelected:null, quizRevealed:false, quizStats:{correct:0,total:0},
     quizMultiSelected:[], quizFillInput:"", quizFillCorrect:false, quizMode:"chapter", quizHistory:[],
     examA:[], examAHistory:[], examAPool:[], examAIdx:0, examASelected:null, examARevealed:false, examAStats:{correct:0,total:0},
+    examASeenIds:{},
     lawQuery:"", lawShowForm:false, lawDraft:{law:"職業安全衛生法",article:"",penalty:"",refs:"",note:""},
     headerEditing:false,
     syncMsg:"",
@@ -334,15 +336,19 @@
     state.quizHistory = loadData("quizHistory", []);
 
     state.examA = loadData("examA", []);
-    if(Array.isArray(window.EXAM_A_QUESTIONS) && window.EXAM_A_QUESTIONS.length > 0){
-      const existExamAIds = new Set(state.examA.map(q=>q.id));
-      const newExamAQs = window.EXAM_A_QUESTIONS.filter(q=>q.id && !existExamAIds.has(q.id));
-      if(newExamAQs.length > 0){
-        state.examA = [...state.examA, ...newExamAQs];
-        saveData("examA", state.examA);
+    const examABanks = [window.EXAM_A_QUESTIONS, window.EXAM_A_QUESTIONS_2];
+    examABanks.forEach(bank=>{
+      if(Array.isArray(bank) && bank.length > 0){
+        const existExamAIds = new Set(state.examA.map(q=>q.id));
+        const newExamAQs = bank.filter(q=>q.id && !existExamAIds.has(q.id));
+        if(newExamAQs.length > 0){
+          state.examA = [...state.examA, ...newExamAQs];
+        }
       }
-    }
+    });
+    saveData("examA", state.examA);
     state.examAHistory = loadData("examAHistory", []);
+    state.examASeenIds = loadData("examASeenIds", {});
     state.loaded = true;
     render();
   }
@@ -359,6 +365,7 @@
       quizHistory: ()=>saveData("quizHistory",state.quizHistory),
       examA: ()=>saveData("examA",state.examA),
       examAHistory: ()=>saveData("examAHistory",state.examAHistory),
+      examASeenIds: ()=>saveData("examASeenIds",state.examASeenIds),
     };
     if(map[key]) map[key]();
   }
@@ -684,35 +691,51 @@
   }
 
   /* ---------- Wrong book ---------- */
+  function idToQuestionMap(){
+    const map = {};
+    state.questions.forEach(q=>{ map[q.id]=q; });
+    state.examA.forEach(q=>{ map[q.id]=q; });
+    return map;
+  }
+  function bucketKey(q){
+    return (q.id && q.id.startsWith('examA')) ? 'examA' : q.chapter;
+  }
+  function bucketLabel(key){
+    if(key==='examA') return '甲業題庫';
+    const n = parseInt(key,10);
+    return n===0 ? '概論' : ('第'+toChinese(n)+'章');
+  }
+  function bucketTitle(key){
+    if(key==='examA') return '一般甲業模擬題庫';
+    const n = parseInt(key,10);
+    return n===0 ? '職業安全概論（基礎概念）' : ((CHAPTERS.find(ch=>ch.id===n)||{}).title || "");
+  }
   function computeWrongStats(){
-    const idToChapter = {};
-    state.questions.forEach(q=>{ idToChapter[q.id] = q.chapter; });
-    const byChapter = {};
+    const qmap = idToQuestionMap();
+    const byBucket = {};
     let totalAll=0, masteredAll=0;
     Object.keys(state.wrongMap).forEach(qid=>{
-      const c = idToChapter[qid];
-      if(c===undefined) return;
+      const q = qmap[qid];
+      if(!q) return;
+      const key = bucketKey(q);
       const meta = state.wrongMap[qid];
-      if(!byChapter[c]) byChapter[c] = {total:0, mastered:0};
-      byChapter[c].total++; totalAll++;
-      if(meta.mastered){ byChapter[c].mastered++; masteredAll++; }
+      if(!byBucket[key]) byBucket[key] = {total:0, mastered:0};
+      byBucket[key].total++; totalAll++;
+      if(meta.mastered){ byBucket[key].mastered++; masteredAll++; }
     });
-    return {byChapter, totalAll, masteredAll};
+    return {byBucket, totalAll, masteredAll};
   }
   function renderWrongStats(){
-    const {byChapter, totalAll, masteredAll} = computeWrongStats();
+    const {byBucket, totalAll, masteredAll} = computeWrongStats();
     if(totalAll===0) return "";
     const overallPct = Math.round(masteredAll/totalAll*100);
-    const rows = Object.keys(byChapter)
-      .map(c=>parseInt(c,10))
-      .sort((a,b)=>(byChapter[a].mastered/byChapter[a].total)-(byChapter[b].mastered/byChapter[b].total))
-      .map(c=>{
-        const s = byChapter[c];
+    const rows = Object.keys(byBucket)
+      .sort((a,b)=>(byBucket[a].mastered/byBucket[a].total)-(byBucket[b].mastered/byBucket[b].total))
+      .map(key=>{
+        const s = byBucket[key];
         const pct = Math.round(s.mastered/s.total*100);
-        const title = c===0 ? "概論（基礎概念）" : ((CHAPTERS.find(ch=>ch.id===c)||{}).title || "");
-        const label = c===0?'概論':('第'+toChinese(c)+'章');
         return `<div class="wrong-top" style="justify-content:space-between;">
-          <span class="q-chapter">${label} ${esc(title)}</span>
+          <span class="q-chapter">${bucketLabel(key)} ${esc(bucketTitle(key))}</span>
           <span>${s.mastered} / ${s.total} 已熟記（${pct}%）</span>
         </div>`;
       }).join("");
@@ -723,9 +746,10 @@
     `;
   }
   function computeWrongQuestions(){
-    return state.questions
-      .filter(q=>state.wrongMap[q.id] && !state.wrongMap[q.id].mastered)
-      .map(q=>({...q, meta:state.wrongMap[q.id]}))
+    const qmap = idToQuestionMap();
+    return Object.keys(state.wrongMap)
+      .filter(id=>qmap[id] && !state.wrongMap[id].mastered)
+      .map(id=>({...qmap[id], meta:state.wrongMap[id]}))
       .sort((a,b)=>(a.meta.dueDate||"").localeCompare(b.meta.dueDate||""));
   }
   function renderWrong(){
@@ -736,7 +760,7 @@
     function card(q,dim){
       return `<div class="wrong-card" style="opacity:${dim?0.6:1}">
         <div class="wrong-top">
-          <span class="q-chapter">${q.chapter===0?'概論':('第'+toChinese(q.chapter)+'章')}</span>
+          <span class="q-chapter">${bucketLabel(bucketKey(q))}</span>
           <span class="wrong-count">錯過 ${q.meta.wrongCount} 次</span>
           ${q.meta.dueDate?`<span class="wrong-due">複習日 ${q.meta.dueDate}</span>`:""}
         </div>
@@ -758,14 +782,23 @@
   }
 
   /* ---------- 甲種模擬考 ---------- */
+  function computeExamAAccuracy(){
+    let correct=0, total=0;
+    state.examAHistory.forEach(h=>{ correct+=h.correct; total+=h.total; });
+    return {correct, total, pct: total>0?Math.round(correct/total*100):0};
+  }
   function renderExamA(){
     if(state.examA.length===0){
-      return `<div class="empty-hint">甲種題庫尚未載入，請確認 examA_questions.js 已正確引入。</div>`;
+      return `<div class="empty-hint">甲種題庫尚未載入，請確認題庫檔案已正確引入。</div>`;
     }
     if(state.examAPool.length===0){
+      const seenCount = Object.keys(state.examASeenIds).length;
+      const coveragePct = state.examA.length>0 ? Math.round(seenCount/state.examA.length*100) : 0;
+      const acc = computeExamAAccuracy();
       return `
         <div class="section-title">甲種業務主管模擬考</div>
-        <div class="section-desc">題庫共 ${state.examA.length} 題，每次模擬考隨機抽 50 題作答，成績會記錄下來，跟乙級章節練習完全獨立。</div>
+        <div class="section-desc">題庫共 ${state.examA.length} 題，每次模擬考隨機抽 50 題作答，優先抽還沒刷過的題目、刷完一輪才會重複；答錯會自動送入錯題本，跟乙級章節練習共用同一本錯題本。</div>
+        <div class="section-desc">已刷過 ${seenCount} / ${state.examA.length} 題（${coveragePct}%）　累計正確率 ${acc.pct}%（${acc.correct}/${acc.total}）</div>
         <button class="primary-btn" id="startExamABtn">📝 開始模擬考（50 題）</button>
         ${state.examAStats.total>0 ? `<div class="result-card">上一輪結果：${state.examAStats.correct} / ${state.examAStats.total} 答對</div>` : ""}
         ${renderExamAHistory()}
@@ -981,24 +1014,27 @@
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       render();
     });
-    function recordAnswer(current, correct){
-      markStudiedToday();
-      state.quizStats = {correct: state.quizStats.correct+(correct?1:0), total: state.quizStats.total+1};
+    function recordWrongMapOutcome(id, correct){
       const m = state.wrongMap;
       if(!correct){
-        const existing = m[current.id]||{wrongCount:0};
+        const existing = m[id]||{wrongCount:0};
         const wrongCount = existing.wrongCount+1;
         const intervalDays = [1,3,7,14][Math.min(wrongCount-1,3)];
         const due = new Date(); due.setDate(due.getDate()+intervalDays);
-        m[current.id] = {wrongCount, lastSeen:todayStr(), dueDate:due.toISOString().slice(0,10), mastered:false};
-      } else if(m[current.id]){
-        if(m[current.id].wrongCount<=1){ m[current.id] = {...m[current.id], mastered:true}; }
+        m[id] = {wrongCount, lastSeen:todayStr(), dueDate:due.toISOString().slice(0,10), mastered:false};
+      } else if(m[id]){
+        if(m[id].wrongCount<=1){ m[id] = {...m[id], mastered:true}; }
         else{
           const due = new Date(); due.setDate(due.getDate()+14);
-          m[current.id] = {...m[current.id], dueDate:due.toISOString().slice(0,10)};
+          m[id] = {...m[id], dueDate:due.toISOString().slice(0,10)};
         }
       }
       persist("wrongMap");
+    }
+    function recordAnswer(current, correct){
+      markStudiedToday();
+      state.quizStats = {correct: state.quizStats.correct+(correct?1:0), total: state.quizStats.total+1};
+      recordWrongMapOutcome(current.id, correct);
     }
     root.querySelectorAll("[data-choose]").forEach(el=>el.addEventListener("click",()=>{
       if(state.quizRevealed) return;
@@ -1055,7 +1091,17 @@
 
     const startExamABtn = document.getElementById("startExamABtn");
     if(startExamABtn) startExamABtn.addEventListener("click",()=>{
-      state.examAPool = [...state.examA].sort(()=>Math.random()-0.5).slice(0,50);
+      const unseen = state.examA.filter(q=>!state.examASeenIds[q.id]);
+      const seen = state.examA.filter(q=>state.examASeenIds[q.id]);
+      const shuffledUnseen = [...unseen].sort(()=>Math.random()-0.5);
+      let pool;
+      if(shuffledUnseen.length >= 50){
+        pool = shuffledUnseen.slice(0,50);
+      } else {
+        const shuffledSeen = [...seen].sort(()=>Math.random()-0.5);
+        pool = [...shuffledUnseen, ...shuffledSeen].slice(0,50);
+      }
+      state.examAPool = pool;
       state.examAIdx=0; state.examASelected=null; state.examARevealed=false; state.examAStats={correct:0,total:0};
       render();
     });
@@ -1066,7 +1112,10 @@
       state.examASelected = i; state.examARevealed = true;
       const correct = i===current.answer;
       state.examAStats = {correct: state.examAStats.correct+(correct?1:0), total: state.examAStats.total+1};
+      state.examASeenIds[current.id] = true;
+      persist("examASeenIds");
       markStudiedToday();
+      recordWrongMapOutcome(current.id, correct);
       render();
     }));
     const nextExamABtn = document.getElementById("nextExamABtn");
@@ -1125,7 +1174,7 @@
         v:1, examDate:state.examDate, chapterState:state.chapterState,
         questions:state.questions, wrongMap:state.wrongMap,
         studyLog:state.studyLog, laws:state.laws, quizHistory:state.quizHistory,
-        examA:state.examA, examAHistory:state.examAHistory,
+        examA:state.examA, examAHistory:state.examAHistory, examASeenIds:state.examASeenIds,
         exportedAt:new Date().toISOString()
       };
     }
@@ -1140,6 +1189,7 @@
       state.quizHistory = data.quizHistory||[];
       state.examA = data.examA||state.examA;
       state.examAHistory = data.examAHistory||[];
+      state.examASeenIds = data.examASeenIds||{};
       saveData("meta",{examDate:state.examDate});
       saveData("chapterState",state.chapterState);
       saveData("questions",state.questions);
@@ -1149,6 +1199,7 @@
       saveData("quizHistory",state.quizHistory);
       saveData("examA",state.examA);
       saveData("examAHistory",state.examAHistory);
+      saveData("examASeenIds",state.examASeenIds);
     }
 
     const shareExportBtn = document.getElementById("shareExportBtn");
