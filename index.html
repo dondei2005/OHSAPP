@@ -7,6 +7,7 @@
 <script src="./questions.js"></script>
 <script src="./examA_questions.js"></script>
 <script src="./examA_questions_2.js"></script>
+<script src="./examB_questions.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -281,6 +282,8 @@
     quizMultiSelected:[], quizFillInput:"", quizFillCorrect:false, quizMode:"chapter", quizHistory:[],
     examA:[], examAHistory:[], examAPool:[], examAIdx:0, examASelected:null, examARevealed:false, examAStats:{correct:0,total:0},
     examASeenIds:{},
+    examB:[], examBHistory:[], examBPool:[], examBIdx:0, examBSelected:null, examBRevealed:false, examBStats:{correct:0,total:0},
+    examBSeenIds:{},
     lawQuery:"", lawShowForm:false, lawDraft:{law:"職業安全衛生法",article:"",penalty:"",refs:"",note:""},
     headerEditing:false,
     syncMsg:"",
@@ -351,6 +354,21 @@
     saveData("examA", state.examA);
     state.examAHistory = loadData("examAHistory", []);
     state.examASeenIds = loadData("examASeenIds", {});
+
+    state.examB = loadData("examB", []);
+    const examBBanks = [window.EXAM_B_QUESTIONS];
+    examBBanks.forEach(bank=>{
+      if(Array.isArray(bank) && bank.length > 0){
+        const existExamBIds = new Set(state.examB.map(q=>q.id));
+        const newExamBQs = bank.filter(q=>q.id && !existExamBIds.has(q.id));
+        if(newExamBQs.length > 0){
+          state.examB = [...state.examB, ...newExamBQs];
+        }
+      }
+    });
+    saveData("examB", state.examB);
+    state.examBHistory = loadData("examBHistory", []);
+    state.examBSeenIds = loadData("examBSeenIds", {});
     state.loaded = true;
     render();
     runCloudSync({silent:true});
@@ -369,6 +387,9 @@
       examA: ()=>saveData("examA",state.examA),
       examAHistory: ()=>saveData("examAHistory",state.examAHistory),
       examASeenIds: ()=>saveData("examASeenIds",state.examASeenIds),
+      examB: ()=>saveData("examB",state.examB),
+      examBHistory: ()=>saveData("examBHistory",state.examBHistory),
+      examBSeenIds: ()=>saveData("examBSeenIds",state.examBSeenIds),
     };
     if(map[key]) map[key]();
   }
@@ -422,7 +443,7 @@
     const dueWrongCount = computeWrongQuestions().filter(q=>!q.meta.dueDate||q.meta.dueDate<=todayStr()).length;
     const items = [
       ["dashboard","◆","總覽"],["chapters","▤","章節"],["bank","✎","題庫"],
-      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["examA","🅰","甲種模擬"],["laws","§","法規"],["sync","⇅","備份"],
+      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["examA","🅰","甲種模擬"],["examB","🅱","乙級模擬"],["laws","§","法規"],["sync","⇅","備份"],
     ];
     return `<nav class="nav">${items.map(it=>{
       const [key,icon,label,badge] = it;
@@ -440,6 +461,7 @@
     if(state.tab==="quiz") return renderQuiz();
     if(state.tab==="wrong") return renderWrong();
     if(state.tab==="examA") return renderExamA();
+    if(state.tab==="examB") return renderExamB();
     if(state.tab==="laws") return renderLaws();
     if(state.tab==="sync") return renderSync();
     return "";
@@ -698,18 +720,23 @@
     const map = {};
     state.questions.forEach(q=>{ map[q.id]=q; });
     state.examA.forEach(q=>{ map[q.id]=q; });
+    state.examB.forEach(q=>{ map[q.id]=q; });
     return map;
   }
   function bucketKey(q){
-    return (q.id && q.id.startsWith('examA')) ? 'examA' : q.chapter;
+    if(q.id && q.id.startsWith('examA')) return 'examA';
+    if(q.id && q.id.startsWith('examB')) return 'examB';
+    return q.chapter;
   }
   function bucketLabel(key){
     if(key==='examA') return '甲業題庫';
+    if(key==='examB') return '乙級考古題';
     const n = parseInt(key,10);
     return n===0 ? '概論' : ('第'+toChinese(n)+'章');
   }
   function bucketTitle(key){
     if(key==='examA') return '一般甲業模擬題庫';
+    if(key==='examB') return '22200職業安全衛生管理乙級學科考古題';
     const n = parseInt(key,10);
     return n===0 ? '職業安全概論（基礎概念）' : ((CHAPTERS.find(ch=>ch.id===n)||{}).title || "");
   }
@@ -838,6 +865,60 @@
     return `<div class="section-title" style="margin-top:18px;">模擬考成績記錄</div>${rows}`;
   }
 
+  /* ---------- 乙級官方學科考古題模擬考 ---------- */
+  function computeExamBAccuracy(){
+    let correct=0, total=0;
+    state.examBHistory.forEach(h=>{ correct+=h.correct; total+=h.total; });
+    return {correct, total, pct: total>0?Math.round(correct/total*100):0};
+  }
+  function renderExamB(){
+    if(state.examB.length===0){
+      return `<div class="empty-hint">乙級學科考古題庫尚未載入，請確認題庫檔案已正確引入。</div>`;
+    }
+    if(state.examBPool.length===0){
+      const seenCount = Object.keys(state.examBSeenIds).length;
+      const coveragePct = state.examB.length>0 ? Math.round(seenCount/state.examB.length*100) : 0;
+      const acc = computeExamBAccuracy();
+      return `
+        <div class="section-title">22200 職業安全衛生管理乙級 學科考古題模擬考</div>
+        <div class="section-desc">題庫共 ${state.examB.length} 題，每次模擬考隨機抽 50 題作答，優先抽還沒刷過的題目、刷完一輪才會重複；答錯會自動送入錯題本，跟乙級章節練習共用同一本錯題本。</div>
+        <div class="section-desc">已刷過 ${seenCount} / ${state.examB.length} 題（${coveragePct}%）　累計正確率 ${acc.pct}%（${acc.correct}/${acc.total}）</div>
+        <button class="primary-btn" id="startExamBBtn">📝 開始模擬考（50 題）</button>
+        ${state.examBStats.total>0 ? `<div class="result-card">上一輪結果：${state.examBStats.correct} / ${state.examBStats.total} 答對</div>` : ""}
+        ${renderExamBHistory()}
+      `;
+    }
+    const current = state.examBPool[state.examBIdx];
+    return `
+      <div class="quiz-progress">第 ${state.examBIdx+1} / ${state.examBPool.length} 題 · 答對 ${state.examBStats.correct}</div>
+      <div class="quiz-card">
+        <div class="quiz-question">${esc(current.text)}</div>
+        ${current.options.map((opt,i)=>{
+          let cls="quiz-option";
+          if(state.examBRevealed){
+            if(i===current.answer) cls+=" correct";
+            else if(i===state.examBSelected) cls+=" wrong";
+          }
+          return `<button class="${cls}" data-exambchoose="${i}" ${state.examBRevealed?'disabled':''}>
+            <span class="quiz-option-label">${'ABCD'[i]}</span>${esc(opt)}
+          </button>`;
+        }).join("")}
+        ${state.examBRevealed ? `<button class="primary-btn" id="nextExamBBtn">${state.examBIdx+1<state.examBPool.length?'下一題':'完成本輪'}</button>` : ""}
+      </div>
+    `;
+  }
+  function renderExamBHistory(){
+    if(state.examBHistory.length===0) return "";
+    const rows = state.examBHistory.slice(0,10).map(h=>{
+      const pct = h.total>0 ? Math.round(h.correct/h.total*100) : 0;
+      return `<div class="wrong-top" style="justify-content:space-between;">
+        <span class="q-chapter">${esc(h.date)}</span>
+        <span>${h.correct} / ${h.total} 答對（${pct}%）</span>
+      </div>`;
+    }).join("");
+    return `<div class="section-title" style="margin-top:18px;">模擬考成績記錄</div>${rows}`;
+  }
+
   /* ---------- Sync / Backup ---------- */
   function getCloudSyncPayload(){
     return {
@@ -849,6 +930,8 @@
       quizHistory: state.quizHistory,
       examAHistory: state.examAHistory,
       examASeenIds: state.examASeenIds,
+      examBHistory: state.examBHistory,
+      examBSeenIds: state.examBSeenIds,
       syncedAt: new Date().toISOString()
     };
   }
@@ -877,6 +960,7 @@
 
     merged.studyLog = {...(cloud.studyLog||{}), ...(local.studyLog||{})};
     merged.examASeenIds = {...(cloud.examASeenIds||{}), ...(local.examASeenIds||{})};
+    merged.examBSeenIds = {...(cloud.examBSeenIds||{}), ...(local.examBSeenIds||{})};
 
     function mergeHistory(a, b){
       const combined = [...(a||[]), ...(b||[])];
@@ -891,6 +975,7 @@
     }
     merged.quizHistory = mergeHistory(local.quizHistory, cloud.quizHistory);
     merged.examAHistory = mergeHistory(local.examAHistory, cloud.examAHistory);
+    merged.examBHistory = mergeHistory(local.examBHistory, cloud.examBHistory);
 
     return merged;
   }
@@ -902,6 +987,8 @@
     state.examASeenIds = merged.examASeenIds;
     state.quizHistory = merged.quizHistory;
     state.examAHistory = merged.examAHistory;
+    state.examBSeenIds = merged.examBSeenIds;
+    state.examBHistory = merged.examBHistory;
     saveData("meta", {examDate: state.examDate});
     saveData("chapterState", state.chapterState);
     saveData("wrongMap", state.wrongMap);
@@ -909,6 +996,8 @@
     saveData("examASeenIds", state.examASeenIds);
     saveData("quizHistory", state.quizHistory);
     saveData("examAHistory", state.examAHistory);
+    saveData("examBSeenIds", state.examBSeenIds);
+    saveData("examBHistory", state.examBHistory);
   }
   function runCloudSync(opts){
     opts = opts || {};
@@ -1247,6 +1336,47 @@
       render();
     });
 
+    const startExamBBtn = document.getElementById("startExamBBtn");
+    if(startExamBBtn) startExamBBtn.addEventListener("click",()=>{
+      const unseen = state.examB.filter(q=>!state.examBSeenIds[q.id]);
+      const seen = state.examB.filter(q=>state.examBSeenIds[q.id]);
+      const shuffledUnseen = [...unseen].sort(()=>Math.random()-0.5);
+      let pool;
+      if(shuffledUnseen.length >= 50){
+        pool = shuffledUnseen.slice(0,50);
+      } else {
+        const shuffledSeen = [...seen].sort(()=>Math.random()-0.5);
+        pool = [...shuffledUnseen, ...shuffledSeen].slice(0,50);
+      }
+      state.examBPool = pool;
+      state.examBIdx=0; state.examBSelected=null; state.examBRevealed=false; state.examBStats={correct:0,total:0};
+      render();
+    });
+    root.querySelectorAll("[data-exambchoose]").forEach(el=>el.addEventListener("click",()=>{
+      if(state.examBRevealed) return;
+      const i = parseInt(el.dataset.exambchoose,10);
+      const current = state.examBPool[state.examBIdx];
+      state.examBSelected = i; state.examBRevealed = true;
+      const correct = i===current.answer;
+      state.examBStats = {correct: state.examBStats.correct+(correct?1:0), total: state.examBStats.total+1};
+      state.examBSeenIds[current.id] = true;
+      persist("examBSeenIds");
+      markStudiedToday();
+      recordWrongMapOutcome(current.id, correct);
+      render();
+    }));
+    const nextExamBBtn = document.getElementById("nextExamBBtn");
+    if(nextExamBBtn) nextExamBBtn.addEventListener("click",()=>{
+      if(state.examBIdx+1<state.examBPool.length){
+        state.examBIdx++; state.examBSelected=null; state.examBRevealed=false;
+      } else {
+        state.examBHistory = [{date:todayStr(), correct:state.examBStats.correct, total:state.examBStats.total}, ...state.examBHistory].slice(0,50);
+        persist("examBHistory");
+        state.examBPool=[];
+      }
+      render();
+    });
+
     root.querySelectorAll("[data-showans]").forEach(el=>el.addEventListener("click",()=>{
       const box = root.querySelector(`[data-ansbox="${el.dataset.showans}"]`);
       if(box){ box.style.display="block"; el.style.display="none"; }
@@ -1292,6 +1422,7 @@
         questions:state.questions, wrongMap:state.wrongMap,
         studyLog:state.studyLog, laws:state.laws, quizHistory:state.quizHistory,
         examA:state.examA, examAHistory:state.examAHistory, examASeenIds:state.examASeenIds,
+        examB:state.examB, examBHistory:state.examBHistory, examBSeenIds:state.examBSeenIds,
         exportedAt:new Date().toISOString()
       };
     }
@@ -1307,6 +1438,9 @@
       state.examA = data.examA||state.examA;
       state.examAHistory = data.examAHistory||[];
       state.examASeenIds = data.examASeenIds||{};
+      state.examB = data.examB||state.examB;
+      state.examBHistory = data.examBHistory||[];
+      state.examBSeenIds = data.examBSeenIds||{};
       saveData("meta",{examDate:state.examDate});
       saveData("chapterState",state.chapterState);
       saveData("questions",state.questions);
@@ -1317,6 +1451,9 @@
       saveData("examA",state.examA);
       saveData("examAHistory",state.examAHistory);
       saveData("examASeenIds",state.examASeenIds);
+      saveData("examB",state.examB);
+      saveData("examBHistory",state.examBHistory);
+      saveData("examBSeenIds",state.examBSeenIds);
     }
 
     const cloudSyncBtn = document.getElementById("cloudSyncBtn");
