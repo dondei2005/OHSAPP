@@ -508,7 +508,7 @@
   /* ---------- Chapters ---------- */
   function renderChapters(){
     return `
-      <div class="section-title">章節清單（共 20 章）</div>
+      <div class="section-title">章節清單（共 ${CHAPTERS.length} 章）</div>
       <div class="section-desc">點一下狀態標籤可循環切換：未讀 → 閱讀中 → 已完成</div>
       ${CHAPTERS.map(c=>{
         const st = state.chapterState[c.id]?.status||"todo";
