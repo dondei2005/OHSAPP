@@ -83,9 +83,15 @@
   .quiz-note{ font-size:14.5px; color:#6b6356; margin-top:4px; margin-bottom:10px; }
   .result-card{ margin-top:10px; font-size:13px; color:#6b6356; background:#F1EFE9; border-radius:10px; padding:10px; text-align:center; }
   .wrong-card{ background:#fff; border:1px solid #E7E1D4; border-radius:12px; padding:12px; margin-bottom:8px; }
+  .wrong-card.level-mid{ border-color:#E3C79A; border-left:4px solid #A8631F; background:#FFFBF3; }
+  .wrong-card.level-high{ border-color:#E8B4AC; border-left:4px solid #B9554A; background:#FBEEEC; }
   .wrong-top{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .wrong-count{ font-size:11px; color:#B9554A; font-weight:600; }
   .wrong-due{ font-size:11px; color:#9a9488; }
+  .wrong-streak{ font-size:11px; color:#2F6B4F; font-weight:600; }
+  .wrong-level-badge{ font-size:11px; font-weight:700; padding:2px 8px; border-radius:99px; }
+  .wrong-level-badge.mid{ background:#F6E9D8; color:#A8631F; }
+  .wrong-level-badge.high{ background:#FBEEEC; color:#B9554A; }
   .mastered-btn{ margin-top:8px; border:1px solid #2F6B4F; color:#2F6B4F; background:transparent; border-radius:8px; padding:6px 10px; font-size:12px; font-weight:600; }
   .law-card{ background:#fff; border:1px solid #E7E1D4; border-radius:12px; padding:12px; margin-bottom:8px; }
   .law-top{ display:flex; align-items:center; gap:8px; }
@@ -783,16 +789,39 @@
       .sort((a,b)=>(a.meta.dueDate||"").localeCompare(b.meta.dueDate||""));
   }
   function renderWrong(){
+    if(state.quizPool.length>0 && state.quizMode==='wrongreview'){
+      const current = state.quizPool[state.quizIdx];
+      const qtype = current.type || "single";
+      return `
+        <div class="quiz-progress">🔁 錯題複習 第 ${state.quizIdx+1} / ${state.quizPool.length} 題 · 答對 ${state.quizStats.correct}</div>
+        <div class="quiz-card">
+          <div class="quiz-chapter-tag">${esc(bucketLabel(bucketKey(current)))}${qtype==='multi'?' · 複選題':qtype==='fill'?' · 填空題':qtype==='truefalse'?' · 是非題':''}</div>
+          <div class="quiz-question">${esc(current.text)}</div>
+          ${qtype==='single' ? renderSingleOptions(current) : ""}
+          ${qtype==='multi' ? renderMultiOptions(current) : ""}
+          ${qtype==='fill' ? renderFillInput(current) : ""}
+          ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
+          ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
+          ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
+        </div>
+      `;
+    }
     const wq = computeWrongQuestions();
     const today = todayStr();
     const due = wq.filter(q=>!q.meta.dueDate||q.meta.dueDate<=today);
     const upcoming = wq.filter(q=>q.meta.dueDate && q.meta.dueDate>today);
     function card(q,dim){
-      return `<div class="wrong-card" style="opacity:${dim?0.6:1}">
+      const wc = q.meta.wrongCount||0;
+      const streak = q.meta.correctStreak||0;
+      const levelClass = wc>=3 ? ' level-high' : wc===2 ? ' level-mid' : '';
+      const levelBadge = wc>=3 ? '<span class="wrong-level-badge high">🔥 重點加強</span>' : wc===2 ? '<span class="wrong-level-badge mid">⚠️ 加強複習</span>' : '';
+      return `<div class="wrong-card${levelClass}" style="opacity:${dim?0.6:1}">
         <div class="wrong-top">
           <span class="q-chapter">${bucketLabel(bucketKey(q))}</span>
-          <span class="wrong-count">錯過 ${q.meta.wrongCount} 次</span>
+          <span class="wrong-count">錯過 ${wc} 次</span>
+          <span class="wrong-streak">連續答對 ${streak}/3</span>
           ${q.meta.dueDate?`<span class="wrong-due">複習日 ${q.meta.dueDate}</span>`:""}
+          ${levelBadge}
         </div>
         <div class="q-text">${esc(q.text)}</div>
         <button class="toggle-btn" data-showans="${q.id}" style="width:auto;display:inline-block;padding:6px 12px;">顯示答案</button>
@@ -802,7 +831,8 @@
     }
     return `
       <div class="section-title">錯題本</div>
-      <div class="section-desc">答錯的題目會依錯誤次數安排複習間隔（1 / 3 / 7 / 14 天），到期的題目會列在「今天該複習」。</div>
+      <div class="section-desc">答錯的題目會依錯誤次數安排複習間隔（1 / 3 / 7 / 14 天）。連續答對 3 次才會移出錯題本；中途再答錯，連續次數歸零並升級成「加強複習／重點加強」（用顏色標示）。</div>
+      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🔁 開始錯題複習測驗（本輪 ${Math.min(20,wq.length)} 題，全部範圍混合出題）</button>` : ""}
       ${renderWrongStats()}
       <div class="sub-title">今天該複習（${due.length}）</div>
       ${due.length===0?`<div class="empty-hint">太好了，今天沒有需要複習的錯題。</div>`:""}
@@ -1220,19 +1250,32 @@
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       render();
     });
+    const startWrongReviewBtn = document.getElementById("startWrongReviewBtn");
+    if(startWrongReviewBtn) startWrongReviewBtn.addEventListener("click",()=>{
+      const wq = computeWrongQuestions();
+      state.quizPool = [...wq].sort(()=>Math.random()-0.5).slice(0,20);
+      state.quizMode = "wrongreview";
+      state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
+      state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      render();
+    });
     function recordWrongMapOutcome(id, correct){
       const m = state.wrongMap;
       if(!correct){
-        const existing = m[id]||{wrongCount:0};
+        const existing = m[id]||{wrongCount:0, correctStreak:0};
         const wrongCount = existing.wrongCount+1;
         const intervalDays = [1,3,7,14][Math.min(wrongCount-1,3)];
         const due = new Date(); due.setDate(due.getDate()+intervalDays);
-        m[id] = {wrongCount, lastSeen:todayStr(), dueDate:due.toISOString().slice(0,10), mastered:false};
+        // 再錯一次：連續答對次數歸零，等級（wrongCount）提升，錯題本卡片會用顏色標示需要加強
+        m[id] = {wrongCount, correctStreak:0, lastSeen:todayStr(), dueDate:due.toISOString().slice(0,10), mastered:false};
       } else if(m[id]){
-        if(m[id].wrongCount<=1){ m[id] = {...m[id], mastered:true}; }
-        else{
-          const due = new Date(); due.setDate(due.getDate()+14);
-          m[id] = {...m[id], dueDate:due.toISOString().slice(0,10)};
+        const correctStreak = (m[id].correctStreak||0)+1;
+        if(correctStreak>=3){
+          // 連續答對 3 次，移出錯題本（mastered）
+          m[id] = {...m[id], correctStreak, mastered:true};
+        } else {
+          const due = new Date(); due.setDate(due.getDate()+3);
+          m[id] = {...m[id], correctStreak, dueDate:due.toISOString().slice(0,10)};
         }
       }
       persist("wrongMap");
