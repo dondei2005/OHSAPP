@@ -1013,8 +1013,25 @@
     merged.wrongMap = {...(cloud.wrongMap||{})};
     Object.keys(local.wrongMap||{}).forEach(id=>{
       const l = local.wrongMap[id], c = merged.wrongMap[id];
-      if(!c || (l.wrongCount||0) > (c.wrongCount||0) || (l.lastSeen||"") > (c.lastSeen||"")){
+      if(!c){ merged.wrongMap[id] = l; return; }
+      // 已熟記（mastered）是單向的，任一邊已熟記，合併結果就必須維持已熟記，不能被另一邊較舊的紀錄蓋回未熟記
+      if(l.mastered || c.mastered){
+        const newer = (l.updatedAt||(l.lastSeen?l.lastSeen+'T00:00:00':'')) >= (c.updatedAt||(c.lastSeen?c.lastSeen+'T00:00:00':'')) ? l : c;
+        merged.wrongMap[id] = {...newer, mastered:true};
+        return;
+      }
+      // lastSeen 只精確到日期，同一天內多次作答（例如錯題複習測驗連續答對）會比不出先後，
+      // 改用完整時間戳記 updatedAt 判斷何者較新為準；舊資料沒有 updatedAt 時退回用 lastSeen 當天 00:00 比較。
+      // 時間戳記打平（都缺失、或剛好同一天沒記錄）才退回比較累積進度分數，不能單純「任一項較高就贏」，
+      // 否則會出現雲端明明整體較新，卻因為某個次要欄位本機比較高而被本機的舊資料誤蓋掉。
+      const lTime = l.updatedAt || (l.lastSeen ? l.lastSeen+'T00:00:00' : '');
+      const cTime = c.updatedAt || (c.lastSeen ? c.lastSeen+'T00:00:00' : '');
+      if(lTime > cTime){
         merged.wrongMap[id] = l;
+      } else if(lTime === cTime){
+        const lScore = (l.wrongCount||0)*10 + (l.correctStreak||0);
+        const cScore = (c.wrongCount||0)*10 + (c.correctStreak||0);
+        if(lScore > cScore) merged.wrongMap[id] = l;
       }
     });
 
@@ -1291,21 +1308,22 @@
     });
     function recordWrongMapOutcome(id, correct){
       const m = state.wrongMap;
+      const now = new Date().toISOString();
       if(!correct){
         const existing = m[id]||{wrongCount:0, correctStreak:0};
         const wrongCount = existing.wrongCount+1;
         const intervalDays = [1,3,7,14][Math.min(wrongCount-1,3)];
         const due = new Date(); due.setDate(due.getDate()+intervalDays);
         // 再錯一次：連續答對次數歸零，等級（wrongCount）提升，錯題本卡片會用顏色標示需要加強
-        m[id] = {wrongCount, correctStreak:0, lastSeen:todayStr(), dueDate:due.toISOString().slice(0,10), mastered:false};
+        m[id] = {wrongCount, correctStreak:0, lastSeen:todayStr(), updatedAt:now, dueDate:due.toISOString().slice(0,10), mastered:false};
       } else if(m[id]){
         const correctStreak = (m[id].correctStreak||0)+1;
         if(correctStreak>=3){
           // 連續答對 3 次，移出錯題本（mastered）
-          m[id] = {...m[id], correctStreak, mastered:true};
+          m[id] = {...m[id], correctStreak, mastered:true, updatedAt:now};
         } else {
           const due = new Date(); due.setDate(due.getDate()+3);
-          m[id] = {...m[id], correctStreak, dueDate:due.toISOString().slice(0,10)};
+          m[id] = {...m[id], correctStreak, dueDate:due.toISOString().slice(0,10), updatedAt:now};
         }
       }
       persist("wrongMap");
@@ -1455,7 +1473,7 @@
     }));
     root.querySelectorAll("[data-mastered]").forEach(el=>el.addEventListener("click",()=>{
       const id = el.dataset.mastered;
-      state.wrongMap[id] = {...state.wrongMap[id], mastered:true};
+      state.wrongMap[id] = {...state.wrongMap[id], mastered:true, updatedAt:new Date().toISOString()};
       persist("wrongMap"); render();
     }));
 
