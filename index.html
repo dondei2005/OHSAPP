@@ -259,6 +259,36 @@
     return (s||"").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
   }
 
+  // 把字串中的中文數字（含混在文字裡的，如「九十」「三十五」「一百二十」）轉成阿拉伯數字，供填空題模糊比對用
+  function cnNumToArabic(s){
+    const digitMap = {'零':0,'一':1,'二':2,'兩':2,'三':3,'四':4,'五':5,'六':6,'七':7,'八':8,'九':9};
+    const unitMap = {'十':10,'百':100,'千':1000,'萬':10000};
+    return String(s).replace(/[零一二兩三四五六七八九十百千萬]+/g, match => {
+      let result=0, section=0, num=0;
+      for(const ch of match){
+        if(ch in digitMap){ num = digitMap[ch]; }
+        else if(ch in unitMap){
+          const unit = unitMap[ch];
+          if(unit===10000){ section=(section+num)*unit; result+=section; section=0; }
+          else{ section += (num||1)*unit; }
+          num=0;
+        }
+      }
+      result += section+num;
+      return String(result);
+    });
+  }
+  // 填空題模糊比對：忽略中文數字/阿拉伯數字寫法差異、全形半形、千分位逗號、空白、大小寫
+  function normalizeFillAnswer(s){
+    if(s===null||s===undefined) return "";
+    let str = String(s).trim();
+    str = str.replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0)-0xFEE0));
+    str = str.replace(/％/g, '%');
+    str = cnNumToArabic(str);
+    str = str.replace(/,/g,'').replace(/\s+/g,'').toLowerCase();
+    return str;
+  }
+
   /* ---------- storage (localStorage) ---------- */
   const NS = "ohs_";
   function loadData(key, fallback){
@@ -1316,8 +1346,7 @@
     const fillSubmitBtn = document.getElementById("fillSubmitBtn");
     if(fillSubmitBtn) fillSubmitBtn.addEventListener("click",()=>{
       const current = state.quizPool[state.quizIdx];
-      const norm = s => (s||"").toString().trim().toLowerCase().replace(/\s+/g,"");
-      const correct = norm(state.quizFillInput) === norm(current.answer);
+      const correct = normalizeFillAnswer(state.quizFillInput) === normalizeFillAnswer(current.answer);
       state.quizFillCorrect = correct;
       state.quizRevealed = true;
       recordAnswer(current, correct);
