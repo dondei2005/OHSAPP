@@ -476,7 +476,7 @@
   }
 
   function renderNav(){
-    const dueWrongCount = computeWrongQuestions().filter(q=>!q.meta.dueDate||q.meta.dueDate<=todayStr()).length;
+    const dueWrongCount = computeWrongQuestions().length;
     const items = [
       ["dashboard","◆","總覽"],["chapters","▤","章節"],["bank","✎","題庫"],
       ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["examA","🅰","甲種模擬"],["examB","🅱","乙級模擬"],["laws","§","法規"],["sync","⇅","備份"],
@@ -521,13 +521,13 @@
       suggestion = `建議扣除考前 14 天衝刺期，剩餘 ${Math.max(d-14,1)} 天讀完 ${remaining} 個章節，平均每 ${perDay} 天完成 1 章。`;
     } else suggestion = "章節已全部讀完，接下來請把每天的時間集中在「練習」與「錯題本」上。";
 
-    const dueWrongCount = computeWrongQuestions().filter(q=>!q.meta.dueDate||q.meta.dueDate<=todayStr()).length;
+    const dueWrongCount = computeWrongQuestions().length;
 
     return `
       <div class="card-row">
         ${statCard("章節進度", `${doneCount} / ${CHAPTERS.length}`, `${progressPct}%`)}
         ${statCard("題庫題數", state.questions.length, "累積收錄")}
-        ${statCard("待複習錯題", dueWrongCount, "今天到期", dueWrongCount>0)}
+        ${statCard("待複習錯題", dueWrongCount, "待複習", dueWrongCount>0)}
         ${statCard("連續讀書", streak, "天")}
       </div>
       <div class="suggestion-card">
@@ -813,10 +813,11 @@
   }
   function computeWrongQuestions(){
     const qmap = idToQuestionMap();
+    // 不依複習日排程，改依「容易錯」優先：答錯次數越多排越前面；次數相同時，離熟記越遠（連續答對次數越少）的優先
     return Object.keys(state.wrongMap)
       .filter(id=>qmap[id] && !state.wrongMap[id].mastered)
       .map(id=>({...qmap[id], meta:state.wrongMap[id]}))
-      .sort((a,b)=>(a.meta.dueDate||"").localeCompare(b.meta.dueDate||""));
+      .sort((a,b)=>(b.meta.wrongCount||0)-(a.meta.wrongCount||0) || (a.meta.correctStreak||0)-(b.meta.correctStreak||0));
   }
   function renderWrong(){
     if(state.quizPool.length>0 && state.quizMode==='wrongreview'){
@@ -837,20 +838,16 @@
       `;
     }
     const wq = computeWrongQuestions();
-    const today = todayStr();
-    const due = wq.filter(q=>!q.meta.dueDate||q.meta.dueDate<=today);
-    const upcoming = wq.filter(q=>q.meta.dueDate && q.meta.dueDate>today);
-    function card(q,dim){
+    function card(q){
       const wc = q.meta.wrongCount||0;
       const streak = q.meta.correctStreak||0;
       const levelClass = wc>=3 ? ' level-high' : wc===2 ? ' level-mid' : '';
       const levelBadge = wc>=3 ? '<span class="wrong-level-badge high">🔥 重點加強</span>' : wc===2 ? '<span class="wrong-level-badge mid">⚠️ 加強複習</span>' : '';
-      return `<div class="wrong-card${levelClass}" style="opacity:${dim?0.6:1}">
+      return `<div class="wrong-card${levelClass}">
         <div class="wrong-top">
           <span class="q-chapter">${bucketLabel(bucketKey(q))}</span>
           <span class="wrong-count">錯過 ${wc} 次</span>
           <span class="wrong-streak">連續答對 ${streak}/3</span>
-          ${q.meta.dueDate?`<span class="wrong-due">複習日 ${q.meta.dueDate}</span>`:""}
           ${levelBadge}
         </div>
         <div class="q-text">${esc(q.text)}</div>
@@ -861,13 +858,12 @@
     }
     return `
       <div class="section-title">錯題本</div>
-      <div class="section-desc">答錯的題目會依錯誤次數安排複習間隔（1 / 3 / 7 / 14 天）。連續答對 3 次才會移出錯題本；中途再答錯，連續次數歸零並升級成「加強複習／重點加強」（用顏色標示）。</div>
-      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🔁 開始錯題複習測驗（本輪 ${Math.min(20,wq.length)} 題，全部範圍混合出題）</button>` : ""}
+      <div class="section-desc">不照複習排程，直接依「容易錯」排優先順序：答錯次數越多排越前面。連續答對 3 次才會移出錯題本；中途再答錯，連續次數歸零重算，並依錯誤次數升級成「加強複習／重點加強」（用顏色標示）。</div>
+      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🔁 開始錯題複習測驗（本輪 ${Math.min(20,wq.length)} 題，優先抽最容易錯的題目，全部範圍混合出題）</button>` : ""}
       ${renderWrongStats()}
-      <div class="sub-title">今天該複習（${due.length}）</div>
-      ${due.length===0?`<div class="empty-hint">太好了，今天沒有需要複習的錯題。</div>`:""}
-      ${due.map(q=>card(q,false)).join("")}
-      ${upcoming.length>0?`<div class="sub-title">之後排程（${upcoming.length}）</div>${upcoming.map(q=>card(q,true)).join("")}`:""}
+      <div class="sub-title">待複習錯題（${wq.length}，依錯誤次數排序）</div>
+      ${wq.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
+      ${wq.map(q=>card(q)).join("")}
     `;
   }
 
@@ -1299,8 +1295,9 @@
     });
     const startWrongReviewBtn = document.getElementById("startWrongReviewBtn");
     if(startWrongReviewBtn) startWrongReviewBtn.addEventListener("click",()=>{
+      // computeWrongQuestions() 已依「容易錯」排序（答錯次數多的在前），直接取前20題，優先複習最常錯的
       const wq = computeWrongQuestions();
-      state.quizPool = [...wq].sort(()=>Math.random()-0.5).slice(0,20);
+      state.quizPool = wq.slice(0,20);
       state.quizMode = "wrongreview";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
