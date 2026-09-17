@@ -691,6 +691,7 @@
       return `<div class="empty-hint">題庫目前是空的，請先到「題庫」分頁新增考古題再來練習。</div>`;
     }
     if(state.quizPool.length===0){
+      const chapterSelected = state.quizChapterFilter!=="all";
       return `
         <div class="section-title">開始練習</div>
         <label class="label">選擇範圍</label>
@@ -701,10 +702,12 @@
             return `<option value="${c.id}" ${n===0?'disabled':''} ${state.quizChapterFilter===c.id?'selected':''}>${c.id===0?'概論':('第'+toChinese(c.id)+'章')} ${esc(c.title)}（${n} 題）</option>`;
           }).join("")}
         </select>
+        <div class="section-desc" style="margin-top:4px;">單一章節每輪以 50 題為單位出題（不滿 50 題則刷完該章全部題目），優先出還沒刷過的題目，刷完一輪才會重複。</div>
         <button class="primary-btn" id="startQuizBtn">開始隨機練習</button>
         <button class="primary-btn" id="startRandom20Btn" style="margin-top:8px;background:#2f6b4f;">🎲 綜合隨機 20 題（跨章節測驗）</button>
         ${state.quizStats.total>0 ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : ""}
-        ${renderQuizHistory()}
+        ${chapterSelected ? renderChapterCoverage(state.quizChapterFilter) : ""}
+        ${chapterSelected ? renderChapterHistory(state.quizChapterFilter) : renderQuizHistory()}
       `;
     }
     const current = state.quizPool[state.quizIdx];
@@ -726,8 +729,9 @@
     `;
   }
   function renderQuizHistory(){
-    if(state.quizHistory.length===0) return "";
-    const rows = state.quizHistory.slice(0,10).map(h=>{
+    const list = state.quizHistory.filter(h=>h.chapter==null);
+    if(list.length===0) return "";
+    const rows = list.slice(0,10).map(h=>{
       const pct = h.total>0 ? Math.round(h.correct/h.total*100) : 0;
       return `<div class="wrong-top" style="justify-content:space-between;">
         <span class="q-chapter">${esc(h.date)}</span>
@@ -735,6 +739,26 @@
       </div>`;
     }).join("");
     return `<div class="section-title" style="margin-top:18px;">綜合隨機測驗成績記錄</div>${rows}`;
+  }
+  // 單一章節的刷題覆蓋率：已刷過（作答過）幾題／該章節總題數
+  function renderChapterCoverage(chapterId){
+    const total = state.questions.filter(q=>q.chapter===chapterId).length;
+    const seenCount = state.questions.filter(q=>q.chapter===chapterId && state.quizSeenIds[q.id]).length;
+    const pct = total>0 ? Math.round(seenCount/total*100) : 0;
+    return `<div class="result-card" style="margin-top:8px;">本章節刷題進度：已刷過 ${seenCount} / ${total} 題（${pct}%）</div>`;
+  }
+  // 單一章節自己的成績歷史（依日期），用來追蹤該章節熟練度趨勢
+  function renderChapterHistory(chapterId){
+    const list = state.quizHistory.filter(h=>h.chapter===chapterId);
+    if(list.length===0) return "";
+    const rows = list.slice(0,10).map(h=>{
+      const pct = h.total>0 ? Math.round(h.correct/h.total*100) : 0;
+      return `<div class="wrong-top" style="justify-content:space-between;">
+        <span class="q-chapter">${esc(h.date)}</span>
+        <span>${h.correct} / ${h.total} 答對（${pct}%）</span>
+      </div>`;
+    }).join("");
+    return `<div class="section-title" style="margin-top:18px;">本章節成績記錄</div>${rows}`;
   }
   function renderSingleOptions(current){
     return current.options.map((opt,i)=>{
@@ -1074,12 +1098,12 @@
       const combined = [...(a||[]), ...(b||[])];
       const seen = new Set();
       const deduped = combined.filter(h=>{
-        const key = h.date+'|'+h.correct+'|'+h.total;
+        const key = h.date+'|'+h.correct+'|'+h.total+'|'+h.chapter;
         if(seen.has(key)) return false;
         seen.add(key); return true;
       });
       deduped.sort((x,y)=>(y.date||"").localeCompare(x.date||""));
-      return deduped.slice(0,50);
+      return deduped.slice(0,300);
     }
     merged.quizHistory = mergeHistory(local.quizHistory, cloud.quizHistory);
     merged.examAHistory = mergeHistory(local.examAHistory, cloud.examAHistory);
@@ -1312,6 +1336,7 @@
     const quizChapterSelect = document.getElementById("quizChapterSelect");
     if(quizChapterSelect) quizChapterSelect.addEventListener("change",e=>{
       state.quizChapterFilter = e.target.value==="all"?"all":parseInt(e.target.value,10);
+      render();
     });
     // 依「還沒出現過優先」排序：先洗牌未作答過的題目，再接洗牌過的已作答題目
     function orderBySeenFirst(src){
@@ -1319,10 +1344,20 @@
       const seen = src.filter(q=>state.quizSeenIds[q.id]);
       return [...unseen].sort(()=>Math.random()-0.5).concat([...seen].sort(()=>Math.random()-0.5));
     }
+    // 練習題組完成或中途結束時記錄成績歷史；chapter 模式且有指定章節時，連同章節編號一起記錄，
+    // 讓「本章節成績記錄」可以依章節篩選，用來追蹤該章節熟練度趨勢
+    function recordQuizHistoryIfNeeded(){
+      if((state.quizMode==="random20" || state.quizMode==="chapter") && state.quizStats.total>0){
+        const chapter = (state.quizMode==="chapter" && state.quizChapterFilter!=="all") ? state.quizChapterFilter : null;
+        state.quizHistory = [{date:todayStr(), correct:state.quizStats.correct, total:state.quizStats.total, chapter}, ...state.quizHistory].slice(0,300);
+        persist("quizHistory");
+      }
+    }
     const startQuizBtn = document.getElementById("startQuizBtn");
     if(startQuizBtn) startQuizBtn.addEventListener("click",()=>{
       const src = state.quizChapterFilter==="all" ? state.questions : state.questions.filter(q=>q.chapter===state.quizChapterFilter);
-      state.quizPool = orderBySeenFirst(src);
+      // 每輪以 50 題為單位（該範圍不滿 50 題就整批做完），未刷過的題目優先排入
+      state.quizPool = orderBySeenFirst(src).slice(0,50);
       state.quizMode = "chapter";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
@@ -1351,10 +1386,7 @@
     });
     const quizExitBtn = document.getElementById("quizExitBtn");
     if(quizExitBtn) quizExitBtn.addEventListener("click",()=>{
-      if(state.quizMode==="random20" && state.quizStats.total>0){
-        state.quizHistory = [{date:todayStr(), correct:state.quizStats.correct, total:state.quizStats.total}, ...state.quizHistory].slice(0,50);
-        persist("quizHistory");
-      }
+      recordQuizHistoryIfNeeded();
       state.quizPool=[]; state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false;
       state.quizStats={correct:0,total:0}; state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       persistQuizState();
@@ -1436,10 +1468,7 @@
         state.quizIdx++; state.quizSelected=null; state.quizRevealed=false;
         state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       } else {
-        if(state.quizMode==="random20"){
-          state.quizHistory = [{date:todayStr(), correct:state.quizStats.correct, total:state.quizStats.total}, ...state.quizHistory].slice(0,50);
-          persist("quizHistory");
-        }
+        recordQuizHistoryIfNeeded();
         state.quizPool=[];
       }
       persistQuizState();
