@@ -768,7 +768,7 @@
         else if(i===state.quizSelected) cls+=" wrong";
       }
       return `<button class="${cls}" data-choose="${i}" ${state.quizRevealed?'disabled':''}>
-        <span class="quiz-option-label">${'ABCD'[i]}</span>${esc(opt)}
+        <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
       </button>`;
     }).join("");
   }
@@ -781,7 +781,7 @@
         else if(picked) cls+=" wrong";
       }
       return `<button class="${cls}" data-multitoggle="${i}" ${state.quizRevealed?'disabled':''}>
-        <span class="quiz-option-label">${picked&&!state.quizRevealed?'✓':'ABCD'[i]}</span>${esc(opt)}
+        <span class="quiz-option-label">${picked&&!state.quizRevealed?'✓':String.fromCharCode(65+i)}</span>${esc(opt)}
       </button>`;
     }).join("");
     const submit = !state.quizRevealed ? `<button class="primary-btn" id="multiSubmitBtn" style="margin-bottom:10px;">提交答案</button>` : "";
@@ -959,7 +959,7 @@
             else if(i===state.examASelected) cls+=" wrong";
           }
           return `<button class="${cls}" data-examachoose="${i}" ${state.examARevealed?'disabled':''}>
-            <span class="quiz-option-label">${'ABCD'[i]}</span>${esc(opt)}
+            <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
           </button>`;
         }).join("")}
         ${state.examARevealed ? `<button class="primary-btn" id="nextExamABtn">${state.examAIdx+1<state.examAPool.length?'下一題':'完成本輪'}</button>` : ""}
@@ -1013,7 +1013,7 @@
             else if(i===state.examBSelected) cls+=" wrong";
           }
           return `<button class="${cls}" data-exambchoose="${i}" ${state.examBRevealed?'disabled':''}>
-            <span class="quiz-option-label">${'ABCD'[i]}</span>${esc(opt)}
+            <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
           </button>`;
         }).join("")}
         ${state.examBRevealed ? `<button class="primary-btn" id="nextExamBBtn">${state.examBIdx+1<state.examBPool.length?'下一題':'完成本輪'}</button>` : ""}
