@@ -316,6 +316,7 @@
     bankBulkText:"", bankBulkMsg:"", bankFilterChapter:"all",
     quizChapterFilter:"all", quizPool:[], quizIdx:0, quizSelected:null, quizRevealed:false, quizStats:{correct:0,total:0},
     quizMultiSelected:[], quizFillInput:"", quizFillCorrect:false, quizMode:"chapter", quizHistory:[],
+    quizSeenIds:{},
     examA:[], examAHistory:[], examAPool:[], examAIdx:0, examASelected:null, examARevealed:false, examAStats:{correct:0,total:0},
     examASeenIds:{},
     examB:[], examBHistory:[], examBPool:[], examBIdx:0, examBSelected:null, examBRevealed:false, examBStats:{correct:0,total:0},
@@ -375,6 +376,17 @@
     state.studyLog = loadData("studyLog", {});
     state.laws = loadData("laws", LAW_SEED);
     state.quizHistory = loadData("quizHistory", []);
+    state.quizSeenIds = loadData("quizSeenIds", {});
+    // 練習進行到一半離開（關頁、切分頁）也要能接續，所以連同作答中的題組本身一併存本機
+    state.quizPool = loadData("quizPool", []);
+    state.quizIdx = loadData("quizIdx", 0);
+    state.quizSelected = loadData("quizSelected", null);
+    state.quizRevealed = loadData("quizRevealed", false);
+    state.quizStats = loadData("quizStats", {correct:0,total:0});
+    state.quizMultiSelected = loadData("quizMultiSelected", []);
+    state.quizFillInput = loadData("quizFillInput", "");
+    state.quizFillCorrect = loadData("quizFillCorrect", false);
+    state.quizMode = loadData("quizMode", "chapter");
 
     state.examA = loadData("examA", []);
     const examABanks = [window.EXAM_A_QUESTIONS, window.EXAM_A_QUESTIONS_2];
@@ -420,6 +432,16 @@
       studyLog: ()=>saveData("studyLog",state.studyLog),
       laws: ()=>saveData("laws",state.laws),
       quizHistory: ()=>saveData("quizHistory",state.quizHistory),
+      quizSeenIds: ()=>saveData("quizSeenIds",state.quizSeenIds),
+      quizPool: ()=>saveData("quizPool",state.quizPool),
+      quizIdx: ()=>saveData("quizIdx",state.quizIdx),
+      quizSelected: ()=>saveData("quizSelected",state.quizSelected),
+      quizRevealed: ()=>saveData("quizRevealed",state.quizRevealed),
+      quizStats: ()=>saveData("quizStats",state.quizStats),
+      quizMultiSelected: ()=>saveData("quizMultiSelected",state.quizMultiSelected),
+      quizFillInput: ()=>saveData("quizFillInput",state.quizFillInput),
+      quizFillCorrect: ()=>saveData("quizFillCorrect",state.quizFillCorrect),
+      quizMode: ()=>saveData("quizMode",state.quizMode),
       examA: ()=>saveData("examA",state.examA),
       examAHistory: ()=>saveData("examAHistory",state.examAHistory),
       examASeenIds: ()=>saveData("examASeenIds",state.examASeenIds),
@@ -433,6 +455,14 @@
   function markStudiedToday(){
     state.studyLog[todayStr()] = true;
     persist("studyLog");
+  }
+
+  // 練習題組（chapter/random20/wrongreview 共用）進行中的狀態，每次異動都整組存本機，
+  // 這樣中途離開（關頁籤、切分頁）回來能接續在同一題，不用重新開始
+  function persistQuizState(){
+    persist("quizPool"); persist("quizIdx"); persist("quizSelected"); persist("quizRevealed");
+    persist("quizStats"); persist("quizMultiSelected"); persist("quizFillInput"); persist("quizFillCorrect");
+    persist("quizMode");
   }
 
   /* ---------- render ---------- */
@@ -691,6 +721,8 @@
         ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
         ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
+      <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次可換範圍或接續）</button>
+      <div class="section-desc" style="margin-top:6px;">中途關閉分頁或切走也沒關係，回來會自動接續這一題。</div>
     `;
   }
   function renderQuizHistory(){
@@ -835,6 +867,7 @@
           ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
           ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
         </div>
+        <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次回來會接續）</button>
       `;
     }
     const wq = computeWrongQuestions();
@@ -984,6 +1017,7 @@
       wrongMap: state.wrongMap,
       studyLog: state.studyLog,
       quizHistory: state.quizHistory,
+      quizSeenIds: state.quizSeenIds,
       examAHistory: state.examAHistory,
       examASeenIds: state.examASeenIds,
       examBHistory: state.examBHistory,
@@ -1032,6 +1066,7 @@
     });
 
     merged.studyLog = {...(cloud.studyLog||{}), ...(local.studyLog||{})};
+    merged.quizSeenIds = {...(cloud.quizSeenIds||{}), ...(local.quizSeenIds||{})};
     merged.examASeenIds = {...(cloud.examASeenIds||{}), ...(local.examASeenIds||{})};
     merged.examBSeenIds = {...(cloud.examBSeenIds||{}), ...(local.examBSeenIds||{})};
 
@@ -1057,6 +1092,7 @@
     state.chapterState = merged.chapterState;
     state.wrongMap = merged.wrongMap;
     state.studyLog = merged.studyLog;
+    state.quizSeenIds = merged.quizSeenIds;
     state.examASeenIds = merged.examASeenIds;
     state.quizHistory = merged.quizHistory;
     state.examAHistory = merged.examAHistory;
@@ -1066,6 +1102,7 @@
     saveData("chapterState", state.chapterState);
     saveData("wrongMap", state.wrongMap);
     saveData("studyLog", state.studyLog);
+    saveData("quizSeenIds", state.quizSeenIds);
     saveData("examASeenIds", state.examASeenIds);
     saveData("quizHistory", state.quizHistory);
     saveData("examAHistory", state.examAHistory);
@@ -1276,21 +1313,29 @@
     if(quizChapterSelect) quizChapterSelect.addEventListener("change",e=>{
       state.quizChapterFilter = e.target.value==="all"?"all":parseInt(e.target.value,10);
     });
+    // 依「還沒出現過優先」排序：先洗牌未作答過的題目，再接洗牌過的已作答題目
+    function orderBySeenFirst(src){
+      const unseen = src.filter(q=>!state.quizSeenIds[q.id]);
+      const seen = src.filter(q=>state.quizSeenIds[q.id]);
+      return [...unseen].sort(()=>Math.random()-0.5).concat([...seen].sort(()=>Math.random()-0.5));
+    }
     const startQuizBtn = document.getElementById("startQuizBtn");
     if(startQuizBtn) startQuizBtn.addEventListener("click",()=>{
       const src = state.quizChapterFilter==="all" ? state.questions : state.questions.filter(q=>q.chapter===state.quizChapterFilter);
-      state.quizPool = [...src].sort(()=>Math.random()-0.5);
+      state.quizPool = orderBySeenFirst(src);
       state.quizMode = "chapter";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      persistQuizState();
       render();
     });
     const startRandom20Btn = document.getElementById("startRandom20Btn");
     if(startRandom20Btn) startRandom20Btn.addEventListener("click",()=>{
-      state.quizPool = [...state.questions].sort(()=>Math.random()-0.5).slice(0,20);
+      state.quizPool = orderBySeenFirst(state.questions).slice(0,20);
       state.quizMode = "random20";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      persistQuizState();
       render();
     });
     const startWrongReviewBtn = document.getElementById("startWrongReviewBtn");
@@ -1301,6 +1346,18 @@
       state.quizMode = "wrongreview";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      persistQuizState();
+      render();
+    });
+    const quizExitBtn = document.getElementById("quizExitBtn");
+    if(quizExitBtn) quizExitBtn.addEventListener("click",()=>{
+      if(state.quizMode==="random20" && state.quizStats.total>0){
+        state.quizHistory = [{date:todayStr(), correct:state.quizStats.correct, total:state.quizStats.total}, ...state.quizHistory].slice(0,50);
+        persist("quizHistory");
+      }
+      state.quizPool=[]; state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false;
+      state.quizStats={correct:0,total:0}; state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      persistQuizState();
       render();
     });
     function recordWrongMapOutcome(id, correct){
@@ -1329,6 +1386,8 @@
       markStudiedToday();
       state.quizStats = {correct: state.quizStats.correct+(correct?1:0), total: state.quizStats.total+1};
       recordWrongMapOutcome(current.id, correct);
+      state.quizSeenIds[current.id] = true;
+      persist("quizSeenIds");
     }
     root.querySelectorAll("[data-choose]").forEach(el=>el.addEventListener("click",()=>{
       if(state.quizRevealed) return;
@@ -1337,6 +1396,7 @@
       const current = state.quizPool[state.quizIdx];
       state.quizSelected = val; state.quizRevealed = true;
       recordAnswer(current, val===current.answer);
+      persistQuizState();
       render();
     }));
     root.querySelectorAll("[data-multitoggle]").forEach(el=>el.addEventListener("click",()=>{
@@ -1344,6 +1404,7 @@
       const i = parseInt(el.dataset.multitoggle,10);
       const idx = state.quizMultiSelected.indexOf(i);
       if(idx>=0) state.quizMultiSelected.splice(idx,1); else state.quizMultiSelected.push(i);
+      persist("quizMultiSelected");
       render();
     }));
     const multiSubmitBtn = document.getElementById("multiSubmitBtn");
@@ -1354,10 +1415,11 @@
       const correct = a.length===b.length && a.every((v,i2)=>v===b[i2]);
       state.quizRevealed = true;
       recordAnswer(current, correct);
+      persistQuizState();
       render();
     });
     const fillInputEl = document.getElementById("fillInput");
-    if(fillInputEl) fillInputEl.addEventListener("input",e=>{ state.quizFillInput = e.target.value; });
+    if(fillInputEl) fillInputEl.addEventListener("input",e=>{ state.quizFillInput = e.target.value; persist("quizFillInput"); });
     const fillSubmitBtn = document.getElementById("fillSubmitBtn");
     if(fillSubmitBtn) fillSubmitBtn.addEventListener("click",()=>{
       const current = state.quizPool[state.quizIdx];
@@ -1365,6 +1427,7 @@
       state.quizFillCorrect = correct;
       state.quizRevealed = true;
       recordAnswer(current, correct);
+      persistQuizState();
       render();
     });
     const nextQuizBtn = document.getElementById("nextQuizBtn");
@@ -1379,6 +1442,7 @@
         }
         state.quizPool=[];
       }
+      persistQuizState();
       render();
     });
 
@@ -1507,7 +1571,7 @@
       return {
         v:1, examDate:state.examDate, chapterState:state.chapterState,
         questions:state.questions, wrongMap:state.wrongMap,
-        studyLog:state.studyLog, laws:state.laws, quizHistory:state.quizHistory,
+        studyLog:state.studyLog, laws:state.laws, quizHistory:state.quizHistory, quizSeenIds:state.quizSeenIds,
         examA:state.examA, examAHistory:state.examAHistory, examASeenIds:state.examASeenIds,
         examB:state.examB, examBHistory:state.examBHistory, examBSeenIds:state.examBSeenIds,
         exportedAt:new Date().toISOString()
@@ -1522,6 +1586,7 @@
       state.studyLog = data.studyLog||{};
       state.laws = data.laws||LAW_SEED;
       state.quizHistory = data.quizHistory||[];
+      state.quizSeenIds = data.quizSeenIds||{};
       state.examA = data.examA||state.examA;
       state.examAHistory = data.examAHistory||[];
       state.examASeenIds = data.examASeenIds||{};
@@ -1535,6 +1600,7 @@
       saveData("studyLog",state.studyLog);
       saveData("laws",state.laws);
       saveData("quizHistory",state.quizHistory);
+      saveData("quizSeenIds",state.quizSeenIds);
       saveData("examA",state.examA);
       saveData("examAHistory",state.examAHistory);
       saveData("examASeenIds",state.examASeenIds);
