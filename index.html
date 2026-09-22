@@ -289,6 +289,47 @@
     return str;
   }
 
+  /* ---------- 語音朗讀（Web Speech API，純瀏覽器內建，不用外部服務） ---------- */
+  const ttsSupported = typeof window!=="undefined" && "speechSynthesis" in window;
+  function speakText(text){
+    if(!ttsSupported || !text) return;
+    try{
+      window.speechSynthesis.cancel(); // 先打斷上一句，避免疊音
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "zh-TW";
+      utter.rate = state.ttsRate || 1;
+      window.speechSynthesis.speak(utter);
+    }catch(e){ /* 部分瀏覽器（如舊版webview）可能不支援，靜默忽略 */ }
+  }
+  function stopSpeaking(){
+    if(ttsSupported){ try{ window.speechSynthesis.cancel(); }catch(e){} }
+  }
+  // 組出「題目＋選項」要唸的文字（單選/複選/是非題才有選項；填空題只唸題目）
+  function composeQuestionSpeech(current){
+    let parts = [current.text];
+    if(current.type==="single" || current.type==="multi"){
+      current.options.forEach((opt,i)=>{ parts.push(`${String.fromCharCode(65+i)}、${opt}`); });
+    } else if(current.type==="truefalse"){
+      parts.push("是非題");
+    }
+    return parts.join("。");
+  }
+  // 組出「解答＋備註」要唸的文字，作答完（quizRevealed）之後才唸
+  function composeAnswerSpeech(current){
+    let ansText;
+    if(current.type==="single"){
+      ansText = `正確答案：${String.fromCharCode(65+current.answer)}、${current.options[current.answer]}`;
+    } else if(current.type==="multi"){
+      ansText = `正確答案：${current.answer.map(i=>String.fromCharCode(65+i)).join('、')}`;
+    } else if(current.type==="truefalse"){
+      ansText = `正確答案：${current.answer==="true"?"正確":"錯誤"}`;
+    } else {
+      ansText = `正確答案：${current.answer}`;
+    }
+    const note = current.note ? `。備註：${current.note}` : "";
+    return ansText + note;
+  }
+
   /* ---------- storage (localStorage) ---------- */
   const NS = "ohs_";
   function loadData(key, fallback){
@@ -325,6 +366,7 @@
     headerEditing:false,
     syncMsg:"",
     cloudSyncMsg:"",
+    ttsAuto:false, ttsRate:1,
   };
 
   const root = document.getElementById("app");
@@ -377,6 +419,8 @@
     state.laws = loadData("laws", LAW_SEED);
     state.quizHistory = loadData("quizHistory", []);
     state.quizSeenIds = loadData("quizSeenIds", {});
+    state.ttsAuto = loadData("ttsAuto", false);
+    state.ttsRate = loadData("ttsRate", 1);
     // 練習進行到一半離開（關頁、切分頁）也要能接續，所以連同作答中的題組本身一併存本機
     state.quizPool = loadData("quizPool", []);
     state.quizIdx = loadData("quizIdx", 0);
@@ -442,6 +486,8 @@
       quizFillInput: ()=>saveData("quizFillInput",state.quizFillInput),
       quizFillCorrect: ()=>saveData("quizFillCorrect",state.quizFillCorrect),
       quizMode: ()=>saveData("quizMode",state.quizMode),
+      ttsAuto: ()=>saveData("ttsAuto",state.ttsAuto),
+      ttsRate: ()=>saveData("ttsRate",state.ttsRate),
       examA: ()=>saveData("examA",state.examA),
       examAHistory: ()=>saveData("examAHistory",state.examAHistory),
       examASeenIds: ()=>saveData("examASeenIds",state.examASeenIds),
@@ -708,6 +754,7 @@
         ${state.quizStats.total>0 ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : ""}
         ${chapterSelected ? renderChapterCoverage(state.quizChapterFilter) : ""}
         ${chapterSelected ? renderChapterHistory(state.quizChapterFilter) : renderQuizHistory()}
+        ${renderTtsSettings()}
       `;
     }
     const current = state.quizPool[state.quizIdx];
@@ -722,11 +769,32 @@
         ${qtype==='fill' ? renderFillInput(current) : ""}
         ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
         ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
+        ${renderTtsButtons(state.quizRevealed)}
         ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
       <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次可換範圍或接續）</button>
       <div class="section-desc" style="margin-top:6px;">中途關閉分頁或切走也沒關係，回來會自動接續這一題。</div>
     `;
+  }
+  function renderTtsSettings(){
+    if(!ttsSupported) return `<div class="section-desc" style="margin-top:10px;">（這個瀏覽器不支援語音朗讀功能）</div>`;
+    return `<div class="section-desc" style="margin-top:10px;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+        <input type="checkbox" id="ttsAutoToggle" ${state.ttsAuto?'checked':''}> 🔊 自動朗讀題目與解答（適合開車、做家事時用聽的複習）
+      </label>
+      ${state.ttsAuto ? `<div style="margin-top:6px;">語速：<select id="ttsRateSelect" class="text-input" style="display:inline-block;width:auto;">
+        <option value="0.8" ${state.ttsRate===0.8?'selected':''}>慢</option>
+        <option value="1" ${state.ttsRate===1?'selected':''}>正常</option>
+        <option value="1.3" ${state.ttsRate===1.3?'selected':''}>快</option>
+      </select></div>` : ""}
+    </div>`;
+  }
+  function renderTtsButtons(revealed){
+    if(!ttsSupported) return "";
+    return `<div style="margin-top:8px;display:flex;gap:8px;">
+      <button class="primary-btn" id="ttsQBtn" style="background:#4a7a8c;flex:1;">🔊 唸題目</button>
+      ${revealed ? `<button class="primary-btn" id="ttsABtn" style="background:#4a7a8c;flex:1;">🔊 唸解答</button>` : ""}
+    </div>`;
   }
   function renderQuizHistory(){
     const list = state.quizHistory.filter(h=>h.chapter==null);
@@ -889,6 +957,7 @@
           ${qtype==='fill' ? renderFillInput(current) : ""}
           ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
           ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
+          ${renderTtsButtons(state.quizRevealed)}
           ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
         </div>
         <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次回來會接續）</button>
@@ -945,6 +1014,7 @@
         <button class="primary-btn" id="startExamABtn">📝 開始模擬考（50 題）</button>
         ${state.examAStats.total>0 ? `<div class="result-card">上一輪結果：${state.examAStats.correct} / ${state.examAStats.total} 答對</div>` : ""}
         ${renderExamAHistory()}
+        ${renderTtsSettings()}
       `;
     }
     const current = state.examAPool[state.examAIdx];
@@ -962,6 +1032,7 @@
             <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
           </button>`;
         }).join("")}
+        ${renderTtsButtons(state.examARevealed)}
         ${state.examARevealed ? `<button class="primary-btn" id="nextExamABtn">${state.examAIdx+1<state.examAPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
     `;
@@ -999,6 +1070,7 @@
         <button class="primary-btn" id="startExamBBtn">📝 開始模擬考（50 題）</button>
         ${state.examBStats.total>0 ? `<div class="result-card">上一輪結果：${state.examBStats.correct} / ${state.examBStats.total} 答對</div>` : ""}
         ${renderExamBHistory()}
+        ${renderTtsSettings()}
       `;
     }
     const current = state.examBPool[state.examBIdx];
@@ -1016,6 +1088,7 @@
             <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
           </button>`;
         }).join("")}
+        ${renderTtsButtons(state.examBRevealed)}
         ${state.examBRevealed ? `<button class="primary-btn" id="nextExamBBtn">${state.examBIdx+1<state.examBPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
     `;
@@ -1245,9 +1318,44 @@
   }
 
   /* ---------- events ---------- */
+  // 目前畫面上活躍的題目卡片是哪一題（練習/錯題複習/甲種模擬考/乙級模擬考共用同一組🔊按鈕，同一時間只會有一個在畫面上）
+  function getActiveQuizContext(){
+    if((state.tab==="quiz" || state.tab==="wrong") && state.quizPool.length>0){
+      return {current: state.quizPool[state.quizIdx], revealed: state.quizRevealed};
+    }
+    if(state.tab==="examA" && state.examAPool.length>0){
+      return {current: state.examAPool[state.examAIdx], revealed: state.examARevealed};
+    }
+    if(state.tab==="examB" && state.examBPool.length>0){
+      return {current: state.examBPool[state.examBIdx], revealed: state.examBRevealed};
+    }
+    return null;
+  }
   function bindEvents(){
-    root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.tab; render(); }));
+    root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{ stopSpeaking(); state.tab=el.dataset.tab; render(); }));
     root.querySelectorAll("[data-goto]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.goto; render(); }));
+
+    const ttsQBtn = document.getElementById("ttsQBtn");
+    if(ttsQBtn) ttsQBtn.addEventListener("click",()=>{
+      const ctx = getActiveQuizContext();
+      if(ctx) speakText(composeQuestionSpeech(ctx.current));
+    });
+    const ttsABtn = document.getElementById("ttsABtn");
+    if(ttsABtn) ttsABtn.addEventListener("click",()=>{
+      const ctx = getActiveQuizContext();
+      if(ctx) speakText(composeAnswerSpeech(ctx.current));
+    });
+    const ttsAutoToggle = document.getElementById("ttsAutoToggle");
+    if(ttsAutoToggle) ttsAutoToggle.addEventListener("change",e=>{
+      state.ttsAuto = e.target.checked;
+      persist("ttsAuto");
+      render();
+    });
+    const ttsRateSelect = document.getElementById("ttsRateSelect");
+    if(ttsRateSelect) ttsRateSelect.addEventListener("change",e=>{
+      state.ttsRate = parseFloat(e.target.value);
+      persist("ttsRate");
+    });
 
     const examBadge = document.getElementById("examBadge");
     if(examBadge) examBadge.addEventListener("click",()=>{ state.headerEditing=true; render(); });
@@ -1362,6 +1470,7 @@
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       persistQuizState();
+      if(state.ttsAuto && state.quizPool.length>0) speakText(composeQuestionSpeech(state.quizPool[0]));
       render();
     });
     const startRandom20Btn = document.getElementById("startRandom20Btn");
@@ -1371,6 +1480,7 @@
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       persistQuizState();
+      if(state.ttsAuto && state.quizPool.length>0) speakText(composeQuestionSpeech(state.quizPool[0]));
       render();
     });
     const startWrongReviewBtn = document.getElementById("startWrongReviewBtn");
@@ -1382,10 +1492,12 @@
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       persistQuizState();
+      if(state.ttsAuto && state.quizPool.length>0) speakText(composeQuestionSpeech(state.quizPool[0]));
       render();
     });
     const quizExitBtn = document.getElementById("quizExitBtn");
     if(quizExitBtn) quizExitBtn.addEventListener("click",()=>{
+      stopSpeaking();
       recordQuizHistoryIfNeeded();
       state.quizPool=[]; state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false;
       state.quizStats={correct:0,total:0}; state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
@@ -1429,6 +1541,7 @@
       state.quizSelected = val; state.quizRevealed = true;
       recordAnswer(current, val===current.answer);
       persistQuizState();
+      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     }));
     root.querySelectorAll("[data-multitoggle]").forEach(el=>el.addEventListener("click",()=>{
@@ -1448,6 +1561,7 @@
       state.quizRevealed = true;
       recordAnswer(current, correct);
       persistQuizState();
+      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     });
     const fillInputEl = document.getElementById("fillInput");
@@ -1460,6 +1574,7 @@
       state.quizRevealed = true;
       recordAnswer(current, correct);
       persistQuizState();
+      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     });
     const nextQuizBtn = document.getElementById("nextQuizBtn");
@@ -1467,6 +1582,7 @@
       if(state.quizIdx+1<state.quizPool.length){
         state.quizIdx++; state.quizSelected=null; state.quizRevealed=false;
         state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+        if(state.ttsAuto) speakText(composeQuestionSpeech(state.quizPool[state.quizIdx]));
       } else {
         recordQuizHistoryIfNeeded();
         state.quizPool=[];
@@ -1489,6 +1605,7 @@
       }
       state.examAPool = pool;
       state.examAIdx=0; state.examASelected=null; state.examARevealed=false; state.examAStats={correct:0,total:0};
+      if(state.ttsAuto && state.examAPool.length>0) speakText(composeQuestionSpeech(state.examAPool[0]));
       render();
     });
     root.querySelectorAll("[data-examachoose]").forEach(el=>el.addEventListener("click",()=>{
@@ -1502,12 +1619,14 @@
       persist("examASeenIds");
       markStudiedToday();
       recordWrongMapOutcome(current.id, correct);
+      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     }));
     const nextExamABtn = document.getElementById("nextExamABtn");
     if(nextExamABtn) nextExamABtn.addEventListener("click",()=>{
       if(state.examAIdx+1<state.examAPool.length){
         state.examAIdx++; state.examASelected=null; state.examARevealed=false;
+        if(state.ttsAuto) speakText(composeQuestionSpeech(state.examAPool[state.examAIdx]));
       } else {
         state.examAHistory = [{date:todayStr(), correct:state.examAStats.correct, total:state.examAStats.total}, ...state.examAHistory].slice(0,50);
         persist("examAHistory");
@@ -1530,6 +1649,7 @@
       }
       state.examBPool = pool;
       state.examBIdx=0; state.examBSelected=null; state.examBRevealed=false; state.examBStats={correct:0,total:0};
+      if(state.ttsAuto && state.examBPool.length>0) speakText(composeQuestionSpeech(state.examBPool[0]));
       render();
     });
     root.querySelectorAll("[data-exambchoose]").forEach(el=>el.addEventListener("click",()=>{
@@ -1543,12 +1663,14 @@
       persist("examBSeenIds");
       markStudiedToday();
       recordWrongMapOutcome(current.id, correct);
+      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     }));
     const nextExamBBtn = document.getElementById("nextExamBBtn");
     if(nextExamBBtn) nextExamBBtn.addEventListener("click",()=>{
       if(state.examBIdx+1<state.examBPool.length){
         state.examBIdx++; state.examBSelected=null; state.examBRevealed=false;
+        if(state.ttsAuto) speakText(composeQuestionSpeech(state.examBPool[state.examBIdx]));
       } else {
         state.examBHistory = [{date:todayStr(), correct:state.examBStats.correct, total:state.examBStats.total}, ...state.examBHistory].slice(0,50);
         persist("examBHistory");
