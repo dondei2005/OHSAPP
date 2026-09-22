@@ -330,6 +330,144 @@
     return ansText + note;
   }
 
+  /* ---------- 語音自動作答（隨機20題單選）：語音辨識(STT) + 音效 + 全自動 speak→listen→beep→下一題 迴圈 ---------- */
+  const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
+  const sttSupported = !!SpeechRecognitionClass;
+  function speakAsync(text){
+    return new Promise(resolve=>{
+      if(!ttsSupported || !text){ resolve(); return; }
+      window.speechSynthesis.cancel();
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = "zh-TW";
+      utter.rate = state.ttsRate || 1;
+      utter.onend = resolve;
+      utter.onerror = resolve;
+      window.speechSynthesis.speak(utter);
+    });
+  }
+  // 錄一次語音，回傳{transcripts, error}；transcripts是辨識引擎給的候選文字（maxAlternatives份），交給parseAnswerFromTranscripts判斷選了哪個選項
+  function listenOnceAsync(){
+    return new Promise(resolve=>{
+      if(!sttSupported){ resolve({transcripts:[], error:'unsupported'}); return; }
+      let done=false;
+      const rec = new SpeechRecognitionClass();
+      rec.lang = "zh-TW";
+      rec.continuous = false;
+      rec.interimResults = false;
+      rec.maxAlternatives = 3;
+      rec.onresult = (e)=>{
+        if(done) return; done=true;
+        const transcripts = Array.from(e.results[0]).map(r=>r.transcript);
+        resolve({transcripts, error:null});
+      };
+      rec.onerror = (e)=>{ if(done) return; done=true; resolve({transcripts:[], error:e.error}); };
+      rec.onend = ()=>{ if(done) return; done=true; resolve({transcripts:[], error:'no-result'}); };
+      state.voiceRecognitionInstance = rec;
+      try{ rec.start(); }catch(err){ done=true; resolve({transcripts:[], error:'start-failed'}); }
+    });
+  }
+  // 從語音辨識文字判斷答的是第幾個選項（0-based）：依序試「英文字母A/B/C/D」→「第一/第二/第三/第四」→
+  // 阿拉伯數字「1/2/3/4」→（短句才試）中文數字「一/二/三/四」→都不行的話，用選項文字本身模糊比對
+  function parseAnswerFromTranscripts(transcripts, options){
+    const letters = "ABCDEF";
+    const cnOrdinal = ["第一","第二","第三","第四","第五","第六"];
+    const cnNum = ["一","二","三","四","五","六"];
+    for(const raw of (transcripts||[])){
+      const t = String(raw||"").trim();
+      if(!t) continue;
+      const upper = t.toUpperCase();
+      for(let i=0;i<options.length;i++){ if(upper.includes(letters[i])) return i; }
+      for(let i=0;i<options.length;i++){ if(t.includes(cnOrdinal[i])) return i; }
+      for(let i=0;i<options.length;i++){ if(t.includes(String(i+1))) return i; }
+      if(t.length<=3){
+        for(let i=0;i<options.length;i++){ if(t.includes(cnNum[i])) return i; }
+      }
+    }
+    // 都沒抓到明確字母/序數時，改用選項文字本身模糊比對（使用者可能直接唸出答案內容而非選字母）
+    let bestIdx=-1, bestScore=0;
+    (transcripts||[]).forEach(raw=>{
+      const t = String(raw||"").trim();
+      if(!t) return;
+      options.forEach((opt,i)=>{
+        const sa = new Set(t), sb = new Set(String(opt));
+        let inter=0; sa.forEach(ch=>{ if(sb.has(ch)) inter++; });
+        const score = inter / Math.max(1, Math.min(sa.size, sb.size));
+        if(score>bestScore){ bestScore=score; bestIdx=i; }
+      });
+    });
+    return bestScore>=0.5 ? bestIdx : null;
+  }
+  let __audioCtx = null;
+  function playBeep(correct){
+    return new Promise(resolve=>{
+      try{
+        if(!__audioCtx) __audioCtx = new (window.AudioContext||window.webkitAudioContext)();
+        const ctx = __audioCtx;
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.type = "sine";
+        osc.frequency.value = correct ? 880 : 220;
+        gain.gain.setValueAtTime(0.18, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.35);
+        osc.start();
+        osc.stop(ctx.currentTime+0.35);
+        osc.onended = resolve;
+      }catch(e){ resolve(); }
+    });
+  }
+  function stopVoiceQuiz(){
+    state.voiceRunning = false;
+    stopSpeaking();
+    if(state.voiceRecognitionInstance){ try{ state.voiceRecognitionInstance.abort(); }catch(e){} }
+  }
+  async function runVoiceQuizLoop(){
+    while(state.voiceRunning && state.voiceIdx < state.voicePool.length){
+      const current = state.voicePool[state.voiceIdx];
+      state.voiceStatus = "speaking"; state.voiceLastTranscript=""; state.voiceLastAnswer=null;
+      render();
+      await speakAsync(composeQuestionSpeech(current));
+      if(!state.voiceRunning) break;
+
+      state.voiceStatus = "listening";
+      render();
+      let result = await listenOnceAsync();
+      if(!state.voiceRunning) break;
+      let idx = parseAnswerFromTranscripts(result.transcripts, current.options);
+      if(idx===null){
+        state.voiceStatus = "retry";
+        render();
+        await speakAsync("沒聽清楚，請再說一次答案");
+        if(!state.voiceRunning) break;
+        result = await listenOnceAsync();
+        if(!state.voiceRunning) break;
+        idx = parseAnswerFromTranscripts(result.transcripts, current.options);
+      }
+
+      const correct = idx!==null && idx===current.answer;
+      state.voiceStats = {correct: state.voiceStats.correct+(correct?1:0), total: state.voiceStats.total+1};
+      state.voiceLastTranscript = (result.transcripts&&result.transcripts[0]) || "（未辨識到語音）";
+      state.voiceLastAnswer = idx;
+      markStudiedToday();
+      recordWrongMapOutcome(current.id, correct);
+      state.quizSeenIds[current.id] = true; persist("quizSeenIds");
+      state.voiceStatus = "result";
+      render();
+      await playBeep(correct);
+      if(!state.voiceRunning) break;
+
+      state.voiceIdx++;
+    }
+    if(state.voiceRunning){
+      state.quizHistory = [{date:todayStr(), correct:state.voiceStats.correct, total:state.voiceStats.total, chapter:null, mode:'voice20'}, ...state.quizHistory].slice(0,300);
+      persist("quizHistory");
+      await speakAsync(`本輪語音作答結束，共 ${state.voiceStats.total} 題，答對 ${state.voiceStats.correct} 題`);
+    }
+    state.voiceRunning = false;
+    state.voicePool = [];
+    render();
+  }
+
   /* ---------- storage (localStorage) ---------- */
   const NS = "ohs_";
   function loadData(key, fallback){
@@ -367,6 +505,8 @@
     syncMsg:"",
     cloudSyncMsg:"",
     ttsAuto:false, ttsRate:1,
+    voicePool:[], voiceIdx:0, voiceStats:{correct:0,total:0}, voiceRunning:false,
+    voiceStatus:"", voiceLastTranscript:"", voiceLastAnswer:null, voiceRecognitionInstance:null,
   };
 
   const root = document.getElementById("app");
@@ -501,6 +641,28 @@
   function markStudiedToday(){
     state.studyLog[todayStr()] = true;
     persist("studyLog");
+  }
+  function recordWrongMapOutcome(id, correct){
+    const m = state.wrongMap;
+    const now = new Date().toISOString();
+    if(!correct){
+      const existing = m[id]||{wrongCount:0, correctStreak:0};
+      const wrongCount = existing.wrongCount+1;
+      const intervalDays = [1,3,7,14][Math.min(wrongCount-1,3)];
+      const due = new Date(); due.setDate(due.getDate()+intervalDays);
+      // 再錯一次：連續答對次數歸零，等級（wrongCount）提升，錯題本卡片會用顏色標示需要加強
+      m[id] = {wrongCount, correctStreak:0, lastSeen:todayStr(), updatedAt:now, dueDate:due.toISOString().slice(0,10), mastered:false};
+    } else if(m[id]){
+      const correctStreak = (m[id].correctStreak||0)+1;
+      if(correctStreak>=3){
+        // 連續答對 3 次，移出錯題本（mastered）
+        m[id] = {...m[id], correctStreak, mastered:true, updatedAt:now};
+      } else {
+        const due = new Date(); due.setDate(due.getDate()+3);
+        m[id] = {...m[id], correctStreak, dueDate:due.toISOString().slice(0,10), updatedAt:now};
+      }
+    }
+    persist("wrongMap");
   }
 
   // 練習題組（chapter/random20/wrongreview 共用）進行中的狀態，每次異動都整組存本機，
@@ -732,9 +894,36 @@
   }
 
   /* ---------- Quiz ---------- */
+  function renderVoiceQuiz(){
+    const current = state.voicePool[state.voiceIdx];
+    const statusText = {
+      speaking: "🔊 正在讀題目…",
+      listening: "🎙️ 請說出答案（可以說字母 A / B / C / D，或直接唸出答案內容）",
+      retry: "🎙️ 沒聽清楚，請再說一次…",
+      result: state.voiceLastAnswer===null
+        ? `❌ 沒有辨識到有效答案（你說的是：「${esc(state.voiceLastTranscript)}」）`
+        : `${state.voiceLastAnswer===current.answer?'✅ 答對了':'❌ 答錯了'}（你說的是：「${esc(state.voiceLastTranscript)}」→ 選了 ${String.fromCharCode(65+state.voiceLastAnswer)}）`,
+    }[state.voiceStatus] || "";
+    return `
+      <div class="quiz-progress">🎙️ 語音自動作答 第 ${state.voiceIdx+1} / ${state.voicePool.length} 題 · 答對 ${state.voiceStats.correct}</div>
+      <div class="quiz-card">
+        <div class="quiz-chapter-tag">${current.chapter===0?'概論':('第'+toChinese(current.chapter)+'章')}</div>
+        <div class="quiz-question">${esc(current.text)}</div>
+        ${current.options.map((opt,i)=>`<div class="quiz-option" style="cursor:default;">
+          <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
+        </div>`).join("")}
+        <div class="quiz-note" style="margin-top:10px;">${statusText}</div>
+      </div>
+      <button class="primary-btn" id="voiceStopBtn" style="background:#8a8275;margin-top:8px;">🛑 停止語音作答</button>
+      <div class="section-desc" style="margin-top:6px;">全程自動進行：讀題 → 聆聽你的回答 → 播放音效 → 自動下一題，不需要點擊畫面。</div>
+    `;
+  }
   function renderQuiz(){
     if(state.questions.length===0){
       return `<div class="empty-hint">題庫目前是空的，請先到「題庫」分頁新增考古題再來練習。</div>`;
+    }
+    if(state.voicePool.length>0){
+      return renderVoiceQuiz();
     }
     if(state.quizPool.length===0){
       const chapterSelected = state.quizChapterFilter!=="all";
@@ -751,6 +940,10 @@
         <div class="section-desc" style="margin-top:4px;">單一章節每輪以 50 題為單位出題（不滿 50 題則刷完該章全部題目），優先出還沒刷過的題目，刷完一輪才會重複。</div>
         <button class="primary-btn" id="startQuizBtn">開始隨機練習</button>
         <button class="primary-btn" id="startRandom20Btn" style="margin-top:8px;background:#2f6b4f;">🎲 綜合隨機 20 題（跨章節測驗）</button>
+        ${sttSupported
+          ? `<button class="primary-btn" id="startVoiceQuizBtn" style="margin-top:8px;background:#7a4a8c;">🎙️ 語音自動作答（隨機 20 題單選，全自動免點擊）</button>`
+          : `<div class="section-desc" style="margin-top:8px;">（這個瀏覽器不支援語音辨識，語音自動作答功能無法使用，建議改用 Chrome）</div>`}
+        ${state.voiceStats.total>0 ? `<div class="result-card">上一輪語音作答結果：${state.voiceStats.correct} / ${state.voiceStats.total} 答對</div>` : ""}
         ${state.quizStats.total>0 ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : ""}
         ${chapterSelected ? renderChapterCoverage(state.quizChapterFilter) : ""}
         ${chapterSelected ? renderChapterHistory(state.quizChapterFilter) : renderQuizHistory()}
@@ -802,7 +995,7 @@
     const rows = list.slice(0,10).map(h=>{
       const pct = h.total>0 ? Math.round(h.correct/h.total*100) : 0;
       return `<div class="wrong-top" style="justify-content:space-between;">
-        <span class="q-chapter">${esc(h.date)}</span>
+        <span class="q-chapter">${h.mode==='voice20'?'🎙️ ':''}${esc(h.date)}</span>
         <span>${h.correct} / ${h.total} 答對（${pct}%）</span>
       </div>`;
     }).join("");
@@ -1171,7 +1364,7 @@
       const combined = [...(a||[]), ...(b||[])];
       const seen = new Set();
       const deduped = combined.filter(h=>{
-        const key = h.date+'|'+h.correct+'|'+h.total+'|'+h.chapter;
+        const key = h.date+'|'+h.correct+'|'+h.total+'|'+h.chapter+'|'+h.mode;
         if(seen.has(key)) return false;
         seen.add(key); return true;
       });
@@ -1332,7 +1525,11 @@
     return null;
   }
   function bindEvents(){
-    root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{ stopSpeaking(); state.tab=el.dataset.tab; render(); }));
+    root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{
+      stopSpeaking();
+      if(state.voiceRunning){ stopVoiceQuiz(); state.voicePool=[]; }
+      state.tab=el.dataset.tab; render();
+    }));
     root.querySelectorAll("[data-goto]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.goto; render(); }));
 
     const ttsQBtn = document.getElementById("ttsQBtn");
@@ -1483,6 +1680,21 @@
       if(state.ttsAuto && state.quizPool.length>0) speakText(composeQuestionSpeech(state.quizPool[0]));
       render();
     });
+    const startVoiceQuizBtn = document.getElementById("startVoiceQuizBtn");
+    if(startVoiceQuizBtn) startVoiceQuizBtn.addEventListener("click",()=>{
+      const singleQs = state.questions.filter(q=>q.type==="single");
+      state.voicePool = orderBySeenFirst(singleQs).slice(0,20);
+      state.voiceIdx = 0; state.voiceStats = {correct:0,total:0}; state.voiceRunning = true;
+      state.voiceStatus = ""; state.voiceLastTranscript = ""; state.voiceLastAnswer = null;
+      render();
+      runVoiceQuizLoop();
+    });
+    const voiceStopBtn = document.getElementById("voiceStopBtn");
+    if(voiceStopBtn) voiceStopBtn.addEventListener("click",()=>{
+      stopVoiceQuiz();
+      state.voicePool = [];
+      render();
+    });
     const startWrongReviewBtn = document.getElementById("startWrongReviewBtn");
     if(startWrongReviewBtn) startWrongReviewBtn.addEventListener("click",()=>{
       // computeWrongQuestions() 已依「容易錯」排序（答錯次數多的在前），直接取前20題，優先複習最常錯的
@@ -1504,28 +1716,6 @@
       persistQuizState();
       render();
     });
-    function recordWrongMapOutcome(id, correct){
-      const m = state.wrongMap;
-      const now = new Date().toISOString();
-      if(!correct){
-        const existing = m[id]||{wrongCount:0, correctStreak:0};
-        const wrongCount = existing.wrongCount+1;
-        const intervalDays = [1,3,7,14][Math.min(wrongCount-1,3)];
-        const due = new Date(); due.setDate(due.getDate()+intervalDays);
-        // 再錯一次：連續答對次數歸零，等級（wrongCount）提升，錯題本卡片會用顏色標示需要加強
-        m[id] = {wrongCount, correctStreak:0, lastSeen:todayStr(), updatedAt:now, dueDate:due.toISOString().slice(0,10), mastered:false};
-      } else if(m[id]){
-        const correctStreak = (m[id].correctStreak||0)+1;
-        if(correctStreak>=3){
-          // 連續答對 3 次，移出錯題本（mastered）
-          m[id] = {...m[id], correctStreak, mastered:true, updatedAt:now};
-        } else {
-          const due = new Date(); due.setDate(due.getDate()+3);
-          m[id] = {...m[id], correctStreak, dueDate:due.toISOString().slice(0,10), updatedAt:now};
-        }
-      }
-      persist("wrongMap");
-    }
     function recordAnswer(current, correct){
       markStudiedToday();
       state.quizStats = {correct: state.quizStats.correct+(correct?1:0), total: state.quizStats.total+1};
