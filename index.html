@@ -289,185 +289,6 @@
     return str;
   }
 
-  /* ---------- 語音朗讀（Web Speech API，純瀏覽器內建，不用外部服務） ---------- */
-  const ttsSupported = typeof window!=="undefined" && "speechSynthesis" in window;
-  function speakText(text){
-    if(!ttsSupported || !text) return;
-    try{
-      window.speechSynthesis.cancel(); // 先打斷上一句，避免疊音
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = "zh-TW";
-      utter.rate = state.ttsRate || 1;
-      window.speechSynthesis.speak(utter);
-    }catch(e){ /* 部分瀏覽器（如舊版webview）可能不支援，靜默忽略 */ }
-  }
-  function stopSpeaking(){
-    if(ttsSupported){ try{ window.speechSynthesis.cancel(); }catch(e){} }
-  }
-  // 組出「題目＋選項」要唸的文字（單選/複選/是非題才有選項；填空題只唸題目）
-  function composeQuestionSpeech(current){
-    let parts = [current.text];
-    if(current.type==="single" || current.type==="multi"){
-      current.options.forEach((opt,i)=>{ parts.push(`${String.fromCharCode(65+i)}、${opt}`); });
-    } else if(current.type==="truefalse"){
-      parts.push("是非題");
-    }
-    return parts.join("。");
-  }
-  // 組出「解答＋備註」要唸的文字，作答完（quizRevealed）之後才唸
-  function composeAnswerSpeech(current){
-    let ansText;
-    if(current.type==="single"){
-      ansText = `正確答案：${String.fromCharCode(65+current.answer)}、${current.options[current.answer]}`;
-    } else if(current.type==="multi"){
-      ansText = `正確答案：${current.answer.map(i=>String.fromCharCode(65+i)).join('、')}`;
-    } else if(current.type==="truefalse"){
-      ansText = `正確答案：${current.answer==="true"?"正確":"錯誤"}`;
-    } else {
-      ansText = `正確答案：${current.answer}`;
-    }
-    const note = current.note ? `。備註：${current.note}` : "";
-    return ansText + note;
-  }
-
-  /* ---------- 語音自動作答（隨機20題單選）：語音辨識(STT) + 音效 + 全自動 speak→listen→beep→下一題 迴圈 ---------- */
-  const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
-  const sttSupported = !!SpeechRecognitionClass;
-  function speakAsync(text){
-    return new Promise(resolve=>{
-      if(!ttsSupported || !text){ resolve(); return; }
-      window.speechSynthesis.cancel();
-      const utter = new SpeechSynthesisUtterance(text);
-      utter.lang = "zh-TW";
-      utter.rate = state.ttsRate || 1;
-      utter.onend = resolve;
-      utter.onerror = resolve;
-      window.speechSynthesis.speak(utter);
-    });
-  }
-  // 錄一次語音，回傳{transcripts, error}；transcripts是辨識引擎給的候選文字（maxAlternatives份），交給parseAnswerFromTranscripts判斷選了哪個選項
-  function listenOnceAsync(){
-    return new Promise(resolve=>{
-      if(!sttSupported){ resolve({transcripts:[], error:'unsupported'}); return; }
-      let done=false;
-      const rec = new SpeechRecognitionClass();
-      rec.lang = "zh-TW";
-      rec.continuous = false;
-      rec.interimResults = false;
-      rec.maxAlternatives = 3;
-      rec.onresult = (e)=>{
-        if(done) return; done=true;
-        const transcripts = Array.from(e.results[0]).map(r=>r.transcript);
-        resolve({transcripts, error:null});
-      };
-      rec.onerror = (e)=>{ if(done) return; done=true; resolve({transcripts:[], error:e.error}); };
-      rec.onend = ()=>{ if(done) return; done=true; resolve({transcripts:[], error:'no-result'}); };
-      state.voiceRecognitionInstance = rec;
-      try{ rec.start(); }catch(err){ done=true; resolve({transcripts:[], error:'start-failed'}); }
-    });
-  }
-  // 從語音辨識文字判斷答的是第幾個選項（0-based）：依序試「英文字母A/B/C/D」→「第一/第二/第三/第四」→
-  // 阿拉伯數字「1/2/3/4」→（短句才試）中文數字「一/二/三/四」→都不行的話，用選項文字本身模糊比對
-  function parseAnswerFromTranscripts(transcripts, options){
-    const letters = "ABCDEF";
-    const cnOrdinal = ["第一","第二","第三","第四","第五","第六"];
-    const cnNum = ["一","二","三","四","五","六"];
-    for(const raw of (transcripts||[])){
-      const t = String(raw||"").trim();
-      if(!t) continue;
-      const upper = t.toUpperCase();
-      for(let i=0;i<options.length;i++){ if(upper.includes(letters[i])) return i; }
-      for(let i=0;i<options.length;i++){ if(t.includes(cnOrdinal[i])) return i; }
-      for(let i=0;i<options.length;i++){ if(t.includes(String(i+1))) return i; }
-      if(t.length<=3){
-        for(let i=0;i<options.length;i++){ if(t.includes(cnNum[i])) return i; }
-      }
-    }
-    // 都沒抓到明確字母/序數時，改用選項文字本身模糊比對（使用者可能直接唸出答案內容而非選字母）
-    let bestIdx=-1, bestScore=0;
-    (transcripts||[]).forEach(raw=>{
-      const t = String(raw||"").trim();
-      if(!t) return;
-      options.forEach((opt,i)=>{
-        const sa = new Set(t), sb = new Set(String(opt));
-        let inter=0; sa.forEach(ch=>{ if(sb.has(ch)) inter++; });
-        const score = inter / Math.max(1, Math.min(sa.size, sb.size));
-        if(score>bestScore){ bestScore=score; bestIdx=i; }
-      });
-    });
-    return bestScore>=0.5 ? bestIdx : null;
-  }
-  let __audioCtx = null;
-  function playBeep(correct){
-    return new Promise(resolve=>{
-      try{
-        if(!__audioCtx) __audioCtx = new (window.AudioContext||window.webkitAudioContext)();
-        const ctx = __audioCtx;
-        const osc = ctx.createOscillator();
-        const gain = ctx.createGain();
-        osc.connect(gain); gain.connect(ctx.destination);
-        osc.type = "sine";
-        osc.frequency.value = correct ? 880 : 220;
-        gain.gain.setValueAtTime(0.18, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime+0.35);
-        osc.start();
-        osc.stop(ctx.currentTime+0.35);
-        osc.onended = resolve;
-      }catch(e){ resolve(); }
-    });
-  }
-  function stopVoiceQuiz(){
-    state.voiceRunning = false;
-    stopSpeaking();
-    if(state.voiceRecognitionInstance){ try{ state.voiceRecognitionInstance.abort(); }catch(e){} }
-  }
-  async function runVoiceQuizLoop(){
-    while(state.voiceRunning && state.voiceIdx < state.voicePool.length){
-      const current = state.voicePool[state.voiceIdx];
-      state.voiceStatus = "speaking"; state.voiceLastTranscript=""; state.voiceLastAnswer=null;
-      render();
-      await speakAsync(composeQuestionSpeech(current));
-      if(!state.voiceRunning) break;
-
-      state.voiceStatus = "listening";
-      render();
-      let result = await listenOnceAsync();
-      if(!state.voiceRunning) break;
-      let idx = parseAnswerFromTranscripts(result.transcripts, current.options);
-      if(idx===null){
-        state.voiceStatus = "retry";
-        render();
-        await speakAsync("沒聽清楚，請再說一次答案");
-        if(!state.voiceRunning) break;
-        result = await listenOnceAsync();
-        if(!state.voiceRunning) break;
-        idx = parseAnswerFromTranscripts(result.transcripts, current.options);
-      }
-
-      const correct = idx!==null && idx===current.answer;
-      state.voiceStats = {correct: state.voiceStats.correct+(correct?1:0), total: state.voiceStats.total+1};
-      state.voiceLastTranscript = (result.transcripts&&result.transcripts[0]) || "（未辨識到語音）";
-      state.voiceLastAnswer = idx;
-      markStudiedToday();
-      recordWrongMapOutcome(current.id, correct);
-      state.quizSeenIds[current.id] = true; persist("quizSeenIds");
-      state.voiceStatus = "result";
-      render();
-      await playBeep(correct);
-      if(!state.voiceRunning) break;
-
-      state.voiceIdx++;
-    }
-    if(state.voiceRunning){
-      state.quizHistory = [{date:todayStr(), correct:state.voiceStats.correct, total:state.voiceStats.total, chapter:null, mode:'voice20'}, ...state.quizHistory].slice(0,300);
-      persist("quizHistory");
-      await speakAsync(`本輪語音作答結束，共 ${state.voiceStats.total} 題，答對 ${state.voiceStats.correct} 題`);
-    }
-    state.voiceRunning = false;
-    state.voicePool = [];
-    render();
-  }
-
   /* ---------- storage (localStorage) ---------- */
   const NS = "ohs_";
   function loadData(key, fallback){
@@ -496,6 +317,7 @@
     quizChapterFilter:"all", quizPool:[], quizIdx:0, quizSelected:null, quizRevealed:false, quizStats:{correct:0,total:0},
     quizMultiSelected:[], quizFillInput:"", quizFillCorrect:false, quizMode:"chapter", quizHistory:[],
     quizSeenIds:{},
+    chartExpandedChapter:null,
     examA:[], examAHistory:[], examAPool:[], examAIdx:0, examASelected:null, examARevealed:false, examAStats:{correct:0,total:0},
     examASeenIds:{},
     examB:[], examBHistory:[], examBPool:[], examBIdx:0, examBSelected:null, examBRevealed:false, examBStats:{correct:0,total:0},
@@ -504,9 +326,6 @@
     headerEditing:false,
     syncMsg:"",
     cloudSyncMsg:"",
-    ttsAuto:false, ttsRate:1,
-    voicePool:[], voiceIdx:0, voiceStats:{correct:0,total:0}, voiceRunning:false,
-    voiceStatus:"", voiceLastTranscript:"", voiceLastAnswer:null, voiceRecognitionInstance:null,
   };
 
   const root = document.getElementById("app");
@@ -559,8 +378,8 @@
     state.laws = loadData("laws", LAW_SEED);
     state.quizHistory = loadData("quizHistory", []);
     state.quizSeenIds = loadData("quizSeenIds", {});
-    state.ttsAuto = loadData("ttsAuto", false);
-    state.ttsRate = loadData("ttsRate", 1);
+    // 記住上次選的章節範圍，回來時預設停在同一章，才看得到「本章節成績記錄」而不是被重置成「全部章節」
+    state.quizChapterFilter = loadData("quizChapterFilter", "all");
     // 練習進行到一半離開（關頁、切分頁）也要能接續，所以連同作答中的題組本身一併存本機
     state.quizPool = loadData("quizPool", []);
     state.quizIdx = loadData("quizIdx", 0);
@@ -617,6 +436,7 @@
       laws: ()=>saveData("laws",state.laws),
       quizHistory: ()=>saveData("quizHistory",state.quizHistory),
       quizSeenIds: ()=>saveData("quizSeenIds",state.quizSeenIds),
+      quizChapterFilter: ()=>saveData("quizChapterFilter",state.quizChapterFilter),
       quizPool: ()=>saveData("quizPool",state.quizPool),
       quizIdx: ()=>saveData("quizIdx",state.quizIdx),
       quizSelected: ()=>saveData("quizSelected",state.quizSelected),
@@ -626,8 +446,6 @@
       quizFillInput: ()=>saveData("quizFillInput",state.quizFillInput),
       quizFillCorrect: ()=>saveData("quizFillCorrect",state.quizFillCorrect),
       quizMode: ()=>saveData("quizMode",state.quizMode),
-      ttsAuto: ()=>saveData("ttsAuto",state.ttsAuto),
-      ttsRate: ()=>saveData("ttsRate",state.ttsRate),
       examA: ()=>saveData("examA",state.examA),
       examAHistory: ()=>saveData("examAHistory",state.examAHistory),
       examASeenIds: ()=>saveData("examASeenIds",state.examASeenIds),
@@ -802,23 +620,85 @@
   }
 
   /* ---------- Chapters ---------- */
+  // 該章節累計正確率：把quizHistory裡標記這個章節的每一輪成績加總（跟renderChapterHistory用的是同一份資料，這裡做總和而非列表）
+  function computeChapterAccuracy(chapterId){
+    let correct=0, total=0;
+    state.quizHistory.forEach(h=>{ if(h.chapter===chapterId){ correct+=h.correct; total+=h.total; } });
+    return {correct, total, pct: total>0 ? Math.round(correct/total*100) : null};
+  }
+  // 畫一個環形進度圖（SVG，不用外部圖表套件）：中心顯示百分比數字，可傳入不同顏色代表覆蓋率/正確率
+  function svgRing(pct, color, label){
+    const size=92, stroke=10, r=(size-stroke)/2, c=size/2;
+    const circumference = 2*Math.PI*r;
+    const safePct = pct===null ? 0 : Math.max(0,Math.min(100,pct));
+    const offset = circumference * (1-safePct/100);
+    return `<div style="text-align:center;">
+      <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}" style="display:block;margin:0 auto;">
+        <circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="#EFE8DA" stroke-width="${stroke}"/>
+        ${pct!==null ? `<circle cx="${c}" cy="${c}" r="${r}" fill="none" stroke="${color}" stroke-width="${stroke}"
+          stroke-linecap="round" stroke-dasharray="${circumference.toFixed(1)}" stroke-dashoffset="${offset.toFixed(1)}"
+          transform="rotate(-90 ${c} ${c})"/>` : ""}
+        <text x="${c}" y="${c+6}" text-anchor="middle" font-size="19" font-weight="700" fill="#2B2620">${pct===null?'—':pct+'%'}</text>
+      </svg>
+      <div style="font-size:12px;color:#6b6356;margin-top:4px;">${esc(label)}</div>
+    </div>`;
+  }
+  // 點擊章節後展開的互動式數據圖：刷題覆蓋率＋正確率兩個環形圖，加上最近幾輪成績的長條圖（可以看趨勢）
+  function renderChapterChart(chapterId){
+    const total = state.questions.filter(q=>q.chapter===chapterId).length;
+    const seenCount = state.questions.filter(q=>q.chapter===chapterId && state.quizSeenIds[q.id]).length;
+    const coveragePct = total>0 ? Math.round(seenCount/total*100) : null;
+    const acc = computeChapterAccuracy(chapterId);
+    let accColor="#9a9488", accLabel="尚無作答記錄";
+    if(acc.pct!==null){
+      if(acc.pct>=80){ accColor="#3F7D5C"; accLabel="✅ 已熟練"; }
+      else if(acc.pct>=50){ accColor="#A8631F"; accLabel="⚠️ 加強中"; }
+      else { accColor="#B9554A"; accLabel="🔥 待加強"; }
+    }
+    const history = state.quizHistory.filter(h=>h.chapter===chapterId).slice(0,8).reverse();
+    const trend = history.length===0 ? `<div class="section-desc" style="margin-top:8px;">還沒有這個章節的作答記錄，開始練習後這裡會出現趨勢圖。</div>` : `
+      <div style="font-size:12px;color:#6b6356;margin-top:14px;margin-bottom:6px;">最近 ${history.length} 輪正確率趨勢（由左到右依時間排序）</div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:70px;">
+        ${history.map(h=>{
+          const pct = h.total>0 ? Math.round(h.correct/h.total*100) : 0;
+          const barColor = pct>=80?"#3F7D5C":pct>=50?"#A8631F":"#B9554A";
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;">
+            <div style="font-size:10px;color:#6b6356;margin-bottom:2px;">${pct}%</div>
+            <div style="width:100%;max-width:22px;height:${Math.max(4,pct*0.5)}px;background:${barColor};border-radius:4px 4px 0 0;"></div>
+          </div>`;
+        }).join("")}
+      </div>
+      <div style="display:flex;gap:6px;margin-top:4px;">
+        ${history.map(h=>`<div style="flex:1;text-align:center;font-size:9px;color:#9a9488;max-width:22px;margin:0 auto;">${esc(h.date.slice(5))}</div>`).join("")}
+      </div>
+    `;
+    return `<div class="chapter-chart" style="background:#fff;border:1px solid #E7E1D4;border-radius:14px;padding:16px;margin-top:-4px;">
+      <div style="display:flex;justify-content:space-around;">
+        ${svgRing(coveragePct, "#A8631F", `刷題進度 ${seenCount}/${total} 題`)}
+        ${svgRing(acc.pct, accColor, acc.pct===null ? accLabel : `${accLabel}（${acc.correct}/${acc.total}題）`)}
+      </div>
+      ${trend}
+    </div>`;
+  }
   function renderChapters(){
     return `
       <div class="section-title">章節清單（共 ${CHAPTERS.length} 章）</div>
-      <div class="section-desc">點一下狀態標籤可循環切換：未讀 → 閱讀中 → 已完成</div>
+      <div class="section-desc">點一下狀態標籤可循環切換：未讀 → 閱讀中 → 已完成；點一下章節標題可以看刷題數據圖</div>
       ${CHAPTERS.map(c=>{
         const st = state.chapterState[c.id]?.status||"todo";
         const s = STATUS[st];
         const notes = state.chapterState[c.id]?.notes||"";
+        const expanded = state.chartExpandedChapter===c.id;
         return `<div class="chapter-card">
           <div class="chapter-top">
             <div class="chapter-idx">第${toChinese(c.id)}章</div>
             <button class="status-pill" data-cycle="${c.id}" style="color:${s.color};background:${s.bg};">${s.label}</button>
           </div>
-          <div class="chapter-title">${esc(c.title)}</div>
+          <div class="chapter-title" data-chartexpand="${c.id}" style="cursor:pointer;">${esc(c.title)} <span style="font-size:12px;color:#A8631F;">${expanded?'📊 收合':'📊 查看數據'}</span></div>
           <div class="chapter-pages">P.${c.pages}</div>
           <textarea class="notes-area" placeholder="重點筆記（選填）" data-notes="${c.id}">${esc(notes)}</textarea>
-        </div>`;
+        </div>
+        ${expanded ? renderChapterChart(c.id) : ""}`;
       }).join("")}
     `;
   }
@@ -894,36 +774,9 @@
   }
 
   /* ---------- Quiz ---------- */
-  function renderVoiceQuiz(){
-    const current = state.voicePool[state.voiceIdx];
-    const statusText = {
-      speaking: "🔊 正在讀題目…",
-      listening: "🎙️ 請說出答案（可以說字母 A / B / C / D，或直接唸出答案內容）",
-      retry: "🎙️ 沒聽清楚，請再說一次…",
-      result: state.voiceLastAnswer===null
-        ? `❌ 沒有辨識到有效答案（你說的是：「${esc(state.voiceLastTranscript)}」）`
-        : `${state.voiceLastAnswer===current.answer?'✅ 答對了':'❌ 答錯了'}（你說的是：「${esc(state.voiceLastTranscript)}」→ 選了 ${String.fromCharCode(65+state.voiceLastAnswer)}）`,
-    }[state.voiceStatus] || "";
-    return `
-      <div class="quiz-progress">🎙️ 語音自動作答 第 ${state.voiceIdx+1} / ${state.voicePool.length} 題 · 答對 ${state.voiceStats.correct}</div>
-      <div class="quiz-card">
-        <div class="quiz-chapter-tag">${current.chapter===0?'概論':('第'+toChinese(current.chapter)+'章')}</div>
-        <div class="quiz-question">${esc(current.text)}</div>
-        ${current.options.map((opt,i)=>`<div class="quiz-option" style="cursor:default;">
-          <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
-        </div>`).join("")}
-        <div class="quiz-note" style="margin-top:10px;">${statusText}</div>
-      </div>
-      <button class="primary-btn" id="voiceStopBtn" style="background:#8a8275;margin-top:8px;">🛑 停止語音作答</button>
-      <div class="section-desc" style="margin-top:6px;">全程自動進行：讀題 → 聆聽你的回答 → 播放音效 → 自動下一題，不需要點擊畫面。</div>
-    `;
-  }
   function renderQuiz(){
     if(state.questions.length===0){
       return `<div class="empty-hint">題庫目前是空的，請先到「題庫」分頁新增考古題再來練習。</div>`;
-    }
-    if(state.voicePool.length>0){
-      return renderVoiceQuiz();
     }
     if(state.quizPool.length===0){
       const chapterSelected = state.quizChapterFilter!=="all";
@@ -940,14 +793,9 @@
         <div class="section-desc" style="margin-top:4px;">單一章節每輪以 50 題為單位出題（不滿 50 題則刷完該章全部題目），優先出還沒刷過的題目，刷完一輪才會重複。</div>
         <button class="primary-btn" id="startQuizBtn">開始隨機練習</button>
         <button class="primary-btn" id="startRandom20Btn" style="margin-top:8px;background:#2f6b4f;">🎲 綜合隨機 20 題（跨章節測驗）</button>
-        ${sttSupported
-          ? `<button class="primary-btn" id="startVoiceQuizBtn" style="margin-top:8px;background:#7a4a8c;">🎙️ 語音自動作答（隨機 20 題單選，全自動免點擊）</button>`
-          : `<div class="section-desc" style="margin-top:8px;">（這個瀏覽器不支援語音辨識，語音自動作答功能無法使用，建議改用 Chrome）</div>`}
-        ${state.voiceStats.total>0 ? `<div class="result-card">上一輪語音作答結果：${state.voiceStats.correct} / ${state.voiceStats.total} 答對</div>` : ""}
         ${state.quizStats.total>0 ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : ""}
         ${chapterSelected ? renderChapterCoverage(state.quizChapterFilter) : ""}
         ${chapterSelected ? renderChapterHistory(state.quizChapterFilter) : renderQuizHistory()}
-        ${renderTtsSettings()}
       `;
     }
     const current = state.quizPool[state.quizIdx];
@@ -962,32 +810,11 @@
         ${qtype==='fill' ? renderFillInput(current) : ""}
         ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
         ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
-        ${renderTtsButtons(state.quizRevealed)}
         ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
       <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次可換範圍或接續）</button>
       <div class="section-desc" style="margin-top:6px;">中途關閉分頁或切走也沒關係，回來會自動接續這一題。</div>
     `;
-  }
-  function renderTtsSettings(){
-    if(!ttsSupported) return `<div class="section-desc" style="margin-top:10px;">（這個瀏覽器不支援語音朗讀功能）</div>`;
-    return `<div class="section-desc" style="margin-top:10px;">
-      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
-        <input type="checkbox" id="ttsAutoToggle" ${state.ttsAuto?'checked':''}> 🔊 自動朗讀題目與解答（適合開車、做家事時用聽的複習）
-      </label>
-      ${state.ttsAuto ? `<div style="margin-top:6px;">語速：<select id="ttsRateSelect" class="text-input" style="display:inline-block;width:auto;">
-        <option value="0.8" ${state.ttsRate===0.8?'selected':''}>慢</option>
-        <option value="1" ${state.ttsRate===1?'selected':''}>正常</option>
-        <option value="1.3" ${state.ttsRate===1.3?'selected':''}>快</option>
-      </select></div>` : ""}
-    </div>`;
-  }
-  function renderTtsButtons(revealed){
-    if(!ttsSupported) return "";
-    return `<div style="margin-top:8px;display:flex;gap:8px;">
-      <button class="primary-btn" id="ttsQBtn" style="background:#4a7a8c;flex:1;">🔊 唸題目</button>
-      ${revealed ? `<button class="primary-btn" id="ttsABtn" style="background:#4a7a8c;flex:1;">🔊 唸解答</button>` : ""}
-    </div>`;
   }
   function renderQuizHistory(){
     const list = state.quizHistory.filter(h=>h.chapter==null);
@@ -995,7 +822,7 @@
     const rows = list.slice(0,10).map(h=>{
       const pct = h.total>0 ? Math.round(h.correct/h.total*100) : 0;
       return `<div class="wrong-top" style="justify-content:space-between;">
-        <span class="q-chapter">${h.mode==='voice20'?'🎙️ ':''}${esc(h.date)}</span>
+        <span class="q-chapter">${esc(h.date)}</span>
         <span>${h.correct} / ${h.total} 答對（${pct}%）</span>
       </div>`;
     }).join("");
@@ -1150,7 +977,6 @@
           ${qtype==='fill' ? renderFillInput(current) : ""}
           ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
           ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
-          ${renderTtsButtons(state.quizRevealed)}
           ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
         </div>
         <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次回來會接續）</button>
@@ -1207,7 +1033,6 @@
         <button class="primary-btn" id="startExamABtn">📝 開始模擬考（50 題）</button>
         ${state.examAStats.total>0 ? `<div class="result-card">上一輪結果：${state.examAStats.correct} / ${state.examAStats.total} 答對</div>` : ""}
         ${renderExamAHistory()}
-        ${renderTtsSettings()}
       `;
     }
     const current = state.examAPool[state.examAIdx];
@@ -1225,7 +1050,6 @@
             <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
           </button>`;
         }).join("")}
-        ${renderTtsButtons(state.examARevealed)}
         ${state.examARevealed ? `<button class="primary-btn" id="nextExamABtn">${state.examAIdx+1<state.examAPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
     `;
@@ -1263,7 +1087,6 @@
         <button class="primary-btn" id="startExamBBtn">📝 開始模擬考（50 題）</button>
         ${state.examBStats.total>0 ? `<div class="result-card">上一輪結果：${state.examBStats.correct} / ${state.examBStats.total} 答對</div>` : ""}
         ${renderExamBHistory()}
-        ${renderTtsSettings()}
       `;
     }
     const current = state.examBPool[state.examBIdx];
@@ -1281,7 +1104,6 @@
             <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
           </button>`;
         }).join("")}
-        ${renderTtsButtons(state.examBRevealed)}
         ${state.examBRevealed ? `<button class="primary-btn" id="nextExamBBtn">${state.examBIdx+1<state.examBPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
     `;
@@ -1511,48 +1333,9 @@
   }
 
   /* ---------- events ---------- */
-  // 目前畫面上活躍的題目卡片是哪一題（練習/錯題複習/甲種模擬考/乙級模擬考共用同一組🔊按鈕，同一時間只會有一個在畫面上）
-  function getActiveQuizContext(){
-    if((state.tab==="quiz" || state.tab==="wrong") && state.quizPool.length>0){
-      return {current: state.quizPool[state.quizIdx], revealed: state.quizRevealed};
-    }
-    if(state.tab==="examA" && state.examAPool.length>0){
-      return {current: state.examAPool[state.examAIdx], revealed: state.examARevealed};
-    }
-    if(state.tab==="examB" && state.examBPool.length>0){
-      return {current: state.examBPool[state.examBIdx], revealed: state.examBRevealed};
-    }
-    return null;
-  }
   function bindEvents(){
-    root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{
-      stopSpeaking();
-      if(state.voiceRunning){ stopVoiceQuiz(); state.voicePool=[]; }
-      state.tab=el.dataset.tab; render();
-    }));
+    root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.tab; render(); }));
     root.querySelectorAll("[data-goto]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.goto; render(); }));
-
-    const ttsQBtn = document.getElementById("ttsQBtn");
-    if(ttsQBtn) ttsQBtn.addEventListener("click",()=>{
-      const ctx = getActiveQuizContext();
-      if(ctx) speakText(composeQuestionSpeech(ctx.current));
-    });
-    const ttsABtn = document.getElementById("ttsABtn");
-    if(ttsABtn) ttsABtn.addEventListener("click",()=>{
-      const ctx = getActiveQuizContext();
-      if(ctx) speakText(composeAnswerSpeech(ctx.current));
-    });
-    const ttsAutoToggle = document.getElementById("ttsAutoToggle");
-    if(ttsAutoToggle) ttsAutoToggle.addEventListener("change",e=>{
-      state.ttsAuto = e.target.checked;
-      persist("ttsAuto");
-      render();
-    });
-    const ttsRateSelect = document.getElementById("ttsRateSelect");
-    if(ttsRateSelect) ttsRateSelect.addEventListener("change",e=>{
-      state.ttsRate = parseFloat(e.target.value);
-      persist("ttsRate");
-    });
 
     const examBadge = document.getElementById("examBadge");
     if(examBadge) examBadge.addEventListener("click",()=>{ state.headerEditing=true; render(); });
@@ -1570,6 +1353,11 @@
       const next = cur==="todo"?"reading":cur==="reading"?"done":"todo";
       state.chapterState[id] = {...state.chapterState[id], status:next};
       persist("chapterState"); render();
+    }));
+    root.querySelectorAll("[data-chartexpand]").forEach(el=>el.addEventListener("click",()=>{
+      const id = parseInt(el.dataset.chartexpand,10);
+      state.chartExpandedChapter = state.chartExpandedChapter===id ? null : id;
+      render();
     }));
     root.querySelectorAll("[data-notes]").forEach(el=>el.addEventListener("change",()=>{
       const id = parseInt(el.dataset.notes,10);
@@ -1641,6 +1429,7 @@
     const quizChapterSelect = document.getElementById("quizChapterSelect");
     if(quizChapterSelect) quizChapterSelect.addEventListener("change",e=>{
       state.quizChapterFilter = e.target.value==="all"?"all":parseInt(e.target.value,10);
+      persist("quizChapterFilter");
       render();
     });
     // 依「還沒出現過優先」排序：先洗牌未作答過的題目，再接洗牌過的已作答題目
@@ -1667,7 +1456,6 @@
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       persistQuizState();
-      if(state.ttsAuto && state.quizPool.length>0) speakText(composeQuestionSpeech(state.quizPool[0]));
       render();
     });
     const startRandom20Btn = document.getElementById("startRandom20Btn");
@@ -1677,22 +1465,6 @@
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       persistQuizState();
-      if(state.ttsAuto && state.quizPool.length>0) speakText(composeQuestionSpeech(state.quizPool[0]));
-      render();
-    });
-    const startVoiceQuizBtn = document.getElementById("startVoiceQuizBtn");
-    if(startVoiceQuizBtn) startVoiceQuizBtn.addEventListener("click",()=>{
-      const singleQs = state.questions.filter(q=>q.type==="single");
-      state.voicePool = orderBySeenFirst(singleQs).slice(0,20);
-      state.voiceIdx = 0; state.voiceStats = {correct:0,total:0}; state.voiceRunning = true;
-      state.voiceStatus = ""; state.voiceLastTranscript = ""; state.voiceLastAnswer = null;
-      render();
-      runVoiceQuizLoop();
-    });
-    const voiceStopBtn = document.getElementById("voiceStopBtn");
-    if(voiceStopBtn) voiceStopBtn.addEventListener("click",()=>{
-      stopVoiceQuiz();
-      state.voicePool = [];
       render();
     });
     const startWrongReviewBtn = document.getElementById("startWrongReviewBtn");
@@ -1704,12 +1476,10 @@
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       persistQuizState();
-      if(state.ttsAuto && state.quizPool.length>0) speakText(composeQuestionSpeech(state.quizPool[0]));
       render();
     });
     const quizExitBtn = document.getElementById("quizExitBtn");
     if(quizExitBtn) quizExitBtn.addEventListener("click",()=>{
-      stopSpeaking();
       recordQuizHistoryIfNeeded();
       state.quizPool=[]; state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false;
       state.quizStats={correct:0,total:0}; state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
@@ -1731,7 +1501,6 @@
       state.quizSelected = val; state.quizRevealed = true;
       recordAnswer(current, val===current.answer);
       persistQuizState();
-      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     }));
     root.querySelectorAll("[data-multitoggle]").forEach(el=>el.addEventListener("click",()=>{
@@ -1751,7 +1520,6 @@
       state.quizRevealed = true;
       recordAnswer(current, correct);
       persistQuizState();
-      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     });
     const fillInputEl = document.getElementById("fillInput");
@@ -1764,7 +1532,6 @@
       state.quizRevealed = true;
       recordAnswer(current, correct);
       persistQuizState();
-      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     });
     const nextQuizBtn = document.getElementById("nextQuizBtn");
@@ -1772,7 +1539,6 @@
       if(state.quizIdx+1<state.quizPool.length){
         state.quizIdx++; state.quizSelected=null; state.quizRevealed=false;
         state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
-        if(state.ttsAuto) speakText(composeQuestionSpeech(state.quizPool[state.quizIdx]));
       } else {
         recordQuizHistoryIfNeeded();
         state.quizPool=[];
@@ -1795,7 +1561,6 @@
       }
       state.examAPool = pool;
       state.examAIdx=0; state.examASelected=null; state.examARevealed=false; state.examAStats={correct:0,total:0};
-      if(state.ttsAuto && state.examAPool.length>0) speakText(composeQuestionSpeech(state.examAPool[0]));
       render();
     });
     root.querySelectorAll("[data-examachoose]").forEach(el=>el.addEventListener("click",()=>{
@@ -1809,14 +1574,12 @@
       persist("examASeenIds");
       markStudiedToday();
       recordWrongMapOutcome(current.id, correct);
-      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     }));
     const nextExamABtn = document.getElementById("nextExamABtn");
     if(nextExamABtn) nextExamABtn.addEventListener("click",()=>{
       if(state.examAIdx+1<state.examAPool.length){
         state.examAIdx++; state.examASelected=null; state.examARevealed=false;
-        if(state.ttsAuto) speakText(composeQuestionSpeech(state.examAPool[state.examAIdx]));
       } else {
         state.examAHistory = [{date:todayStr(), correct:state.examAStats.correct, total:state.examAStats.total}, ...state.examAHistory].slice(0,50);
         persist("examAHistory");
@@ -1839,7 +1602,6 @@
       }
       state.examBPool = pool;
       state.examBIdx=0; state.examBSelected=null; state.examBRevealed=false; state.examBStats={correct:0,total:0};
-      if(state.ttsAuto && state.examBPool.length>0) speakText(composeQuestionSpeech(state.examBPool[0]));
       render();
     });
     root.querySelectorAll("[data-exambchoose]").forEach(el=>el.addEventListener("click",()=>{
@@ -1853,14 +1615,12 @@
       persist("examBSeenIds");
       markStudiedToday();
       recordWrongMapOutcome(current.id, correct);
-      if(state.ttsAuto) speakText(composeAnswerSpeech(current));
       render();
     }));
     const nextExamBBtn = document.getElementById("nextExamBBtn");
     if(nextExamBBtn) nextExamBBtn.addEventListener("click",()=>{
       if(state.examBIdx+1<state.examBPool.length){
         state.examBIdx++; state.examBSelected=null; state.examBRevealed=false;
-        if(state.ttsAuto) speakText(composeQuestionSpeech(state.examBPool[state.examBIdx]));
       } else {
         state.examBHistory = [{date:todayStr(), correct:state.examBStats.correct, total:state.examBStats.total}, ...state.examBHistory].slice(0,50);
         persist("examBHistory");
