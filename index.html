@@ -1671,13 +1671,17 @@
     }));
 
     /* --- 備份/還原 --- */
+    // 題庫本身（questions/examA/examB）故意不放進匯出檔：每台裝置一律以當下載入的
+    // questions.js/examA_questions.js/examB_questions.js（GitHub Pages 上最新版）為準，
+    // 不然匯出檔會凍結當時的題庫快照，事後題庫有更新（新增章節/刪重複題）時，
+    // 匯入舊檔會把題庫覆蓋回舊版本（跟雲端同步的設計原則一致，見getCloudSyncPayload）
     function getExportPayload(){
       return {
         v:1, examDate:state.examDate, chapterState:state.chapterState,
-        questions:state.questions, wrongMap:state.wrongMap,
+        wrongMap:state.wrongMap,
         studyLog:state.studyLog, laws:state.laws, quizHistory:state.quizHistory, quizSeenIds:state.quizSeenIds,
-        examA:state.examA, examAHistory:state.examAHistory, examASeenIds:state.examASeenIds,
-        examB:state.examB, examBHistory:state.examBHistory, examBSeenIds:state.examBSeenIds,
+        examAHistory:state.examAHistory, examASeenIds:state.examASeenIds,
+        examBHistory:state.examBHistory, examBSeenIds:state.examBSeenIds,
         exportedAt:new Date().toISOString()
       };
     }
@@ -1685,30 +1689,24 @@
       if(!data.v||!data.chapterState) throw new Error("格式錯誤");
       state.examDate = data.examDate||"";
       state.chapterState = data.chapterState;
-      state.questions = data.questions||[];
       state.wrongMap = data.wrongMap||{};
       state.studyLog = data.studyLog||{};
       state.laws = data.laws||LAW_SEED;
       state.quizHistory = data.quizHistory||[];
       state.quizSeenIds = data.quizSeenIds||{};
-      state.examA = data.examA||state.examA;
       state.examAHistory = data.examAHistory||[];
       state.examASeenIds = data.examASeenIds||{};
-      state.examB = data.examB||state.examB;
       state.examBHistory = data.examBHistory||[];
       state.examBSeenIds = data.examBSeenIds||{};
       saveData("meta",{examDate:state.examDate});
       saveData("chapterState",state.chapterState);
-      saveData("questions",state.questions);
       saveData("wrongMap",state.wrongMap);
       saveData("studyLog",state.studyLog);
       saveData("laws",state.laws);
       saveData("quizHistory",state.quizHistory);
       saveData("quizSeenIds",state.quizSeenIds);
-      saveData("examA",state.examA);
       saveData("examAHistory",state.examAHistory);
       saveData("examASeenIds",state.examASeenIds);
-      saveData("examB",state.examB);
       saveData("examBHistory",state.examBHistory);
       saveData("examBSeenIds",state.examBSeenIds);
     }
