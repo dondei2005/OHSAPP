@@ -1445,6 +1445,7 @@
         const chapter = (state.quizMode==="chapter" && state.quizChapterFilter!=="all") ? state.quizChapterFilter : null;
         state.quizHistory = [{date:todayStr(), correct:state.quizStats.correct, total:state.quizStats.total, chapter}, ...state.quizHistory].slice(0,300);
         persist("quizHistory");
+        runCloudSync({silent:true}); // 一輪練習結束就順手同步一次，不用等使用者記得手動按或切走APP
       }
     }
     const startQuizBtn = document.getElementById("startQuizBtn");
@@ -1583,6 +1584,7 @@
       } else {
         state.examAHistory = [{date:todayStr(), correct:state.examAStats.correct, total:state.examAStats.total}, ...state.examAHistory].slice(0,50);
         persist("examAHistory");
+        runCloudSync({silent:true});
         state.examAPool=[];
       }
       render();
@@ -1624,6 +1626,7 @@
       } else {
         state.examBHistory = [{date:todayStr(), correct:state.examBStats.correct, total:state.examBStats.total}, ...state.examBHistory].slice(0,50);
         persist("examBHistory");
+        runCloudSync({silent:true});
         state.examBPool=[];
       }
       render();
@@ -1747,6 +1750,15 @@
       reader.readAsText(file);
     });
   }
+
+  // 手機真實使用情境：練習到一半直接切走APP/鎖螢幕，不會回來重新整理頁面，
+  // 如果只靠開頁面時的靜默同步跟手動按鈕，這段練習永遠不會被推上雲端。
+  // 加上「頁面被切到背景」時也靜默同步一次，這是手機瀏覽器最可靠會觸發的時機點。
+  document.addEventListener("visibilitychange", ()=>{
+    if(document.visibilityState==="hidden" && state.loaded){
+      runCloudSync({silent:true});
+    }
+  });
 
   init();
 })();
