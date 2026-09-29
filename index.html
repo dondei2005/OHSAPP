@@ -241,6 +241,11 @@
 
   const CLOUD_SYNC_URL = "https://script.google.com/macros/s/AKfycbwkHmn7ajGSUYH1ILS8hwvnpWT7pPZ6tEYmRuEmKjSWUnTnWSnkto9MPfqpU-lBkgGf/exec";
   const uid = () => Math.random().toString(36).slice(2,10);
+  function dedupeById(arr){
+    const seen = new Set(); const out = [];
+    for(const q of arr){ if(q && q.id && !seen.has(q.id)){ seen.add(q.id); out.push(q); } }
+    return out;
+  }
   const todayStr = () => new Date().toISOString().slice(0,10);
   function daysUntil(dateStr){
     if(!dateStr) return null;
@@ -338,40 +343,21 @@
       state.chapterState[5] = {...state.chapterState[5], status:"reading", notes: state.chapterState[5].notes || "張木原講師教材，已匯入23題歷屆考古題"};
       saveData("chapterState", state.chapterState);
     }
-    state.questions = loadData("questions", []);
-    if(!seedFlag){
-      const existIds = new Set(state.questions.map(q=>q.id));
-      const newQs = QUESTION_SEED.filter(q=>!existIds.has(q.id));
-      state.questions = [...state.questions, ...newQs];
-      saveData("questions", state.questions);
-      saveData("questionSeedV1Applied", true);
-    }
-    const seedFlagV2 = loadData("questionSeedV2Applied", false);
-    if(!seedFlagV2){
-      const existIds = new Set(state.questions.map(q=>q.id));
-      const newQs = QUESTION_SEED_V2.filter(q=>!existIds.has(q.id));
-      state.questions = [...state.questions, ...newQs];
-      saveData("questions", state.questions);
-      saveData("questionSeedV2Applied", true);
-    }
-    const seedFlagV3 = loadData("questionSeedV3Applied", false);
-    if(!seedFlagV3){
-      const existIds = new Set(state.questions.map(q=>q.id));
-      const newQs = QUESTION_SEED_V3.filter(q=>!existIds.has(q.id));
-      state.questions = [...state.questions, ...newQs];
-      saveData("questions", state.questions);
-      saveData("questionSeedV3Applied", true);
-    }
-
-    // 從 questions.js 載入額外題目（Claude Code 解析 PDF 後寫入）
-    if(Array.isArray(window.EXTERNAL_QUESTIONS) && window.EXTERNAL_QUESTIONS.length > 0){
-      const existIds = new Set(state.questions.map(q=>q.id));
-      const newQs = window.EXTERNAL_QUESTIONS.filter(q=>q.id && !existIds.has(q.id));
-      if(newQs.length > 0){
-        state.questions = [...state.questions, ...newQs];
-        saveData("questions", state.questions);
-      }
-    }
+    // 題庫（乙級40章）每次載入都整批用「種子資料＋questions.js（EXTERNAL_QUESTIONS，
+    // GitHub Pages最新版）」重建，不再用舊版「只累加新id」的合併方式——累加式合併
+    // 只會加、永遠不會減，裝置一旦看過某個題目id，就算之後題庫端把它刪掉/清重複，
+    // 這個裝置的本機快取還是會留著它，導致每台裝置的題數停留在各自第一次看到的
+    // 歷史快照、彼此對不上（跨裝置題數不一致的根因）。使用者自己手動新增/大量匯入
+    // 的題目（id用uid()產生、格式不含"-"）跟題庫本身的id格式（如ch00-001）不會重疊，
+    // 每次重建時原樣保留，不受題庫更新影響。
+    const prevQuestions = loadData("questions", []);
+    const customQs = prevQuestions.filter(q=>q.id && !q.id.includes("-"));
+    const librarySources = [
+      QUESTION_SEED, QUESTION_SEED_V2, QUESTION_SEED_V3,
+      Array.isArray(window.EXTERNAL_QUESTIONS) ? window.EXTERNAL_QUESTIONS : []
+    ];
+    state.questions = [...dedupeById(librarySources.flat()), ...customQs];
+    saveData("questions", state.questions);
 
     state.wrongMap = loadData("wrongMap", {});
     state.studyLog = loadData("studyLog", {});
@@ -391,32 +377,13 @@
     state.quizFillCorrect = loadData("quizFillCorrect", false);
     state.quizMode = loadData("quizMode", "chapter");
 
-    state.examA = loadData("examA", []);
-    const examABanks = [window.EXAM_A_QUESTIONS, window.EXAM_A_QUESTIONS_2];
-    examABanks.forEach(bank=>{
-      if(Array.isArray(bank) && bank.length > 0){
-        const existExamAIds = new Set(state.examA.map(q=>q.id));
-        const newExamAQs = bank.filter(q=>q.id && !existExamAIds.has(q.id));
-        if(newExamAQs.length > 0){
-          state.examA = [...state.examA, ...newExamAQs];
-        }
-      }
-    });
+    // 甲種/乙種模擬考題庫同理：整批用來源檔重建，不用累加式合併（沒有使用者自建題目要保留）。
+    state.examA = dedupeById([window.EXAM_A_QUESTIONS, window.EXAM_A_QUESTIONS_2].filter(Array.isArray).flat());
     saveData("examA", state.examA);
     state.examAHistory = loadData("examAHistory", []);
     state.examASeenIds = loadData("examASeenIds", {});
 
-    state.examB = loadData("examB", []);
-    const examBBanks = [window.EXAM_B_QUESTIONS];
-    examBBanks.forEach(bank=>{
-      if(Array.isArray(bank) && bank.length > 0){
-        const existExamBIds = new Set(state.examB.map(q=>q.id));
-        const newExamBQs = bank.filter(q=>q.id && !existExamBIds.has(q.id));
-        if(newExamBQs.length > 0){
-          state.examB = [...state.examB, ...newExamBQs];
-        }
-      }
-    });
+    state.examB = dedupeById([window.EXAM_B_QUESTIONS].filter(Array.isArray).flat());
     saveData("examB", state.examB);
     state.examBHistory = loadData("examBHistory", []);
     state.examBSeenIds = loadData("examBSeenIds", {});
