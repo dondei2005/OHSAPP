@@ -464,9 +464,12 @@
     // 每次重建時原樣保留，不受題庫更新影響。
     const prevQuestions = loadData("questions", []);
     const customQs = prevQuestions.filter(q=>q.id && !q.id.includes("-"));
+    // 乙級考古題中已標好章節（有 chapter 欄位）的題目也一併放進章節練習，沿用同一個 id，
+    // 所以不論在章節練習或乙級模擬考作答，錯題本記錄都是同一筆
     const librarySources = [
       QUESTION_SEED, QUESTION_SEED_V2, QUESTION_SEED_V3,
-      Array.isArray(window.EXTERNAL_QUESTIONS) ? window.EXTERNAL_QUESTIONS : []
+      Array.isArray(window.EXTERNAL_QUESTIONS) ? window.EXTERNAL_QUESTIONS : [],
+      Array.isArray(window.EXAM_B_QUESTIONS) ? window.EXAM_B_QUESTIONS.filter(q=>q.chapter!=null) : []
     ];
     state.questions = [...dedupeById(librarySources.flat()), ...customQs];
     saveData("questions", state.questions);
@@ -1182,8 +1185,10 @@
       {key:"numeric", label:"數字填空", total:num.total, seen:num.seen, acc:num.acc, accC:num.correct, accT:num.answered},
     ].map(b=>({...b, cov: b.total>0?Math.round(b.seen/b.total*100):0}));
     // 整體：數字填空是從三個題庫衍生出來的，刷題數不重複計入；正確率則四個來源的作答全部加總
-    const allTotal = chTotal + state.examA.length + state.examB.length;
-    const allSeen = chSeen + aSeen + bSeen;
+    // 已分章的乙級考古題同時出現在「乙級40章」和「乙級考古題」，整體題數只算一次
+    const overlap = state.examB.filter(q=>q.chapter!=null);
+    const allTotal = chTotal + state.examA.length + state.examB.length - overlap.length;
+    const allSeen = chSeen + aSeen + bSeen - overlap.filter(q=>state.quizSeenIds[q.id] && state.examBSeenIds[q.id]).length;
     const allC = chAcc.correct + aAcc.correct + bAcc.correct + num.correct;
     const allT = chAcc.total + aAcc.total + bAcc.total + num.answered;
     return {chapters, banks, allTotal, allSeen, allCov: allTotal>0?Math.round(allSeen/allTotal*100):0,
