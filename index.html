@@ -1316,20 +1316,27 @@
       `;
     }
     const current = state.examBPool[state.examBIdx];
+    // 複選題：examBSelected 存已勾選的選項陣列，按「提交答案」才判斷對錯
+    const isMulti = current.type==='multi';
+    const picked = isMulti ? (Array.isArray(state.examBSelected) ? state.examBSelected : []) : [];
     return `
-      <div class="quiz-progress">第 ${state.examBIdx+1} / ${state.examBPool.length} 題 · 答對 ${state.examBStats.correct}</div>
+      <div class="quiz-progress">第 ${state.examBIdx+1} / ${state.examBPool.length} 題 · 答對 ${state.examBStats.correct}${isMulti?' · 複選題':''}</div>
       <div class="quiz-card">
         <div class="quiz-question">${esc(current.text)}</div>
         ${current.options.map((opt,i)=>{
           let cls="quiz-option";
           if(state.examBRevealed){
-            if(i===current.answer) cls+=" correct";
-            else if(i===state.examBSelected) cls+=" wrong";
+            const isAns = isMulti ? current.answer.includes(i) : i===current.answer;
+            const isPicked = isMulti ? picked.includes(i) : i===state.examBSelected;
+            if(isAns) cls+=" correct";
+            else if(isPicked) cls+=" wrong";
           }
-          return `<button class="${cls}" data-exambchoose="${i}" ${state.examBRevealed?'disabled':''}>
-            <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
+          const label = isMulti && picked.includes(i) && !state.examBRevealed ? '✓' : String.fromCharCode(65+i);
+          return `<button class="${cls}" ${isMulti?'data-exambtoggle':'data-exambchoose'}="${i}" ${state.examBRevealed?'disabled':''}>
+            <span class="quiz-option-label">${label}</span>${esc(opt)}
           </button>`;
         }).join("")}
+        ${isMulti && !state.examBRevealed ? `<button class="primary-btn" id="examBMultiSubmitBtn" style="margin-bottom:10px;">提交答案</button>` : ""}
         ${state.examBRevealed ? `<button class="primary-btn" id="nextExamBBtn">${state.examBIdx+1<state.examBPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
     `;
@@ -1857,14 +1864,34 @@
       const i = parseInt(el.dataset.exambchoose,10);
       const current = state.examBPool[state.examBIdx];
       state.examBSelected = i; state.examBRevealed = true;
-      const correct = i===current.answer;
+      finishExamBAnswer(current, i===current.answer);
+    }));
+    root.querySelectorAll("[data-exambtoggle]").forEach(el=>el.addEventListener("click",()=>{
+      if(state.examBRevealed) return;
+      const i = parseInt(el.dataset.exambtoggle,10);
+      const sel = Array.isArray(state.examBSelected) ? [...state.examBSelected] : [];
+      const at = sel.indexOf(i);
+      if(at>=0) sel.splice(at,1); else sel.push(i);
+      state.examBSelected = sel;
+      render();
+    }));
+    const examBMultiSubmitBtn = document.getElementById("examBMultiSubmitBtn");
+    if(examBMultiSubmitBtn) examBMultiSubmitBtn.addEventListener("click",()=>{
+      const current = state.examBPool[state.examBIdx];
+      const a = (Array.isArray(state.examBSelected) ? [...state.examBSelected] : []).sort();
+      const b = [...current.answer].sort();
+      state.examBSelected = a;
+      state.examBRevealed = true;
+      finishExamBAnswer(current, a.length===b.length && a.every((v,i2)=>v===b[i2]));
+    });
+    function finishExamBAnswer(current, correct){
       state.examBStats = {correct: state.examBStats.correct+(correct?1:0), total: state.examBStats.total+1};
       state.examBSeenIds[current.id] = true;
       persist("examBSeenIds");
       markStudiedToday();
       recordWrongMapOutcome(current.id, correct);
       render();
-    }));
+    }
     const nextExamBBtn = document.getElementById("nextExamBBtn");
     if(nextExamBBtn) nextExamBBtn.addEventListener("click",()=>{
       if(state.examBIdx+1<state.examBPool.length){
