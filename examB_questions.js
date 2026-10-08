@@ -11,7 +11,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-002",
@@ -25,7 +26,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-003",
@@ -39,7 +41,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-004",
@@ -53,7 +56,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-005",
@@ -67,7 +71,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-006",
@@ -81,7 +86,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-007",
@@ -95,7 +101,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-008",
@@ -109,7 +116,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-009",
@@ -123,7 +131,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-010",
@@ -137,7 +146,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-011",
@@ -151,7 +161,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-012",
@@ -165,7 +176,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-013",
@@ -179,7 +191,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-014",
@@ -193,7 +206,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-015",
@@ -207,7 +221,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-016",
@@ -221,7 +236,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-017",
@@ -235,7 +251,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-018",
@@ -249,7 +266,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-019",
@@ -263,7 +281,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-020",
@@ -277,7 +296,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-021",
@@ -291,7 +311,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-022",
@@ -305,7 +326,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-023",
@@ -319,7 +341,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-024",
@@ -333,7 +356,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 1
   },
   {
     "id": "examB-025",
@@ -347,7 +371,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-026",
@@ -361,7 +386,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-027",
@@ -375,7 +401,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-028",
@@ -389,7 +416,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-029",
@@ -403,7 +431,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-030",
@@ -417,7 +446,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-031",
@@ -431,7 +461,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-032",
@@ -445,7 +476,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-033",
@@ -459,7 +491,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-034",
@@ -473,7 +506,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-035",
@@ -487,7 +521,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-036",
@@ -501,7 +536,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-037",
@@ -515,7 +551,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-038",
@@ -529,7 +566,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-039",
@@ -543,7 +581,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-040",
@@ -557,7 +596,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-041",
@@ -571,7 +611,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-042",
@@ -585,7 +626,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-043",
@@ -599,7 +641,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-044",
@@ -613,7 +656,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-045",
@@ -627,7 +671,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-046",
@@ -641,7 +686,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-047",
@@ -655,7 +701,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-048",
@@ -669,7 +716,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-049",
@@ -683,7 +731,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-050",
@@ -697,7 +746,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-051",
@@ -711,7 +761,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-052",
@@ -725,7 +776,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-053",
@@ -739,7 +791,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-054",
@@ -753,7 +806,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-055",
@@ -767,7 +821,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-056",
@@ -781,7 +836,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-057",
@@ -795,7 +851,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-058",
@@ -809,7 +866,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-059",
@@ -823,7 +881,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-060",
@@ -837,7 +896,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-061",
@@ -851,7 +911,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-062",
@@ -865,7 +926,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-063",
@@ -879,7 +941,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-064",
@@ -893,7 +956,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-065",
@@ -907,7 +971,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-066",
@@ -921,7 +986,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-067",
@@ -935,7 +1001,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-068",
@@ -949,7 +1016,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-069",
@@ -963,7 +1031,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-070",
@@ -977,7 +1046,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-071",
@@ -991,7 +1061,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-072",
@@ -1005,7 +1076,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-073",
@@ -1019,7 +1091,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-074",
@@ -1033,7 +1106,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-075",
@@ -1047,7 +1121,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-076",
@@ -1061,7 +1136,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-077",
@@ -1075,7 +1151,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-078",
@@ -1089,7 +1166,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-079",
@@ -1103,7 +1181,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-080",
@@ -1117,7 +1196,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-081",
@@ -1131,7 +1211,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-082",
@@ -1145,7 +1226,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-083",
@@ -1159,7 +1241,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-084",
@@ -1173,7 +1256,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-085",
@@ -1187,7 +1271,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-086",
@@ -1201,7 +1286,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-087",
@@ -1215,7 +1301,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-088",
@@ -1229,7 +1316,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 3
   },
   {
     "id": "examB-089",
@@ -1243,7 +1331,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-090",
@@ -1257,7 +1346,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-091",
@@ -1271,7 +1361,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-092",
@@ -1285,7 +1376,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-093",
@@ -1299,7 +1391,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-094",
@@ -1313,7 +1406,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-095",
@@ -1327,7 +1421,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-096",
@@ -1341,7 +1436,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-097",
@@ -1355,7 +1451,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-098",
@@ -1369,7 +1466,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-099",
@@ -1383,7 +1481,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-100",
@@ -1397,7 +1496,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-101",
@@ -1411,7 +1511,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-102",
@@ -1425,7 +1526,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-103",
@@ -1439,7 +1541,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-104",
@@ -1453,7 +1556,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-105",
@@ -1467,7 +1571,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-106",
@@ -1481,7 +1586,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-107",
@@ -1495,7 +1601,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 2
   },
   {
     "id": "examB-108",
@@ -1509,7 +1616,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-109",
@@ -1523,7 +1631,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-110",
@@ -1537,7 +1646,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-111",
@@ -1551,7 +1661,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-112",
@@ -1565,7 +1676,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 4
   },
   {
     "id": "examB-113",
@@ -1579,7 +1691,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-114",
@@ -1593,7 +1706,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-115",
@@ -1607,7 +1721,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-116",
@@ -1621,7 +1736,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-117",
@@ -1635,7 +1751,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-118",
@@ -1649,7 +1766,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-119",
@@ -1663,7 +1781,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-120",
@@ -1677,7 +1796,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-121",
@@ -1691,7 +1811,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-122",
@@ -1705,7 +1826,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-123",
@@ -1719,7 +1841,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-124",
@@ -1733,7 +1856,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-125",
@@ -1747,7 +1871,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-126",
@@ -1761,7 +1886,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-127",
@@ -1775,7 +1901,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-128",
@@ -1789,7 +1916,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 5
   },
   {
     "id": "examB-129",
@@ -1803,7 +1931,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-130",
@@ -1817,7 +1946,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-131",
@@ -1831,7 +1961,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-132",
@@ -1845,7 +1976,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-133",
@@ -1859,7 +1991,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-134",
@@ -1873,7 +2006,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-135",
@@ -1887,7 +2021,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-137",
@@ -1901,7 +2036,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-138",
@@ -1915,7 +2051,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-139",
@@ -1929,7 +2066,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-140",
@@ -1943,7 +2081,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-141",
@@ -1957,7 +2096,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-142",
@@ -1971,7 +2111,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-143",
@@ -1985,7 +2126,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-144",
@@ -1999,7 +2141,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 6
   },
   {
     "id": "examB-145",
@@ -2013,7 +2156,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-146",
@@ -2027,7 +2171,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-147",
@@ -2041,7 +2186,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-148",
@@ -2055,7 +2201,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-149",
@@ -2069,7 +2216,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-150",
@@ -2083,7 +2231,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-151",
@@ -2097,7 +2246,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-152",
@@ -2111,7 +2261,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-153",
@@ -2125,7 +2276,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-154",
@@ -2139,7 +2291,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-155",
@@ -2153,7 +2306,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-156",
@@ -2167,7 +2321,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-157",
@@ -2181,7 +2336,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-158",
@@ -2195,7 +2351,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-159",
@@ -2209,7 +2366,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-160",
@@ -2223,7 +2381,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 7
   },
   {
     "id": "examB-161",
@@ -2237,7 +2396,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-162",
@@ -2251,7 +2411,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-163",
@@ -2265,7 +2426,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-164",
@@ -2279,7 +2441,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-165",
@@ -2293,7 +2456,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-166",
@@ -2307,7 +2471,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-167",
@@ -2321,7 +2486,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-168",
@@ -2335,7 +2501,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-169",
@@ -2349,7 +2516,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-170",
@@ -2363,7 +2531,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-171",
@@ -2377,7 +2546,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-172",
@@ -2391,7 +2561,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-173",
@@ -2405,7 +2576,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-174",
@@ -2419,7 +2591,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-175",
@@ -2433,7 +2606,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-176",
@@ -2447,7 +2621,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 8
   },
   {
     "id": "examB-177",
@@ -2461,7 +2636,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-178",
@@ -2475,7 +2651,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-179",
@@ -2489,7 +2666,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-180",
@@ -2503,7 +2681,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-181",
@@ -2517,7 +2696,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-182",
@@ -2531,7 +2711,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-183",
@@ -2545,7 +2726,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-184",
@@ -2559,7 +2741,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-185",
@@ -2573,7 +2756,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-186",
@@ -2587,7 +2771,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-187",
@@ -2601,7 +2786,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-188",
@@ -2615,7 +2801,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-189",
@@ -2629,7 +2816,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-190",
@@ -2643,7 +2831,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-191",
@@ -2657,7 +2846,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-192",
@@ -2671,7 +2861,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 9
   },
   {
     "id": "examB-193",
@@ -2685,7 +2876,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-194",
@@ -2699,7 +2891,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-195",
@@ -2713,7 +2906,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-196",
@@ -2727,7 +2921,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-197",
@@ -2741,7 +2936,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-198",
@@ -2755,7 +2951,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-199",
@@ -2769,7 +2966,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-200",
@@ -2783,7 +2981,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-201",
@@ -2797,7 +2996,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-202",
@@ -2811,7 +3011,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-203",
@@ -2825,7 +3026,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-204",
@@ -2839,7 +3041,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-205",
@@ -2853,7 +3056,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-206",
@@ -2867,7 +3071,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-207",
@@ -2881,7 +3086,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-208",
@@ -2895,7 +3101,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-209",
@@ -2909,7 +3116,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-210",
@@ -2923,7 +3131,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-211",
@@ -2937,7 +3146,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-212",
@@ -2951,7 +3161,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-213",
@@ -2965,7 +3176,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-214",
@@ -2979,7 +3191,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-215",
@@ -2993,7 +3206,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-216",
@@ -3007,7 +3221,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 10
   },
   {
     "id": "examB-217",
@@ -3021,7 +3236,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-218",
@@ -3035,7 +3251,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-219",
@@ -3049,7 +3266,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-220",
@@ -3063,7 +3281,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-221",
@@ -3077,7 +3296,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-222",
@@ -3091,7 +3311,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-223",
@@ -3105,7 +3326,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-224",
@@ -3119,7 +3341,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-225",
@@ -3133,7 +3356,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-226",
@@ -3147,7 +3371,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-227",
@@ -3161,7 +3386,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-228",
@@ -3175,7 +3401,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-229",
@@ -3189,7 +3416,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-230",
@@ -3203,7 +3431,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-231",
@@ -3217,7 +3446,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-232",
@@ -3231,7 +3461,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 11
   },
   {
     "id": "examB-233",
@@ -3245,7 +3476,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-234",
@@ -3259,7 +3491,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-235",
@@ -3273,7 +3506,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-236",
@@ -3287,7 +3521,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-237",
@@ -3301,7 +3536,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-238",
@@ -3315,7 +3551,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-239",
@@ -3329,7 +3566,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-240",
@@ -3343,7 +3581,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-241",
@@ -3357,7 +3596,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-242",
@@ -3371,7 +3611,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-243",
@@ -3385,7 +3626,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-244",
@@ -3399,7 +3641,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-245",
@@ -3413,7 +3656,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-246",
@@ -3427,7 +3671,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-247",
@@ -3441,7 +3686,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-248",
@@ -3455,7 +3701,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-249",
@@ -3469,7 +3716,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-250",
@@ -3483,7 +3731,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-251",
@@ -3497,7 +3746,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-252",
@@ -3511,7 +3761,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-253",
@@ -3525,7 +3776,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-254",
@@ -3539,7 +3791,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-255",
@@ -3553,7 +3806,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-256",
@@ -3567,7 +3821,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 12
   },
   {
     "id": "examB-257",
@@ -3581,7 +3836,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-258",
@@ -3595,7 +3851,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-259",
@@ -3609,7 +3866,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-260",
@@ -3623,7 +3881,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-261",
@@ -3637,7 +3896,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-262",
@@ -3651,7 +3911,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-263",
@@ -3665,7 +3926,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-264",
@@ -3679,7 +3941,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-265",
@@ -3693,7 +3956,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-266",
@@ -3707,7 +3971,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-267",
@@ -3721,7 +3986,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-268",
@@ -3735,7 +4001,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-269",
@@ -3749,7 +4016,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-270",
@@ -3763,7 +4031,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-271",
@@ -3777,7 +4046,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-272",
@@ -3791,7 +4061,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-273",
@@ -3805,7 +4076,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-274",
@@ -3819,7 +4091,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-275",
@@ -3833,7 +4106,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-276",
@@ -3847,7 +4121,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-277",
@@ -3861,7 +4136,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-278",
@@ -3875,7 +4151,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-279",
@@ -3889,7 +4166,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-280",
@@ -3903,7 +4181,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 13
   },
   {
     "id": "examB-281",
@@ -3917,7 +4196,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-282",
@@ -3931,7 +4211,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-283",
@@ -3945,7 +4226,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-284",
@@ -3959,7 +4241,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-285",
@@ -3973,7 +4256,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-287",
@@ -3987,7 +4271,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-288",
@@ -4001,7 +4286,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-289",
@@ -4015,7 +4301,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-290",
@@ -4029,7 +4316,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-291",
@@ -4043,7 +4331,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-292",
@@ -4057,7 +4346,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-293",
@@ -4071,7 +4361,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-294",
@@ -4085,7 +4376,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-295",
@@ -4099,7 +4391,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-296",
@@ -4113,7 +4406,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-297",
@@ -4127,7 +4421,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-298",
@@ -4141,7 +4436,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-299",
@@ -4155,7 +4451,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-300",
@@ -4169,7 +4466,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-301",
@@ -4183,7 +4481,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-302",
@@ -4197,7 +4496,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-303",
@@ -4211,7 +4511,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-304",
@@ -4225,7 +4526,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 14
   },
   {
     "id": "examB-305",
@@ -4239,7 +4541,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-306",
@@ -4253,7 +4556,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-307",
@@ -4267,7 +4571,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-308",
@@ -4281,7 +4586,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-309",
@@ -4295,7 +4601,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-310",
@@ -4309,7 +4616,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-311",
@@ -4323,7 +4631,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-312",
@@ -4337,7 +4646,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-313",
@@ -4351,7 +4661,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-314",
@@ -4365,7 +4676,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-315",
@@ -4379,7 +4691,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-316",
@@ -4393,7 +4706,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 1,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-317",
@@ -4407,7 +4721,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 3,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-318",
@@ -4421,7 +4736,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-319",
@@ -4435,7 +4751,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-320",
@@ -4449,7 +4766,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 0,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 15
   },
   {
     "id": "examB-321",
@@ -4463,7 +4781,8 @@ var EXAM_B_QUESTIONS = [
     ],
     "answer": 2,
     "note": "",
-    "source": "22200 職業安全衛生管理乙級 學科考古題"
+    "source": "22200 職業安全衛生管理乙級 學科考古題",
+    "chapter": 16
   },
   {
     "id": "examB-90006-001",
