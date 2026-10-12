@@ -1101,8 +1101,8 @@
     }
     return `
       <div class="section-title">錯題本</div>
-      <div class="section-desc">不照複習排程，直接依「容易錯」排優先順序：答錯次數越多排越前面。連續答對 3 次才會移出錯題本；中途再答錯，連續次數歸零重算，並依錯誤次數升級成「加強複習／重點加強」（用顏色標示）。</div>
-      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🔁 開始錯題複習測驗（本輪 ${Math.min(20,wq.length)} 題，優先抽最容易錯的題目，全部範圍混合出題）</button>` : ""}
+      <div class="section-desc">錯題複習測驗從所有錯題中完全隨機抽題；下方清單依答錯次數排列方便查看。連續答對 3 次才會移出錯題本；中途再答錯，連續次數歸零重算，並依錯誤次數升級成「加強複習／重點加強」（用顏色標示）。</div>
+      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🔁 開始錯題複習測驗（本輪 ${Math.min(20,wq.length)} 題，從全部錯題隨機抽題）</button>` : ""}
       ${renderWrongStats()}
       <div class="sub-title">待複習錯題（${wq.length}，依錯誤次數排序）</div>
       ${wq.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
@@ -1727,9 +1727,10 @@
     }));
     const startWrongReviewBtn = document.getElementById("startWrongReviewBtn");
     if(startWrongReviewBtn) startWrongReviewBtn.addEventListener("click",()=>{
-      // computeWrongQuestions() 已依「容易錯」排序（答錯次數多的在前），直接取前20題，優先複習最常錯的；
+      // 2026-10-12 改：全部錯題完全隨機抽 20 題（不再優先抽錯最多次的）；
       // 錯題每次進入複習都重新打亂選項順序，避免記住「答案在C」而不是真的記住內容
       const wq = computeWrongQuestions();
+      for(let i=wq.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [wq[i],wq[j]]=[wq[j],wq[i]]; }
       state.quizPool = wq.slice(0,20).map(presentQuestion);
       state.quizMode = "wrongreview";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
