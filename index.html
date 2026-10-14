@@ -8,6 +8,7 @@
 <script src="./examA_questions.js"></script>
 <script src="./examA_questions_2.js"></script>
 <script src="./examB_questions.js"></script>
+<script src="./explanations.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -81,6 +82,10 @@
   .quiz-option.wrong{ border-color:#B9554A; background:#FAEAE7; }
   .quiz-option-label{ width:24px; height:24px; border-radius:50%; background:#EFEAE0; display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:700; flex-shrink:0; }
   .quiz-note{ font-size:14.5px; color:#6b6356; margin-top:4px; margin-bottom:10px; }
+  .quiz-explain{ background:#F6F3EC; border:1px solid #E7E1D4; border-left:4px solid #2F6B4F; border-radius:10px; padding:10px 12px; margin:6px 0 12px; font-size:14.5px; line-height:1.65; color:#3b352c; }
+  .quiz-explain-body{ white-space:pre-wrap; }
+  .quiz-explain-ans{ font-weight:700; color:#2F6B4F; margin-bottom:6px; }
+  .quiz-explain-title{ font-weight:700; color:#6b6356; margin-top:6px; }
   .result-card{ margin-top:10px; font-size:13px; color:#6b6356; background:#F1EFE9; border-radius:10px; padding:10px; text-align:center; }
   .wrong-card{ background:#fff; border:1px solid #E7E1D4; border-radius:12px; padding:12px; margin-bottom:8px; }
   .wrong-card.level-mid{ border-color:#E3C79A; border-left:4px solid #A8631F; background:#FFFBF3; }
@@ -797,6 +802,24 @@
     if(t==="multi") return q.answer.map(i=>q.options[i]).join("、");
     return q.answer;
   }
+  // 作答後一律顯示「正確答案＋詳解」：詳解來自 explanations.js（以題目 id 對應，數字填空題沿用原題 id），
+  // 沒有詳解時改顯示題目原本的備註。選項已在出題時打亂，所以答案代號以目前畫面上的順序計算。
+  function renderExplain(q){
+    const t = q.type||"single";
+    let ans;
+    if(t==="single") ans = `(${String.fromCharCode(65+q.answer)}) ${q.options[q.answer]}`;
+    else if(t==="multi") ans = q.answer.map(i=>`(${String.fromCharCode(65+i)}) ${q.options[i]}`).join("、");
+    else if(t==="truefalse") ans = String(q.answer)==="true" ? "○ 正確" : "✕ 錯誤";
+    else ans = String(q.answer);
+    const ex = (window.EXPLANATIONS && window.EXPLANATIONS[String(q.id||"").replace(/^num-/,"")]) || "";
+    const note = (q.note||"").trim();
+    return `<div class="quiz-explain">
+      <div class="quiz-explain-ans">✅ 正確答案：${esc(ans)}</div>
+      ${ex ? `<div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(ex)}</div>` : ""}
+      ${note ? `<div class="quiz-explain-title">${ex?"📝 備註":"📖 詳解"}</div><div class="quiz-explain-body">${esc(note)}</div>` : ""}
+      ${!ex && !note ? `<div style="color:#9a9488;">（本題詳解整理中）</div>` : ""}
+    </div>`;
+  }
 
   /* ---------- Bank ---------- */
   function renderBank(){
@@ -901,7 +924,7 @@
         ${qtype==='multi' ? renderMultiOptions(current) : ""}
         ${qtype==='fill' ? renderFillInput(current) : ""}
         ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
-        ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
+        ${state.quizRevealed ? renderExplain(current) : ""}
         ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
       <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次可換範圍或接續）</button>
@@ -1082,7 +1105,7 @@
           ${qtype==='multi' ? renderMultiOptions(current) : ""}
           ${qtype==='fill' ? renderFillInput(current) : ""}
           ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
-          ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
+          ${state.quizRevealed ? renderExplain(current) : ""}
           ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
         </div>
         <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次回來會接續）</button>
@@ -1143,7 +1166,7 @@
           <div class="quiz-chapter-tag">${esc(current.origin||"")} · 數字填空</div>
           <div class="quiz-question">${esc(current.text)}</div>
           ${renderFillInput(current)}
-          ${state.quizRevealed && current.note ? `<div class="quiz-note">備註：${esc(current.note)}</div>` : ""}
+          ${state.quizRevealed ? renderExplain(current) : ""}
           ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
         </div>
         <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄）</button>
@@ -1297,6 +1320,7 @@
             <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
           </button>`;
         }).join("")}
+        ${state.examARevealed ? renderExplain(current) : ""}
         ${state.examARevealed ? `<button class="primary-btn" id="nextExamABtn">${state.examAIdx+1<state.examAPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
     `;
@@ -1358,6 +1382,7 @@
           </button>`;
         }).join("")}
         ${isMulti && !state.examBRevealed ? `<button class="primary-btn" id="examBMultiSubmitBtn" style="margin-bottom:10px;">提交答案</button>` : ""}
+        ${state.examBRevealed ? renderExplain(current) : ""}
         ${state.examBRevealed ? `<button class="primary-btn" id="nextExamBBtn">${state.examBIdx+1<state.examBPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
     `;
