@@ -9,6 +9,7 @@
 <script src="./examA_questions_2.js"></script>
 <script src="./examB_questions.js"></script>
 <script src="./explanations.js"></script>
+<script src="./study_tips.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -337,6 +338,9 @@
   // 從所有題庫自動挑出「答案是數字」的題目，轉成沒有選項的數字填空題：
   // ① 原本就是填空題且答案含數字；② 單選題且四個選項全部都含數字（代表這題考的是數字本身），取正確選項當答案。
   // 「何者錯誤/何者非」這類反向題、答案含超過3個數字的題目不納入（拿掉選項後無從作答或太難判斷）。
+  // 停止出題（題目仍保留在題庫，只是練習/模擬考/錯題複習都不會抽到）：四烷基鉛中毒預防規則已廢止
+  const SUSPENDED_IDS = new Set(["chN31-032","examA-088","examB-303","examB-304","examB-W01-301","examB-W01-302"]);
+  const isActiveQ = q => !SUSPENDED_IDS.has(String(q&&q.id||"").replace(/^num-/,""));
   function buildNumericPool(){
     const out=[]; const seenKey=new Set();
     const hasDigit = s => extractNumbers(s).length>0;
@@ -356,6 +360,7 @@
       ...state.examB.map(q=>[q,'乙級考古題']),
     ];
     sources.forEach(([q,origin])=>{
+      if(!isActiveQ(q)) return;
       const t = q.type||'single';
       if(t==='fill'){
         if(hasDigit(q.answer)) push(q, q.answer, origin);
@@ -820,11 +825,15 @@
     else ans = String(q.answer);
     const ex = (window.EXPLANATIONS && window.EXPLANATIONS[String(q.id||"").replace(/^num-/,"")]) || "";
     const note = (q.note||"").trim();
+    const T = window.STUDY_TIPS;
+    const tipKeys = (T && T.map && T.map[String(q.id||"").replace(/^num-/,"")]) || [];
+    const tips = tipKeys.map(k=>T.topics[k]).filter(Boolean);
     return `<div class="quiz-explain">
       <div class="quiz-explain-ans">✅ 正確答案：${esc(ans)}</div>
       ${ex ? `<div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(ex)}</div>` : ""}
       ${note ? `<div class="quiz-explain-title">${ex?"📝 備註":"📖 詳解"}</div><div class="quiz-explain-body">${esc(note)}</div>` : ""}
-      ${!ex && !note ? `<div style="color:#9a9488;">（本題詳解整理中）</div>` : ""}
+      ${tips.map(t=>`<div class="quiz-explain-title">💡 ${esc(t.title)}</div><div class="quiz-explain-body">${esc(t.body)}</div>`).join("")}
+      ${!ex && !note && !tips.length ? `<div style="color:#9a9488;">（本題詳解整理中）</div>` : ""}
     </div>`;
   }
 
@@ -1738,7 +1747,7 @@
     }
     const startQuizBtn = document.getElementById("startQuizBtn");
     if(startQuizBtn) startQuizBtn.addEventListener("click",()=>{
-      const src = state.quizChapterFilter==="all" ? state.questions : state.questions.filter(q=>q.chapter===state.quizChapterFilter);
+      const src = (state.quizChapterFilter==="all" ? state.questions : state.questions.filter(q=>q.chapter===state.quizChapterFilter)).filter(isActiveQ);
       // 每輪以 50 題為單位（該範圍不滿 50 題就整批做完），未刷過的題目優先排入
       state.quizPool = orderBySeenFirst(src).slice(0,50).map(presentQuestion);
       state.quizMode = "chapter";
@@ -1749,7 +1758,7 @@
     });
     const startRandom20Btn = document.getElementById("startRandom20Btn");
     if(startRandom20Btn) startRandom20Btn.addEventListener("click",()=>{
-      state.quizPool = orderBySeenFirst(state.questions).slice(0,20).map(presentQuestion);
+      state.quizPool = orderBySeenFirst(state.questions.filter(isActiveQ)).slice(0,20).map(presentQuestion);
       state.quizMode = "random20";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
@@ -1781,7 +1790,7 @@
     if(startWrongReviewBtn) startWrongReviewBtn.addEventListener("click",()=>{
       // 2026-10-12 改：全部錯題完全隨機抽 20 題（不再優先抽錯最多次的）；
       // 錯題每次進入複習都重新打亂選項順序，避免記住「答案在C」而不是真的記住內容
-      const wq = computeWrongQuestions(state.wrongBook==='examA' ? 'examA' : 'main');
+      const wq = computeWrongQuestions(state.wrongBook==='examA' ? 'examA' : 'main').filter(isActiveQ);
       for(let i=wq.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [wq[i],wq[j]]=[wq[j],wq[i]]; }
       state.quizPool = wq.slice(0,20).map(presentQuestion);
       state.quizMode = "wrongreview";
@@ -1861,8 +1870,8 @@
 
     const startExamABtn = document.getElementById("startExamABtn");
     if(startExamABtn) startExamABtn.addEventListener("click",()=>{
-      const unseen = state.examA.filter(q=>!state.examASeenIds[q.id]);
-      const seen = state.examA.filter(q=>state.examASeenIds[q.id]);
+      const unseen = state.examA.filter(q=>isActiveQ(q) && !state.examASeenIds[q.id]);
+      const seen = state.examA.filter(q=>isActiveQ(q) && state.examASeenIds[q.id]);
       const shuffledUnseen = [...unseen].sort(()=>Math.random()-0.5);
       let pool;
       if(shuffledUnseen.length >= 50){
@@ -1903,8 +1912,8 @@
 
     const startExamBBtn = document.getElementById("startExamBBtn");
     if(startExamBBtn) startExamBBtn.addEventListener("click",()=>{
-      const unseen = state.examB.filter(q=>!state.examBSeenIds[q.id]);
-      const seen = state.examB.filter(q=>state.examBSeenIds[q.id]);
+      const unseen = state.examB.filter(q=>isActiveQ(q) && !state.examBSeenIds[q.id]);
+      const seen = state.examB.filter(q=>isActiveQ(q) && state.examBSeenIds[q.id]);
       const shuffledUnseen = [...unseen].sort(()=>Math.random()-0.5);
       let pool;
       if(shuffledUnseen.length >= 50){
