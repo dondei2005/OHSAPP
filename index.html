@@ -309,8 +309,8 @@
     let str = String(s).trim();
     str = str.replace(/[０-９]/g, ch => String.fromCharCode(ch.charCodeAt(0)-0xFEE0));
     str = str.replace(/％/g, '%');
-    str = cnNumToArabic(str);
-    str = str.replace(/,/g,'').replace(/\s+/g,'').toLowerCase();
+    str = toHalfWidthNum(str);   // 中文數字、分之、百分之、萬千百一律轉成阿拉伯數字
+    str = str.replace(/[～〜－—–至]/g,'~').replace(/[，,；;、]/g,'').replace(/\s+/g,'').toLowerCase();
     return str;
   }
 
@@ -374,7 +374,14 @@
       const a = extractNumbers(q.answer), b = extractNumbers(input);
       return a.length>0 && a.length===b.length && a.every((v,i)=>v===b[i]);
     }
-    return normalizeFillAnswer(input) === normalizeFillAnswer(q.answer);
+    if(normalizeFillAnswer(input) === normalizeFillAnswer(q.answer)) return true;
+    // 答案本身只有數字（頂多帶%、℃、m³之類符號）時，只比數字：寫「3」「3年」「三」都算對
+    const rest = toHalfWidthNum(q.answer).replace(/\d+(?:\.\d+)?/g,'');
+    if(!/[一-鿿]/.test(rest)){
+      const a = extractNumbers(q.answer), b = extractNumbers(input);
+      return a.length>0 && a.length===b.length && a.every((v,i)=>v===b[i]);
+    }
+    return false;
   }
   // 每次出題都重新打亂選項順序；4個選項以上的題目有3成機率隨機拿掉一個選項，
   // 打破「ABC對、D錯」「答案總在某個位置」「複選題一定剛好錯一個」之類的作答慣性。
