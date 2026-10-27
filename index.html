@@ -10,6 +10,7 @@
 <script src="./examB_questions.js"></script>
 <script src="./explanations.js"></script>
 <script src="./study_tips.js"></script>
+<script src="./dedup.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -120,7 +121,7 @@
   .ov-k{ font-size:10.5px; color:#9a9488; width:24px; flex-shrink:0; }
   .ov-track{ position:relative; flex:1; height:8px; background:#EFE8DA; border-radius:4px; }
   .ov-fill{ height:100%; border-radius:4px; }
-  .ov-target{ position:absolute; left:85%; top:-3px; bottom:-3px; width:0; border-left:2px dashed #2B2620; opacity:.55; }
+  .ov-target{ position:absolute; left:80%; top:-3px; bottom:-3px; width:0; border-left:2px dashed #2B2620; opacity:.55; }
   .ov-v{ font-size:11.5px; color:#2B2620; width:58px; text-align:right; flex-shrink:0; font-variant-numeric:tabular-nums; }
   .ov-legend{ display:flex; flex-wrap:wrap; gap:6px 12px; font-size:11px; color:#6b6356; margin-top:10px; }
   .ov-legend i{ display:inline-block; width:12px; height:8px; border-radius:3px; margin-right:4px; vertical-align:middle; }
@@ -341,6 +342,43 @@
   // 停止出題（題目仍保留在題庫，只是練習/模擬考/錯題複習都不會抽到）：四烷基鉛中毒預防規則已廢止
   const SUSPENDED_IDS = new Set(["chN31-032","examA-088","examB-303","examB-304","examB-W01-301","examB-W01-302"]);
   const isActiveQ = q => !SUSPENDED_IDS.has(String(q&&q.id||"").replace(/^num-/,""));
+  // 2026-10-27 重複題清理（dedup.js）：DUP_ALIAS 的 key 是被移除的重複題，value 是保留的同一題。
+  // 載入時把重複題濾掉；它在錯題本／刷題紀錄上的進度，一律合併到保留的那題（數字填空 num- 前綴同理）。
+  const DUP_ALIAS = window.DUP_ALIAS || {};
+  const DUP_CHAPTER = window.DUP_CHAPTER || {};
+  const notDupQ = q => !DUP_ALIAS[q.id];
+  function dupTarget(id){
+    const s = String(id), num = s.startsWith("num-"), base = num ? s.slice(4) : s;
+    return DUP_ALIAS[base] ? (num?"num-":"") + DUP_ALIAS[base] : null;
+  }
+  // 同一題兩筆錯題紀錄合併：以較新的那筆為準（含已學會狀態），答錯次數取較大值
+  function mergeWrongRec(a, b){
+    if(!a) return b; if(!b) return a;
+    const t = r => r.updatedAt || (r.lastSeen ? r.lastSeen+'T00:00:00' : '');
+    const newer = t(b) > t(a) ? b : a;
+    return {...newer, wrongCount: Math.max(a.wrongCount||0, b.wrongCount||0)};
+  }
+  // 結果與執行次數無關（重跑不會重複累加），所以每次載入、每次雲端合併後都可以放心套用
+  function applyDupAlias(p){
+    if(p.wrongMap){
+      Object.keys(p.wrongMap).forEach(id=>{
+        const to = dupTarget(id);
+        if(!to) return;
+        p.wrongMap[to] = mergeWrongRec(p.wrongMap[to], p.wrongMap[id]);
+        delete p.wrongMap[id];
+      });
+    }
+    ["quizSeenIds","examASeenIds","examBSeenIds"].forEach(k=>{
+      const m = p[k]; if(!m) return;
+      Object.keys(m).forEach(id=>{
+        const to = dupTarget(id);
+        if(!to) return;
+        if(m[id]) m[to] = true;
+        delete m[id];
+      });
+    });
+    return p;
+  }
   function buildNumericPool(){
     const out=[]; const seenKey=new Set();
     const hasDigit = s => extractNumbers(s).length>0;
@@ -414,10 +452,11 @@
       : idx.indexOf(q.answer);
     return {...q, options, answer};
   }
-  // 正確率依目標85%分級：達標／加強中／待加強，配合圖示＋文字，不單靠顏色辨識
+  // 正確率依目標 ACC_TARGET% 分級：達標／加強中／待加強，配合圖示＋文字，不單靠顏色辨識（2026-10-27 目標由85%改80%）
+  const ACC_TARGET = 80;
   function accStatus(pct){
     if(pct===null || pct===undefined) return {color:"#9a9488", icon:"—", label:"尚無記錄"};
-    if(pct>=85) return {color:"#3F7D5C", icon:"✅", label:"達標"};
+    if(pct>=ACC_TARGET) return {color:"#3F7D5C", icon:"✅", label:"達標"};
     if(pct>=60) return {color:"#A8631F", icon:"⚠️", label:"加強中"};
     return {color:"#B9554A", icon:"🔥", label:"待加強"};
   }
@@ -481,14 +520,17 @@
     // 每次重建時原樣保留，不受題庫更新影響。
     const prevQuestions = loadData("questions", []);
     const customQs = prevQuestions.filter(q=>q.id && !q.id.includes("-"));
+    // 重複題清理後保留下來、原本沒章節的乙級考古題，沿用被移除那題的章節
+    const examBSrc = (Array.isArray(window.EXAM_B_QUESTIONS) ? window.EXAM_B_QUESTIONS : [])
+      .map(q=>(q.chapter==null && DUP_CHAPTER[q.id]!=null) ? {...q, chapter:DUP_CHAPTER[q.id]} : q);
     // 乙級考古題中已標好章節（有 chapter 欄位）的題目也一併放進章節練習，沿用同一個 id，
     // 所以不論在章節練習或乙級模擬考作答，錯題本記錄都是同一筆
     const librarySources = [
       QUESTION_SEED, QUESTION_SEED_V2, QUESTION_SEED_V3,
       Array.isArray(window.EXTERNAL_QUESTIONS) ? window.EXTERNAL_QUESTIONS : [],
-      Array.isArray(window.EXAM_B_QUESTIONS) ? window.EXAM_B_QUESTIONS.filter(q=>q.chapter!=null) : []
+      examBSrc.filter(q=>q.chapter!=null)
     ];
-    state.questions = [...dedupeById(librarySources.flat()), ...customQs];
+    state.questions = [...dedupeById(librarySources.flat()).filter(notDupQ), ...customQs];
     saveData("questions", state.questions);
 
     state.wrongMap = loadData("wrongMap", {});
@@ -511,15 +553,21 @@
     state.quizMode = loadData("quizMode", "chapter");
 
     // 甲種/乙種模擬考題庫同理：整批用來源檔重建，不用累加式合併（沒有使用者自建題目要保留）。
-    state.examA = dedupeById([window.EXAM_A_QUESTIONS, window.EXAM_A_QUESTIONS_2].filter(Array.isArray).flat());
+    state.examA = dedupeById([window.EXAM_A_QUESTIONS, window.EXAM_A_QUESTIONS_2].filter(Array.isArray).flat()).filter(notDupQ);
     saveData("examA", state.examA);
     state.examAHistory = loadData("examAHistory", []);
     state.examASeenIds = loadData("examASeenIds", {});
 
-    state.examB = dedupeById([window.EXAM_B_QUESTIONS].filter(Array.isArray).flat());
+    state.examB = dedupeById(examBSrc).filter(notDupQ);
     saveData("examB", state.examB);
     state.examBHistory = loadData("examBHistory", []);
     state.examBSeenIds = loadData("examBSeenIds", {});
+    // 被移除的重複題，本機已有的錯題／刷題紀錄併到保留的那題
+    applyDupAlias(state);
+    saveData("wrongMap", state.wrongMap);
+    saveData("quizSeenIds", state.quizSeenIds);
+    saveData("examASeenIds", state.examASeenIds);
+    saveData("examBSeenIds", state.examBSeenIds);
     // 數字填空題庫：每次載入時從上面三個題庫即時挑出，不另外存檔（題庫更新時自動跟著更新）
     state.numeric = buildNumericPool();
     state.loaded = true;
@@ -636,9 +684,10 @@
 
   function renderNav(){
     const dueWrongCount = computeWrongQuestions().length;
+    const examAWrongCount = computeWrongQuestions('examA').length;
     const items = [
       ["dashboard","◆","總覽"],["chapters","▤","章節"],["bank","✎","題庫"],
-      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["numeric","🔢","數字"],["examA","🅰","甲種"],["examB","🅱","乙級"],["laws","§","法規"],["sync","⇅","備份"],
+      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["numeric","🔢","數字"],["examA","🅰","甲種",examAWrongCount],["examB","🅱","乙級"],["laws","§","法規"],["sync","⇅","備份"],
     ];
     return `<nav class="nav">${items.map(it=>{
       const [key,icon,label,badge] = it;
@@ -909,6 +958,10 @@
       return `<div class="result-card">🔢 目前有一輪「數字填空」進行中（第 ${state.quizIdx+1} / ${state.quizPool.length} 題）。</div>
         <button class="primary-btn" data-goto="numeric">前往數字題分頁繼續作答</button>`;
     }
+    if(state.quizPool.length>0 && state.quizMode==="examAwrong"){
+      return `<div class="result-card">🅰 目前有一輪「甲業錯題複習」進行中（第 ${state.quizIdx+1} / ${state.quizPool.length} 題）。</div>
+        <button class="primary-btn" data-goto="examA">前往甲種分頁繼續作答</button>`;
+    }
     if(state.quizPool.length===0){
       const chapterSelected = state.quizChapterFilter!=="all";
       return `
@@ -1118,12 +1171,12 @@
       .map(id=>({...qmap[id], meta:state.wrongMap[id]}))
       .sort((a,b)=>(b.meta.wrongCount||0)-(a.meta.wrongCount||0) || String(a.meta.updatedAt||'').localeCompare(String(b.meta.updatedAt||'')));
   }
-  function renderWrong(){
-    if(state.quizPool.length>0 && state.quizMode==='wrongreview'){
+  // 錯題複習作答畫面：乙級錯題本／已學會（錯題本分頁）與甲業錯題本（甲種分頁）共用
+  function renderWrongReview(title){
       const current = state.quizPool[state.quizIdx];
       const qtype = current.type || "single";
       return `
-        <div class="quiz-progress">🔁 ${state.wrongBook==='examA'?'甲業錯題複習':state.wrongBook==='learned'?'已學會錯題抽考':'錯題複習'} 第 ${state.quizIdx+1} / ${state.quizPool.length} 題 · 答對 ${state.quizStats.correct}</div>
+        <div class="quiz-progress">🔁 ${title} 第 ${state.quizIdx+1} / ${state.quizPool.length} 題 · 答對 ${state.quizStats.correct}</div>
         <div class="quiz-card">
           <div class="quiz-chapter-tag">${esc(bucketLabel(bucketKey(current)))}${qtype==='multi'?' · 複選題':qtype==='fill'?' · 填空題':qtype==='truefalse'?' · 是非題':''}</div>
           <div class="quiz-question">${esc(current.text)}</div>
@@ -1136,15 +1189,8 @@
         </div>
         <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次回來會接續）</button>
       `;
-    }
-    const book = state.wrongBook==='examA' ? 'examA' : state.wrongBook==='learned' ? 'learned' : 'main';
-    const counts = {main:computeWrongQuestions('main').length, examA:computeWrongQuestions('examA').length, learned:computeLearnedQuestions().length};
-    const wq = book==='learned' ? computeLearnedQuestions() : computeWrongQuestions(book);
-    function wrongTabs(){
-      return [['main','乙級錯題本'],['learned','已學會'],['examA','甲業錯題本']].map(([k,label])=>
-        `<button class="toggle-btn ${book===k?'active':''}" data-wrongbook="${k}" style="padding:6px 0;font-size:12px;">${label}（${counts[k]}）</button>`).join("");
-    }
-    function card(q){
+  }
+  function wrongCard(q, book){
       const wc = q.meta.wrongCount||0;
       const streak = q.meta.correctStreak||0;
       const levelClass = wc>=3 ? ' level-high' : wc===2 ? ' level-mid' : '';
@@ -1159,9 +1205,26 @@
         <div class="q-text">${esc(q.text)}</div>
         <button class="toggle-btn" data-showans="${q.id}" style="width:auto;display:inline-block;padding:6px 12px;">顯示答案</button>
         <div class="q-answer" data-ansbox="${q.id}" style="display:none;">正解：${esc(answerDisplay(q))}</div>
-        ${book==='learned' ? '' : `<button class="mastered-btn" data-mastered="${q.id}">已熟記，移到已學會錯題本</button>`}
+        ${book==='learned' ? '' : `<button class="mastered-btn" data-mastered="${q.id}">${book==='examA'?'已熟記，移出甲業錯題本':'已熟記，移到已學會錯題本'}</button>`}
       </div>`;
+  }
+  function renderWrong(){
+    if(state.quizPool.length>0 && state.quizMode==='wrongreview'){
+      return renderWrongReview(state.wrongBook==='learned'?'已學會錯題抽考':'錯題複習');
     }
+    if(state.quizPool.length>0 && state.quizMode==='examAwrong'){
+      return `<div class="result-card">🅰 目前有一輪「甲業錯題複習」進行中（第 ${state.quizIdx+1} / ${state.quizPool.length} 題）。</div>
+        <button class="primary-btn" data-goto="examA">前往甲種分頁繼續作答</button>`;
+    }
+    // 2026-10-27 甲業錯題本移到「甲種」分頁獨立看，這裡只剩乙級錯題本／已學會
+    const book = state.wrongBook==='learned' ? 'learned' : 'main';
+    const counts = {main:computeWrongQuestions('main').length, learned:computeLearnedQuestions().length};
+    const wq = book==='learned' ? computeLearnedQuestions() : computeWrongQuestions(book);
+    function wrongTabs(){
+      return [['main','乙級錯題本'],['learned','已學會']].map(([k,label])=>
+        `<button class="toggle-btn ${book===k?'active':''}" data-wrongbook="${k}" style="padding:6px 0;font-size:12px;">${label}（${counts[k]}）</button>`).join("");
+    }
+    const card = q => wrongCard(q, book);
     if(book==='learned'){
       return `
       <div class="toggle-row" style="margin:0 0 10px;">${wrongTabs()}</div>
@@ -1175,11 +1238,9 @@
     }
     return `
       <div class="toggle-row" style="margin:0 0 10px;">${wrongTabs()}</div>
-      <div class="section-title">${book==='examA'?'甲業錯題本':'錯題本'}</div>
-      <div class="section-desc">${book==='examA'
-        ? '甲種題庫（含由甲種題庫轉出的數字填空題）答錯的題目放在這裡，跟乙級錯題本分開，等考完乙級再來讀。'
-        : '乙級章節練習、乙級考古題、數字填空的錯題（甲種題庫的錯題另放「甲業錯題本」）。'}錯題複習測驗從本錯題本中完全隨機抽題；下方清單依答錯次數排列方便查看。連續答對 3 次會移到「已學會」錯題本；中途再答錯，連續次數歸零重算，並依錯誤次數升級成「加強複習／重點加強」（用顏色標示）。</div>
-      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🔁 開始${book==='examA'?'甲業':''}錯題複習測驗（本輪 ${Math.min(20,wq.length)} 題，從本錯題本隨機抽題）</button>` : ""}
+      <div class="section-title">錯題本</div>
+      <div class="section-desc">乙級章節練習、乙級考古題、數字填空的錯題（甲種題庫的錯題在「甲種」分頁的甲業錯題本，獨立計算）。錯題複習測驗從本錯題本中完全隨機抽題；下方清單依答錯次數排列方便查看。連續答對 3 次會移到「已學會」錯題本；中途再答錯，連續次數歸零重算，並依錯誤次數升級成「加強複習／重點加強」（用顏色標示）。</div>
+      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🔁 開始錯題複習測驗（本輪 ${Math.min(20,wq.length)} 題，從本錯題本隨機抽題）</button>` : ""}
       ${renderWrongStats(book)}
       <div class="sub-title">待複習錯題（${wq.length}，依錯誤次數排序）</div>
       ${wq.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
@@ -1188,9 +1249,12 @@
   }
 
   /* ---------- 數字填空 ---------- */
+  // 數字分頁只出乙級來源的數字題；由甲種題庫轉出的（num-examA*）仍留在 state.numeric 供甲業錯題本對照，但不在這裡出題、計分
+  function numericPoolB(){ return state.numeric.filter(q=>!isExamABookId(q.id)); }
   function computeNumericStats(){
-    const total = state.numeric.length;
-    const seen = state.numeric.filter(q=>state.quizSeenIds[q.id]).length;
+    const pool = numericPoolB();
+    const total = pool.length;
+    const seen = pool.filter(q=>state.quizSeenIds[q.id]).length;
     let correct=0, answered=0;
     state.quizHistory.forEach(h=>{ if(h.mode==="numeric"){ correct+=h.correct; answered+=h.total; } });
     return {total, seen, coverage: total>0?Math.round(seen/total*100):0, correct, answered, acc: answered>0?Math.round(correct/answered*100):null};
@@ -1211,8 +1275,9 @@
       `;
     }
     if(state.quizPool.length>0){
-      return `<div class="result-card">目前有一輪${state.quizMode==="wrongreview"?"錯題複習":"練習"}還沒做完（第 ${state.quizIdx+1} / ${state.quizPool.length} 題），要先結束那一輪才能開始數字填空。</div>
-        <button class="primary-btn" data-goto="${state.quizMode==="wrongreview"?"wrong":"quiz"}">回去繼續那一輪</button>
+      const back = state.quizMode==="wrongreview" ? "wrong" : state.quizMode==="examAwrong" ? "examA" : "quiz";
+      return `<div class="result-card">目前有一輪${state.quizMode==="wrongreview"?"錯題複習":state.quizMode==="examAwrong"?"甲業錯題複習":"練習"}還沒做完（第 ${state.quizIdx+1} / ${state.quizPool.length} 題），要先結束那一輪才能開始數字填空。</div>
+        <button class="primary-btn" data-goto="${back}">回去繼續那一輪</button>
         <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">結束那一輪（已作答的都會記錄）</button>`;
     }
     const s = computeNumericStats();
@@ -1220,12 +1285,12 @@
     const hist = state.quizHistory.filter(h=>h.mode==="numeric");
     return `
       <div class="section-title">🔢 數字填空題庫</div>
-      <div class="section-desc">從所有題庫（乙級40章、甲種題庫、乙級考古題）自動挑出答案是數字的題目，例如年限、人數、公尺、分貝、比例。不給選項，直接輸入數字作答；會提示單位格式，只要數字對就算對。答錯一樣會進錯題本。</div>
+      <div class="section-desc">從乙級題庫（乙級40章、乙級考古題）自動挑出答案是數字的題目，例如年限、人數、公尺、分貝、比例。不給選項，直接輸入數字作答；會提示單位格式，只要數字對就算對。答錯一樣會進錯題本。</div>
       <div style="display:flex;justify-content:space-around;background:#fff;border:1px solid #E7E1D4;border-radius:14px;padding:14px;">
         ${svgRing(s.coverage, "#5B6B82", `刷題達成率 ${s.seen}/${s.total} 題`)}
         ${svgRing(s.acc, st.color, s.acc===null ? "尚無作答記錄" : `${st.icon} 正確率 ${s.correct}/${s.answered} 題`)}
       </div>
-      <div class="section-desc" style="margin-top:0;">目標：刷題 100%、正確率 85%</div>
+      <div class="section-desc" style="margin-top:0;">目標：刷題 100%、正確率 ${ACC_TARGET}%</div>
       <button class="primary-btn" id="startNumericBtn">開始數字填空（每輪 20 題，沒刷過的優先）</button>
       ${state.quizStats.total>0 && state.quizMode==="numeric" ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : ""}
       ${hist.length ? `<div class="section-title" style="margin-top:18px;">數字填空成績記錄</div>` + hist.slice(0,10).map(h=>{
@@ -1251,27 +1316,26 @@
     });
     const chTotal = chapters.reduce((a,c)=>a+c.total,0), chSeen = chapters.reduce((a,c)=>a+c.seen,0);
     const chAcc = sumHistory(state.quizHistory.filter(h=>h.mode!=="numeric"));
-    const aSeen = state.examA.filter(q=>state.examASeenIds[q.id]).length;
     const bSeen = state.examB.filter(q=>state.examBSeenIds[q.id]).length;
-    const aAcc = sumHistory(state.examAHistory), bAcc = sumHistory(state.examBHistory);
+    const bAcc = sumHistory(state.examBHistory);
     const num = computeNumericStats();
+    // 2026-10-27 起總覽只算乙級；甲種題庫的刷題率／正確率在「甲種」分頁獨立看
     const banks = [
       {key:"quiz", label:"乙級40章", total:chTotal, seen:chSeen, acc:chAcc.pct, accC:chAcc.correct, accT:chAcc.total},
-      {key:"examA", label:"甲種題庫", total:state.examA.length, seen:aSeen, acc:aAcc.pct, accC:aAcc.correct, accT:aAcc.total},
       {key:"examB", label:"乙級考古題", total:state.examB.length, seen:bSeen, acc:bAcc.pct, accC:bAcc.correct, accT:bAcc.total},
       {key:"numeric", label:"數字填空", total:num.total, seen:num.seen, acc:num.acc, accC:num.correct, accT:num.answered},
     ].map(b=>({...b, cov: b.total>0?Math.round(b.seen/b.total*100):0}));
-    // 整體：數字填空是從三個題庫衍生出來的，刷題數不重複計入；正確率則四個來源的作答全部加總
+    // 整體：數字填空是從題庫衍生出來的，刷題數不重複計入；正確率則各來源的作答全部加總
     // 已分章的乙級考古題同時出現在「乙級40章」和「乙級考古題」，整體題數只算一次
     const overlap = state.examB.filter(q=>q.chapter!=null);
-    const allTotal = chTotal + state.examA.length + state.examB.length - overlap.length;
-    const allSeen = chSeen + aSeen + bSeen - overlap.filter(q=>state.quizSeenIds[q.id] && state.examBSeenIds[q.id]).length;
-    const allC = chAcc.correct + aAcc.correct + bAcc.correct + num.correct;
-    const allT = chAcc.total + aAcc.total + bAcc.total + num.answered;
+    const allTotal = chTotal + state.examB.length - overlap.length;
+    const allSeen = chSeen + bSeen - overlap.filter(q=>state.quizSeenIds[q.id] && state.examBSeenIds[q.id]).length;
+    const allC = chAcc.correct + bAcc.correct + num.correct;
+    const allT = chAcc.total + bAcc.total + num.answered;
     return {chapters, banks, allTotal, allSeen, allCov: allTotal>0?Math.round(allSeen/allTotal*100):0,
       allAcc: allT>0?Math.round(allC/allT*100):null, allC, allT};
   }
-  // 一列＝一個章節/題庫：上條「刷題率」、下條「正確率」，同一個 0~100% 刻度；正確率條上畫出85%目標線
+  // 一列＝一個章節/題庫：上條「刷題率」、下條「正確率」，同一個 0~100% 刻度；正確率條上畫出目標線（ACC_TARGET）
   function overviewRow(label, title, item, attrs){
     const st = accStatus(item.acc);
     const tip = `已刷 ${item.seen}/${item.total} 題（${item.cov}%）；` + (item.acc===null ? "尚無正確率記錄" : `正確 ${item.accC}/${item.accT} 題（${item.acc}%）`);
@@ -1290,30 +1354,32 @@
     const allSt = accStatus(d.allAcc);
     const sorters = {
       chapter: (a,b)=>a.id-b.id,
-      // 還沒有正確率記錄的章節排在最後（那些看「刷題率低→高」比較準）
+      // 還沒有正確率記錄的章節，不論低→高或高→低都排在最後（那些看刷題率排序比較準）
       acc: (a,b)=>((a.acc===null?101:a.acc)-(b.acc===null?101:b.acc)) || a.id-b.id,
+      accDesc: (a,b)=>((b.acc===null?-1:b.acc)-(a.acc===null?-1:a.acc)) || a.id-b.id,
       cov: (a,b)=>a.cov-b.cov || a.id-b.id,
+      covDesc: (a,b)=>b.cov-a.cov || a.id-b.id,
     };
     const chs = [...d.chapters].sort(sorters[state.overviewSort]||sorters.chapter);
-    const reached = d.chapters.filter(c=>c.cov>=100 && c.acc!==null && c.acc>=85).length;
+    const reached = d.chapters.filter(c=>c.cov>=100 && c.acc!==null && c.acc>=ACC_TARGET).length;
+    const sortBtn = (key,label)=>`<button class="toggle-btn ${state.overviewSort===key?'active':''}" data-ovsort="${key}" style="padding:6px 0;font-size:12px;flex:1 1 30%;">${label}</button>`;
     return `
       <div class="ov-card">
-        <div class="section-title" style="margin-top:0;">📊 刷題總覽</div>
-        <div class="section-desc" style="margin-top:2px;">目標：全部題庫刷題 100%、正確率 85%</div>
+        <div class="section-title" style="margin-top:0;">📊 刷題總覽（乙級）</div>
+        <div class="section-desc" style="margin-top:2px;">目標：全部題庫刷題 100%、正確率 ${ACC_TARGET}%　（甲種題庫在「甲種」分頁獨立計算）</div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(d.allCov, "#5B6B82", `整體刷題 ${d.allSeen}/${d.allTotal} 題`)}
           ${svgRing(d.allAcc, allSt.color, d.allAcc===null ? "尚無作答記錄" : `${allSt.icon} 整體正確率 ${d.allC}/${d.allT}`)}
         </div>
-        <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#3F7D5C;"></i>正確率（✅≥85% ⚠️60~84% 🔥<60%）</span><span><i class="ov-legend-target"></i>85%目標線</span></div>
+        <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#3F7D5C;"></i>正確率（✅≥${ACC_TARGET}% ⚠️60~${ACC_TARGET-1}% 🔥<60%）</span><span><i class="ov-legend-target"></i>${ACC_TARGET}%目標線</span></div>
         <div class="sub-title">各題庫</div>
         ${d.banks.map(b=>overviewRow(b.label, `${b.total} 題`, b, `data-goto="${b.key}"`)).join("")}
         <div class="sub-title" style="display:flex;justify-content:space-between;align-items:center;">
           <span>各章節（雙達標 ${reached}/${CHAPTERS.length} 章）</span>
         </div>
-        <div class="toggle-row" style="margin:6px 0 8px;">
-          <button class="toggle-btn ${state.overviewSort==='chapter'?'active':''}" data-ovsort="chapter" style="padding:6px 0;font-size:12px;">依章節</button>
-          <button class="toggle-btn ${state.overviewSort==='acc'?'active':''}" data-ovsort="acc" style="padding:6px 0;font-size:12px;">正確率低→高</button>
-          <button class="toggle-btn ${state.overviewSort==='cov'?'active':''}" data-ovsort="cov" style="padding:6px 0;font-size:12px;">刷題率低→高</button>
+        <div class="toggle-row" style="margin:6px 0 8px;flex-wrap:wrap;">
+          ${sortBtn('chapter','依章節')}${sortBtn('acc','正確率低→高')}${sortBtn('accDesc','正確率高→低')}
+          ${sortBtn('cov','刷題率低→高')}${sortBtn('covDesc','刷題率高→低')}
         </div>
         <div class="section-desc" style="margin-top:0;">章節正確率＝該章「單一章節練習」累計成績。點任一列可直接進入該章練習。</div>
         ${chs.map(c=>overviewRow(c.label, c.title, c, `data-gochapter="${c.id}"`)).join("")}
@@ -1330,17 +1396,35 @@
     if(state.examA.length===0){
       return `<div class="empty-hint">甲種題庫尚未載入，請確認題庫檔案已正確引入。</div>`;
     }
+    // 2026-10-27 甲業的刷題率、正確率、錯題本全部集中在甲種分頁獨立看，總覽與錯題本分頁不再計入甲種題庫
+    if(state.quizPool.length>0 && state.quizMode==='examAwrong'){
+      return renderWrongReview('甲業錯題複習');
+    }
     if(state.examAPool.length===0){
-      const seenCount = Object.keys(state.examASeenIds).length;
+      const seenCount = state.examA.filter(q=>state.examASeenIds[q.id]).length;
       const coveragePct = state.examA.length>0 ? Math.round(seenCount/state.examA.length*100) : 0;
       const acc = computeExamAAccuracy();
+      const accPct = acc.total>0 ? acc.pct : null;
+      const st = accStatus(accPct);
+      const wq = computeWrongQuestions('examA');
       return `
         <div class="section-title">甲種業務主管模擬考</div>
-        <div class="section-desc">題庫共 ${state.examA.length} 題，每次模擬考隨機抽 50 題作答，優先抽還沒刷過的題目、刷完一輪才會重複；答錯會自動送入「甲業錯題本」（在錯題本分頁上方切換），不會混進乙級錯題本。</div>
-        <div class="section-desc">已刷過 ${seenCount} / ${state.examA.length} 題（${coveragePct}%）　累計正確率 ${acc.pct}%（${acc.correct}/${acc.total}）</div>
+        <div class="section-desc">題庫共 ${state.examA.length} 題，每次模擬考隨機抽 50 題作答，優先抽還沒刷過的題目、刷完一輪才會重複；答錯會自動送入下方「甲業錯題本」，不會混進乙級錯題本。甲業的刷題率、正確率只在這個分頁計算，不併入總覽。</div>
+        <div style="display:flex;justify-content:space-around;background:#fff;border:1px solid #E7E1D4;border-radius:14px;padding:14px;">
+          ${svgRing(coveragePct, "#5B6B82", `甲業刷題 ${seenCount}/${state.examA.length} 題`)}
+          ${svgRing(accPct, st.color, accPct===null ? "尚無作答記錄" : `${st.icon} 甲業正確率 ${acc.correct}/${acc.total}`)}
+        </div>
+        <div class="section-desc" style="margin-top:0;">目標：刷題 100%、正確率 ${ACC_TARGET}%</div>
         <button class="primary-btn" id="startExamABtn">📝 開始模擬考（50 題）</button>
         ${state.examAStats.total>0 ? `<div class="result-card">上一輪結果：${state.examAStats.correct} / ${state.examAStats.total} 答對</div>` : ""}
         ${renderExamAHistory()}
+        <div class="section-title" style="margin-top:18px;">甲業錯題本（${wq.length}）</div>
+        <div class="section-desc">甲種題庫（含由甲種題庫轉出的數字填空題）答錯的題目。複習測驗從這裡完全隨機抽題；連續答對 3 次就移出甲業錯題本，再答錯會依錯誤次數升級成「加強複習／重點加強」。</div>
+        ${wq.length>0 ? `<button class="primary-btn" id="startExamAWrongBtn" style="margin-bottom:14px;">🔁 開始甲業錯題複習（本輪 ${Math.min(20,wq.length)} 題，隨機抽題）</button>` : ""}
+        ${renderWrongStats('examA')}
+        <div class="sub-title">待複習甲業錯題（${wq.length}，依錯誤次數排序）</div>
+        ${wq.length===0?`<div class="empty-hint">目前沒有甲業錯題。</div>`:""}
+        ${wq.map(q=>wrongCard(q,'examA')).join("")}
       `;
     }
     const current = state.examAPool[state.examAIdx];
@@ -1386,7 +1470,7 @@
       return `<div class="empty-hint">乙級學科考古題庫尚未載入，請確認題庫檔案已正確引入。</div>`;
     }
     if(state.examBPool.length===0){
-      const seenCount = Object.keys(state.examBSeenIds).length;
+      const seenCount = state.examB.filter(q=>state.examBSeenIds[q.id]).length;
       const coveragePct = state.examB.length>0 ? Math.round(seenCount/state.examB.length*100) : 0;
       const acc = computeExamBAccuracy();
       return `
@@ -1516,7 +1600,8 @@
     merged.examAHistory = mergeHistory(local.examAHistory, cloud.examAHistory);
     merged.examBHistory = mergeHistory(local.examBHistory, cloud.examBHistory);
 
-    return merged;
+    // 雲端可能還留著舊裝置寫上去的重複題 id，合併後一併轉到保留的那題，回寫雲端時也就清掉了
+    return applyDupAlias(merged);
   }
   function applyMergedProgress(merged){
     state.examDate = merged.examDate;
@@ -1791,7 +1876,7 @@
     });
     const startNumericBtn = document.getElementById("startNumericBtn");
     if(startNumericBtn) startNumericBtn.addEventListener("click",()=>{
-      state.quizPool = orderBySeenFirst(state.numeric).slice(0,20);
+      state.quizPool = orderBySeenFirst(numericPoolB()).slice(0,20);
       state.quizMode = "numeric";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
@@ -1818,11 +1903,23 @@
       if(state.wrongBook==='learned'){
         wq = computeLearnedQuestions();   // 已學會錯題本：不打亂，錯越多次越先出
       } else {
-        wq = computeWrongQuestions(state.wrongBook==='examA' ? 'examA' : 'main').filter(isActiveQ);
+        wq = computeWrongQuestions('main').filter(isActiveQ);
         for(let i=wq.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [wq[i],wq[j]]=[wq[j],wq[i]]; }
       }
       state.quizPool = wq.slice(0,20).map(presentQuestion);
       state.quizMode = "wrongreview";
+      state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
+      state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      persistQuizState();
+      render();
+    });
+    // 甲種分頁的甲業錯題複習：一樣全隨機抽 20 題，作答介面沿用練習題組（quizPool），模式另記 examAwrong
+    const startExamAWrongBtn = document.getElementById("startExamAWrongBtn");
+    if(startExamAWrongBtn) startExamAWrongBtn.addEventListener("click",()=>{
+      const wq = computeWrongQuestions('examA').filter(isActiveQ);
+      for(let i=wq.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [wq[i],wq[j]]=[wq[j],wq[i]]; }
+      state.quizPool = wq.slice(0,20).map(presentQuestion);
+      state.quizMode = "examAwrong";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
       state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
       persistQuizState();
@@ -2067,6 +2164,7 @@
       state.examASeenIds = data.examASeenIds||{};
       state.examBHistory = data.examBHistory||[];
       state.examBSeenIds = data.examBSeenIds||{};
+      applyDupAlias(state);
       saveData("meta",{examDate:state.examDate});
       saveData("chapterState",state.chapterState);
       saveData("wrongMap",state.wrongMap);
