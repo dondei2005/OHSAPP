@@ -620,7 +620,8 @@
       const intervalDays = [1,3,7,14][Math.min(wrongCount-1,3)];
       const due = new Date(); due.setDate(due.getDate()+intervalDays);
       // 再錯一次：連續答對次數歸零，等級（wrongCount）提升，錯題本卡片會用顏色標示需要加強
-      m[id] = {wrongCount, correctStreak:0, lastSeen:todayStr(), updatedAt:now, dueDate:due.toISOString().slice(0,10), mastered:false};
+      // 保留錯題本章節練習／全章節隨機的作答累計（cN/cC/xN/xC），錯題本的刷題率、正確率才不會因再錯一次而歸零
+      m[id] = {...existing, wrongCount, correctStreak:0, lastSeen:todayStr(), updatedAt:now, dueDate:due.toISOString().slice(0,10), mastered:false};
     } else if(m[id]){
       const correctStreak = (m[id].correctStreak||0)+1;
       if(correctStreak>=3){
@@ -1171,6 +1172,49 @@
       .map(id=>({...qmap[id], meta:state.wrongMap[id]}))
       .sort((a,b)=>(b.meta.wrongCount||0)-(a.meta.wrongCount||0) || String(a.meta.updatedAt||'').localeCompare(String(b.meta.updatedAt||'')));
   }
+  // 2026-10-27 乙級錯題本依章節分類：章節練習題、考古題、數字題都用題目本身的章節，沒有章節的歸「未分章」。
+  // 刷題率＝該章「待複習」錯題中，在錯題本章節練習做過至少一次的比例（沒有待複習的題目＝100%）；
+  // 正確率＝該章錯題（含已學會）在錯題本章節練習的累計答對率。全章節隨機 20 題用 xN/xC 另外算。
+  function wrongChKey(q){ return q.chapter!=null ? String(q.chapter) : 'none'; }
+  function wrongChLabel(key){ return key==='none' ? '未分章' : bucketLabel(key); }
+  function wrongChTitle(key){ return key==='none' ? '考古題／數字題（無對應章節）' : bucketTitle(key); }
+  function wrongProg(list, nK, cK){
+    const pending = list.filter(q=>!q.meta.mastered);
+    const seen = pending.filter(q=>(q.meta[nK]||0)>0).length;
+    let accC=0, accT=0;
+    list.forEach(q=>{ accT+=q.meta[nK]||0; accC+=q.meta[cK]||0; });
+    const total = pending.length;
+    return {seen, total, cov: total>0?Math.round(seen/total*100):100, accC, accT, acc: accT>0?Math.round(accC/accT*100):null};
+  }
+  function wrongReached(p){ return p.total===0 || (p.cov>=100 && p.acc!==null && p.acc>=ACC_TARGET); }
+  function computeWrongChapters(){
+    const qmap = idToQuestionMap();
+    const groups = {}, all = [];
+    Object.keys(state.wrongMap).forEach(id=>{
+      const q = qmap[id];
+      if(!q || isExamABookId(id) || !isActiveQ(q)) return;
+      const item = {...q, meta:state.wrongMap[id]};
+      const k = wrongChKey(q);
+      (groups[k] = groups[k] || []).push(item);
+      all.push(item);
+    });
+    const chapters = Object.keys(groups)
+      .sort((a,b)=>(a==='none'?999:parseInt(a,10))-(b==='none'?999:parseInt(b,10)))
+      .map(key=>{
+        const list = groups[key];
+        const pending = list.filter(q=>!q.meta.mastered)
+          .sort((a,b)=>(b.meta.wrongCount||0)-(a.meta.wrongCount||0) || (a.meta.correctStreak||0)-(b.meta.correctStreak||0));
+        return {key, pending, learned:list.length-pending.length, prog:wrongProg(list,'cN','cC')};
+      });
+    return {chapters, mix:wrongProg(all,'xN','xC'), pendingAll:all.filter(q=>!q.meta.mastered)};
+  }
+  function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  function wrongReviewTitle(current){
+    if(state.wrongBook==='learned' && !current._rv) return '已學會錯題抽考';
+    if(current._rv==='mix') return '全章節錯題隨機';
+    if(current._rv==='ch') return wrongChLabel(current._rvCh)+' 錯題加強';
+    return '錯題複習';
+  }
   // 錯題複習作答畫面：乙級錯題本／已學會（錯題本分頁）與甲業錯題本（甲種分頁）共用
   function renderWrongReview(title){
       const current = state.quizPool[state.quizIdx];
@@ -1210,7 +1254,7 @@
   }
   function renderWrong(){
     if(state.quizPool.length>0 && state.quizMode==='wrongreview'){
-      return renderWrongReview(state.wrongBook==='learned'?'已學會錯題抽考':'錯題複習');
+      return renderWrongReview(wrongReviewTitle(state.quizPool[state.quizIdx]));
     }
     if(state.quizPool.length>0 && state.quizMode==='examAwrong'){
       return `<div class="result-card">🅰 目前有一輪「甲業錯題複習」進行中（第 ${state.quizIdx+1} / ${state.quizPool.length} 題）。</div>
@@ -1236,15 +1280,44 @@
       ${wq.map(q=>card(q)).join("")}
     `;
     }
+    // 2026-10-27 乙級錯題本改成章節分類：① 每章獨立加強 → ② 全章節隨機 20 題，兩關都達標才算錯題練好
+    const wc = computeWrongChapters();
+    const chs = wc.chapters.filter(c=>c.pending.length>0 || c.learned>0);
+    const chReached = chs.filter(c=>wrongReached(c.prog)).length;
+    const stage1Done = chs.length>0 && chReached===chs.length;
+    const mixDone = wrongReached(wc.mix);
+    const mixSt = accStatus(wc.mix.acc);
+    const lastRound = (state.quizMode==='wrongreview' && state.quizStats.total>0)
+      ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : "";
+    const chBlock = c=>{
+      const open = state.wrongOpenCh===c.key;
+      const n = c.pending.length;
+      return `<div style="margin-bottom:6px;">
+        ${overviewRow(wrongChLabel(c.key), `${wrongChTitle(c.key)}（待複習 ${n}・已學會 ${c.learned}）${wrongReached(c.prog)?' ✅':''}`, c.prog, `data-wrongview="${c.key}"`)}
+        <div class="toggle-row" style="margin:2px 0 0;">
+          ${n>0 ? `<button class="toggle-btn active" data-wrongch="${c.key}" style="padding:6px 0;font-size:12px;">▶ 練這章（${Math.min(20,n)} 題）</button>` : `<button class="toggle-btn" disabled style="padding:6px 0;font-size:12px;">本章錯題都已學會</button>`}
+          <button class="toggle-btn" data-wrongview="${c.key}" style="padding:6px 0;font-size:12px;">${open?'▲ 收起題目':'📋 看題目'}</button>
+        </div>
+        ${open ? (n===0 ? `<div class="empty-hint">這章沒有待複習的錯題。</div>` : c.pending.map(q=>card(q)).join("")) : ""}
+      </div>`;
+    };
     return `
       <div class="toggle-row" style="margin:0 0 10px;">${wrongTabs()}</div>
       <div class="section-title">錯題本</div>
-      <div class="section-desc">乙級章節練習、乙級考古題、數字填空的錯題（甲種題庫的錯題在「甲種」分頁的甲業錯題本，獨立計算）。錯題複習測驗從本錯題本中完全隨機抽題；下方清單依答錯次數排列方便查看。連續答對 3 次會移到「已學會」錯題本；中途再答錯，連續次數歸零重算，並依錯誤次數升級成「加強複習／重點加強」（用顏色標示）。</div>
-      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🔁 開始錯題複習測驗（本輪 ${Math.min(20,wq.length)} 題，從本錯題本隨機抽題）</button>` : ""}
-      ${renderWrongStats(book)}
-      <div class="sub-title">待複習錯題（${wq.length}，依錯誤次數排序）</div>
-      ${wq.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
-      ${wq.map(q=>card(q)).join("")}
+      <div class="section-desc">乙級章節練習、乙級考古題、數字填空的錯題，依章節分類（甲種題庫的錯題在「甲種」分頁獨立計算）。先每章獨立加強，各章都達標後，再用全章節隨機 20 題把全部錯題混在一起練。連續答對 3 次會移到「已學會」；再答錯，連續次數歸零重算。</div>
+      ${lastRound}
+      <div class="sub-title">練習進度（目標：刷題 100%、正確率 ${ACC_TARGET}%）</div>
+      <div class="result-card" style="text-align:left;">
+        <div>① 各章節錯題加強：${chReached} / ${chs.length} 章達標 ${stage1Done?'✅':''}</div>
+        <div style="margin-top:4px;">② 全章節隨機 20 題：刷題 ${wc.mix.cov}%（${wc.mix.seen}/${wc.mix.total}）・正確率 ${wc.mix.acc===null?'—':mixSt.icon+' '+wc.mix.acc+'%'} ${mixDone && wc.mix.total>0?'✅':''}</div>
+        ${stage1Done && mixDone ? `<div style="margin-top:6px;font-weight:600;">🎉 各章節與全章節錯題都練好了！</div>` : ""}
+      </div>
+      ${wc.pendingAll.length>0 ? `<button class="primary-btn" id="startWrongMixBtn" style="margin:10px 0 4px;${stage1Done?'':'background:#8a8275;'}">🎲 全章節錯題隨機 20 題</button>
+      <div class="section-desc" style="margin-top:0;">${stage1Done?'各章節都已達標，現在用全章節隨機把錯題練到刷題 100%、正確率 '+ACC_TARGET+'%。':'建議先把下面各章節練到達標（還差 '+(chs.length-chReached)+' 章），再來做全章節隨機。'}</div>` : ""}
+      <div class="sub-title">各章節錯題（${wc.pendingAll.length} 題待複習）</div>
+      <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；正確＝這章錯題在「練這章」的答對率。每輪最多 20 題，沒練過的錯題優先出。</div>
+      ${chs.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
+      ${chs.map(chBlock).join("")}
     `;
   }
 
@@ -1891,6 +1964,33 @@
       persist("quizChapterFilter");
       state.tab = "quiz"; render(); window.scrollTo(0,0);
     }));
+    // 錯題本章節分類：展開／收起該章題目清單、開始該章錯題加強（最多 20 題，這章還沒練過的錯題優先）
+    root.querySelectorAll("[data-wrongview]").forEach(el=>el.addEventListener("click",()=>{
+      state.wrongOpenCh = state.wrongOpenCh===el.dataset.wrongview ? null : el.dataset.wrongview;
+      render();
+    }));
+    function startWrongRound(list, rv, ch){
+      state.quizPool = list.slice(0,20).map(q=>({...presentQuestion(q), _rv:rv, _rvCh:ch}));
+      state.quizMode = "wrongreview";
+      state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
+      state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      persistQuizState();
+      render(); window.scrollTo(0,0);
+    }
+    root.querySelectorAll("[data-wrongch]").forEach(el=>el.addEventListener("click",()=>{
+      const key = el.dataset.wrongch;
+      const c = computeWrongChapters().chapters.find(x=>x.key===key);
+      if(!c || c.pending.length===0) return;
+      const fresh = shuffleArr(c.pending.filter(q=>!(q.meta.cN>0)));
+      const done = shuffleArr(c.pending.filter(q=>q.meta.cN>0));
+      startWrongRound(fresh.concat(done), 'ch', key);
+    }));
+    const startWrongMixBtn = document.getElementById("startWrongMixBtn");
+    if(startWrongMixBtn) startWrongMixBtn.addEventListener("click",()=>{
+      // 跨全部章節隨機抽 20 題；全章節隨機還沒做過的錯題優先，刷題率才推得到 100%
+      const all = computeWrongChapters().pendingAll;
+      startWrongRound(shuffleArr(all.filter(q=>!(q.meta.xN>0))).concat(shuffleArr(all.filter(q=>q.meta.xN>0))), 'mix', null);
+    });
     root.querySelectorAll("[data-wrongbook]").forEach(el=>el.addEventListener("click",()=>{
       state.wrongBook = el.dataset.wrongbook;
       persist("wrongBook"); render();
@@ -1937,6 +2037,13 @@
       markStudiedToday();
       state.quizStats = {correct: state.quizStats.correct+(correct?1:0), total: state.quizStats.total+1};
       recordWrongMapOutcome(current.id, correct);
+      // 錯題本的章節練習（_rv='ch'）／全章節隨機（_rv='mix'）另外累計作答與答對次數，給錯題本算刷題率、正確率
+      const rec = state.wrongMap[current.id];
+      if(current._rv && rec){
+        const [nK,cK] = current._rv==='mix' ? ['xN','xC'] : ['cN','cC'];
+        state.wrongMap[current.id] = {...rec, [nK]:(rec[nK]||0)+1, [cK]:(rec[cK]||0)+(correct?1:0)};
+        persist("wrongMap");
+      }
       state.quizSeenIds[current.id] = true;
       persist("quizSeenIds");
     }
