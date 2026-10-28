@@ -454,10 +454,13 @@
   }
   // 正確率依目標 ACC_TARGET% 分級：達標／加強中／待加強，配合圖示＋文字，不單靠顏色辨識（2026-10-27 目標由85%改80%）
   const ACC_TARGET = 80;
-  function accStatus(pct){
+  // 錯題本另訂較高的目標（2026-10-28）：正確率 95%，⚠️ 80~94%、🔥 <80%
+  const WRONG_ACC_TARGET = 95, WRONG_ACC_WARN = 80;
+  function accStatus(pct, target, warn){
+    target = target || ACC_TARGET; warn = warn || 60;
     if(pct===null || pct===undefined) return {color:"#9a9488", icon:"—", label:"尚無記錄"};
-    if(pct>=ACC_TARGET) return {color:"#3F7D5C", icon:"✅", label:"達標"};
-    if(pct>=60) return {color:"#A8631F", icon:"⚠️", label:"加強中"};
+    if(pct>=target) return {color:"#3F7D5C", icon:"✅", label:"達標"};
+    if(pct>=warn) return {color:"#A8631F", icon:"⚠️", label:"加強中"};
     return {color:"#B9554A", icon:"🔥", label:"待加強"};
   }
 
@@ -494,7 +497,7 @@
     examASeenIds:{},
     examB:[], examBHistory:[], examBPool:[], examBIdx:0, examBSelected:null, examBRevealed:false, examBStats:{correct:0,total:0},
     examBSeenIds:{},
-    numeric:[], overviewSort:"chapter",
+    numeric:[], overviewSort:"chapter", wrongSort:"chapter",
     lawQuery:"", lawShowForm:false, lawDraft:{law:"職業安全衛生法",article:"",penalty:"",refs:"",note:""},
     headerEditing:false,
     syncMsg:"",
@@ -1186,7 +1189,7 @@
     const total = pending.length;
     return {seen, total, cov: total>0?Math.round(seen/total*100):100, accC, accT, acc: accT>0?Math.round(accC/accT*100):null};
   }
-  function wrongReached(p){ return p.total===0 || (p.cov>=100 && p.acc!==null && p.acc>=ACC_TARGET); }
+  function wrongReached(p){ return p.total===0 || (p.cov>=100 && p.acc!==null && p.acc>=WRONG_ACC_TARGET); }
   function computeWrongChapters(){
     const qmap = idToQuestionMap();
     const groups = {}, all = [];
@@ -1206,7 +1209,7 @@
           .sort((a,b)=>(b.meta.wrongCount||0)-(a.meta.wrongCount||0) || (a.meta.correctStreak||0)-(b.meta.correctStreak||0));
         return {key, pending, learned:list.length-pending.length, prog:wrongProg(list,'cN','cC')};
       });
-    return {chapters, mix:wrongProg(all,'xN','xC'), pendingAll:all.filter(q=>!q.meta.mastered)};
+    return {chapters, chAll:wrongProg(all,'cN','cC'), mix:wrongProg(all,'xN','xC'), pendingAll:all.filter(q=>!q.meta.mastered)};
   }
   function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
   function wrongReviewTitle(current){
@@ -1286,14 +1289,23 @@
     const chReached = chs.filter(c=>wrongReached(c.prog)).length;
     const stage1Done = chs.length>0 && chReached===chs.length;
     const mixDone = wrongReached(wc.mix);
-    const mixSt = accStatus(wc.mix.acc);
+    const allSt = accStatus(wc.chAll.acc, WRONG_ACC_TARGET, WRONG_ACC_WARN);
+    // 章節排序（同總覽）：還沒有正確率記錄的章節，正確率排序時一律放最後
+    const chNo = c=>c.key==='none' ? 999 : parseInt(c.key,10);
+    const sorters = {
+      chapter: (x,y)=>chNo(x)-chNo(y),
+      cov: (x,y)=>x.prog.cov-y.prog.cov || chNo(x)-chNo(y),
+      acc: (x,y)=>((x.prog.acc===null?101:x.prog.acc)-(y.prog.acc===null?101:y.prog.acc)) || chNo(x)-chNo(y),
+    };
+    const sorted = [...chs].sort(sorters[state.wrongSort]||sorters.chapter);
+    const sortBtn = (key,label)=>`<button class="toggle-btn ${state.wrongSort===key?'active':''}" data-wrongsort="${key}" style="padding:6px 0;font-size:12px;">${label}</button>`;
     const lastRound = (state.quizMode==='wrongreview' && state.quizStats.total>0)
       ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : "";
     const chBlock = c=>{
       const open = state.wrongOpenCh===c.key;
       const n = c.pending.length;
       return `<div style="margin-bottom:6px;">
-        ${overviewRow(wrongChLabel(c.key), `${wrongChTitle(c.key)}（待複習 ${n}・已學會 ${c.learned}）${wrongReached(c.prog)?' ✅':''}`, c.prog, `data-wrongview="${c.key}"`)}
+        ${overviewRow(wrongChLabel(c.key), `${wrongChTitle(c.key)}（待複習 ${n}・已學會 ${c.learned}）${wrongReached(c.prog)?' ✅':''}`, c.prog, `data-wrongview="${c.key}"`, WRONG_ACC_TARGET, WRONG_ACC_WARN)}
         <div class="toggle-row" style="margin:2px 0 0;">
           ${n>0 ? `<button class="toggle-btn active" data-wrongch="${c.key}" style="padding:6px 0;font-size:12px;">▶ 練這章（${Math.min(20,n)} 題）</button>` : `<button class="toggle-btn" disabled style="padding:6px 0;font-size:12px;">本章錯題都已學會</button>`}
           <button class="toggle-btn" data-wrongview="${c.key}" style="padding:6px 0;font-size:12px;">${open?'▲ 收起題目':'📋 看題目'}</button>
@@ -1303,21 +1315,29 @@
     };
     return `
       <div class="toggle-row" style="margin:0 0 10px;">${wrongTabs()}</div>
-      <div class="section-title">錯題本</div>
-      <div class="section-desc">乙級章節練習、乙級考古題、數字填空的錯題，依章節分類（甲種題庫的錯題在「甲種」分頁獨立計算）。先每章獨立加強，各章都達標後，再用全章節隨機 20 題把全部錯題混在一起練。連續答對 3 次會移到「已學會」；再答錯，連續次數歸零重算。</div>
       ${lastRound}
-      <div class="sub-title">練習進度（目標：刷題 100%、正確率 ${ACC_TARGET}%）</div>
-      <div class="result-card" style="text-align:left;">
-        <div>① 各章節錯題加強：${chReached} / ${chs.length} 章達標 ${stage1Done?'✅':''}</div>
-        <div style="margin-top:4px;">② 全章節隨機 20 題：刷題 ${wc.mix.cov}%（${wc.mix.seen}/${wc.mix.total}）・正確率 ${wc.mix.acc===null?'—':mixSt.icon+' '+wc.mix.acc+'%'} ${mixDone && wc.mix.total>0?'✅':''}</div>
-        ${stage1Done && mixDone ? `<div style="margin-top:6px;font-weight:600;">🎉 各章節與全章節錯題都練好了！</div>` : ""}
+      <div class="ov-card">
+        <div class="section-title" style="margin-top:0;">📊 錯題本總覽</div>
+        <div class="section-desc" style="margin-top:2px;">乙級章節練習、乙級考古題、數字填空的錯題，依章節分類（甲種錯題在「甲種」分頁）。先每章獨立加強，各章都達標後，再用全章節隨機 20 題把全部錯題混在一起練。<b>錯題目標：刷題 100%、正確率 ${WRONG_ACC_TARGET}%</b></div>
+        <div style="display:flex;justify-content:space-around;margin-top:10px;">
+          ${svgRing(wc.chAll.cov, "#5B6B82", `章節錯題刷題 ${wc.chAll.seen}/${wc.chAll.total} 題`)}
+          ${svgRing(wc.chAll.acc, allSt.color, wc.chAll.acc===null ? "尚無作答記錄" : `${allSt.icon} 章節錯題正確率 ${wc.chAll.accC}/${wc.chAll.accT}`)}
+        </div>
+        <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#3F7D5C;"></i>正確率（✅≥${WRONG_ACC_TARGET}% ⚠️${WRONG_ACC_WARN}~${WRONG_ACC_TARGET-1}% 🔥<${WRONG_ACC_WARN}%）</span><span><i class="ov-legend-target"></i>${WRONG_ACC_TARGET}%目標線</span></div>
+        <div class="sub-title">練習流程</div>
+        <div class="section-desc" style="margin-top:0;">① 各章節錯題加強：${chReached} / ${chs.length} 章達標 ${stage1Done?'✅':''}</div>
+        ${overviewRow('② 全章節隨機', `20 題一輪${mixDone && wc.mix.total>0?' ✅':''}`, wc.mix, '', WRONG_ACC_TARGET, WRONG_ACC_WARN)}
+        ${stage1Done && mixDone ? `<div class="result-card" style="font-weight:600;">🎉 各章節與全章節錯題都練好了！</div>` : ""}
+        ${wc.pendingAll.length>0 ? `<button class="primary-btn" id="startWrongMixBtn" style="margin:10px 0 4px;${stage1Done?'':'background:#8a8275;'}">🎲 全章節錯題隨機 20 題</button>
+        <div class="section-desc" style="margin-top:0;">${stage1Done?'各章節都已達標，現在用全章節隨機把錯題練到刷題 100%、正確率 '+WRONG_ACC_TARGET+'%。':'建議先把下面各章節練到達標（還差 '+(chs.length-chReached)+' 章），再來做全章節隨機。'}</div>` : ""}
+        <div class="sub-title">各章節錯題（雙達標 ${chReached}/${chs.length} 章・${wc.pendingAll.length} 題待複習）</div>
+        <div class="toggle-row" style="margin:6px 0 8px;">
+          ${sortBtn('chapter','依章節')}${sortBtn('cov','刷題率低→高')}${sortBtn('acc','正確率低→高')}
+        </div>
+        <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；正確＝這章錯題在「練這章」的答對率。每輪最多 20 題，沒練過的錯題優先出。點任一列可展開題目。</div>
+        ${chs.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
+        ${sorted.map(chBlock).join("")}
       </div>
-      ${wc.pendingAll.length>0 ? `<button class="primary-btn" id="startWrongMixBtn" style="margin:10px 0 4px;${stage1Done?'':'background:#8a8275;'}">🎲 全章節錯題隨機 20 題</button>
-      <div class="section-desc" style="margin-top:0;">${stage1Done?'各章節都已達標，現在用全章節隨機把錯題練到刷題 100%、正確率 '+ACC_TARGET+'%。':'建議先把下面各章節練到達標（還差 '+(chs.length-chReached)+' 章），再來做全章節隨機。'}</div>` : ""}
-      <div class="sub-title">各章節錯題（${wc.pendingAll.length} 題待複習）</div>
-      <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；正確＝這章錯題在「練這章」的答對率。每輪最多 20 題，沒練過的錯題優先出。</div>
-      ${chs.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
-      ${chs.map(chBlock).join("")}
     `;
   }
 
@@ -1409,8 +1429,8 @@
       allAcc: allT>0?Math.round(allC/allT*100):null, allC, allT};
   }
   // 一列＝一個章節/題庫：上條「刷題率」、下條「正確率」，同一個 0~100% 刻度；正確率條上畫出目標線（ACC_TARGET）
-  function overviewRow(label, title, item, attrs){
-    const st = accStatus(item.acc);
+  function overviewRow(label, title, item, attrs, target, warn){
+    const st = accStatus(item.acc, target, warn);
     const tip = `已刷 ${item.seen}/${item.total} 題（${item.cov}%）；` + (item.acc===null ? "尚無正確率記錄" : `正確 ${item.accC}/${item.accT} 題（${item.acc}%）`);
     return `<div class="ov-row" ${attrs||""} title="${esc(tip)}">
       <div class="ov-label"><b>${esc(label)}</b> ${esc(title)} <span class="ov-go">›</span></div>
@@ -1418,7 +1438,7 @@
         <div class="ov-track"><div class="ov-fill" style="width:${item.cov}%;background:#5B6B82;"></div></div>
         <span class="ov-v">${item.cov}%</span></div>
       <div class="ov-line"><span class="ov-k">正確</span>
-        <div class="ov-track">${item.acc===null?"":`<div class="ov-fill" style="width:${item.acc}%;background:${st.color};"></div>`}<div class="ov-target"></div></div>
+        <div class="ov-track">${item.acc===null?"":`<div class="ov-fill" style="width:${item.acc}%;background:${st.color};"></div>`}<div class="ov-target" ${target?`style="left:${target}%;"`:""}></div></div>
         <span class="ov-v">${item.acc===null?"—":st.icon+" "+item.acc+"%"}</span></div>
     </div>`;
   }
@@ -1965,6 +1985,9 @@
       state.tab = "quiz"; render(); window.scrollTo(0,0);
     }));
     // 錯題本章節分類：展開／收起該章題目清單、開始該章錯題加強（最多 20 題，這章還沒練過的錯題優先）
+    root.querySelectorAll("[data-wrongsort]").forEach(el=>el.addEventListener("click",()=>{
+      state.wrongSort = el.dataset.wrongsort; render();
+    }));
     root.querySelectorAll("[data-wrongview]").forEach(el=>el.addEventListener("click",()=>{
       state.wrongOpenCh = state.wrongOpenCh===el.dataset.wrongview ? null : el.dataset.wrongview;
       render();
