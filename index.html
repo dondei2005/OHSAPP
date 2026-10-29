@@ -11,6 +11,7 @@
 <script src="./explanations.js"></script>
 <script src="./study_tips.js"></script>
 <script src="./dedup.js"></script>
+<script src="./topic_sets.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -486,9 +487,6 @@
     wrongMap: {}, wrongBook:"main",
     studyLog: {},
     laws: LAW_SEED,
-    bankMode:"manual",
-    bankDraft:{chapter:1,text:"",options:["","","",""],answer:0,note:""},
-    bankBulkText:"", bankBulkMsg:"", bankFilterChapter:"all",
     quizChapterFilter:"all", quizPool:[], quizIdx:0, quizSelected:null, quizRevealed:false, quizStats:{correct:0,total:0},
     quizMultiSelected:[], quizFillInput:"", quizFillCorrect:false, quizMode:"chapter", quizHistory:[],
     quizSeenIds:{},
@@ -498,7 +496,8 @@
     examB:[], examBHistory:[], examBPool:[], examBIdx:0, examBSelected:null, examBRevealed:false, examBStats:{correct:0,total:0},
     examBSeenIds:{},
     numeric:[], overviewSort:"chapter", wrongSort:"chapter",
-    lawQuery:"", lawShowForm:false, lawDraft:{law:"職業安全衛生法",article:"",penalty:"",refs:"",note:""},
+    // 計算題／年份・條號分頁各自的作答累計：{calc:{題目id:{n:作答次數,c:答對次數}}, ref:{...}}
+    topicStats:{calc:{}, ref:{}}, refFilter:"all", topicSort:"chapter",
     headerEditing:false,
     syncMsg:"",
     cloudSyncMsg:"",
@@ -542,6 +541,7 @@
     state.laws = loadData("laws", LAW_SEED);
     state.quizHistory = loadData("quizHistory", []);
     state.quizSeenIds = loadData("quizSeenIds", {});
+    state.topicStats = {calc:{}, ref:{}, ...loadData("topicStats", {})};
     // 記住上次選的章節範圍，回來時預設停在同一章，才看得到「本章節成績記錄」而不是被重置成「全部章節」
     state.quizChapterFilter = loadData("quizChapterFilter", "all");
     // 練習進行到一半離開（關頁、切分頁）也要能接續，所以連同作答中的題組本身一併存本機
@@ -590,6 +590,7 @@
       laws: ()=>saveData("laws",state.laws),
       quizHistory: ()=>saveData("quizHistory",state.quizHistory),
       quizSeenIds: ()=>saveData("quizSeenIds",state.quizSeenIds),
+      topicStats: ()=>saveData("topicStats",state.topicStats),
       quizChapterFilter: ()=>saveData("quizChapterFilter",state.quizChapterFilter),
       quizPool: ()=>saveData("quizPool",state.quizPool),
       quizIdx: ()=>saveData("quizIdx",state.quizIdx),
@@ -690,8 +691,9 @@
     const dueWrongCount = computeWrongQuestions().length;
     const examAWrongCount = computeWrongQuestions('examA').length;
     const items = [
-      ["dashboard","◆","總覽"],["chapters","▤","章節"],["bank","✎","題庫"],
-      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["numeric","🔢","數字"],["examA","🅰","甲種",examAWrongCount],["examB","🅱","乙級"],["laws","§","法規"],["sync","⇅","備份"],
+      // 2026-10-30：拿掉「題庫」「法規」分頁，改成「計算」（首要）與「年份/條號」（次要）
+      ["dashboard","◆","總覽"],["chapters","▤","章節"],["calc","🧮","計算"],
+      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["numeric","🔢","數字"],["examA","🅰","甲種",examAWrongCount],["examB","🅱","乙級"],["ref","📅","年/條"],["sync","⇅","備份"],
     ];
     return `<nav class="nav">${items.map(it=>{
       const [key,icon,label,badge] = it;
@@ -705,13 +707,13 @@
   function renderTab(doneCount,progressPct){
     if(state.tab==="dashboard") return renderDashboard(doneCount,progressPct);
     if(state.tab==="chapters") return renderChapters();
-    if(state.tab==="bank") return renderBank();
+    if(state.tab==="calc") return renderTopic("calc");
     if(state.tab==="quiz") return renderQuiz();
     if(state.tab==="wrong") return renderWrong();
     if(state.tab==="numeric") return renderNumeric();
     if(state.tab==="examA") return renderExamA();
     if(state.tab==="examB") return renderExamB();
-    if(state.tab==="laws") return renderLaws();
+    if(state.tab==="ref") return renderTopic("ref");
     if(state.tab==="sync") return renderSync();
     return "";
   }
@@ -751,20 +753,19 @@
       </div>
       <div class="quick-row">
         <button class="quick-btn" data-goto="chapters"><div class="quick-icon">▤</div><div>章節清單</div></button>
-        <button class="quick-btn" data-goto="bank"><div class="quick-icon">✎</div><div>輸入考古題</div></button>
+        <button class="quick-btn" data-goto="calc"><div class="quick-icon">🧮</div><div>計算題</div></button>
         <button class="quick-btn" data-goto="quiz"><div class="quick-icon">▶</div><div>開始練習</div></button>
       </div>
       <div class="tip-box">
         <div class="tip-title">建議讀書節奏（每天 1 小時內）</div>
         <ul class="tip-list">
           <li>30 分鐘：讀新章節 / 複習筆記</li>
-          <li>20 分鐘：在「題庫」做該章節的練習題</li>
+          <li>20 分鐘：在「練習」做該章節的題目，再到「計算」練該章的計算題</li>
           <li>10 分鐘：複習「錯題本」中今天到期的題目</li>
         </ul>
         <div style="margin-top:10px;font-size:13px;color:#6b6356;">
           考古題來源建議：勞動部勞動力發展署技能檢定中心「學科題庫下載」
           （techbank.wdasec.gov.tw，職類代碼 22200 職業安全衛生管理乙級）。
-          下載 PDF 後，把題目逐題貼到「題庫」分頁即可建立你自己的練習庫。
         </div>
       </div>
     `;
@@ -890,73 +891,10 @@
     </div>`;
   }
 
-  /* ---------- Bank ---------- */
-  function renderBank(){
-    const fc = state.bankFilterChapter;
-    const filtered = fc==="all" ? state.questions : state.questions.filter(q=>q.chapter===fc);
-    return `
-      <div class="section-title">題庫管理</div>
-      <div class="section-desc">把考古題（學科選擇題）整理成這裡的格式，之後就能在「練習」分頁隨機作答，答錯會自動進「錯題本」。</div>
-      <div class="toggle-row">
-        <button class="toggle-btn ${state.bankMode==='manual'?'active':''}" data-bankmode="manual">單題輸入</button>
-        <button class="toggle-btn ${state.bankMode==='bulk'?'active':''}" data-bankmode="bulk">批次貼上</button>
-      </div>
-      ${state.bankMode==='manual' ? renderBankManual() : renderBankBulk()}
-      <div class="section-title">已收錄題目（${filtered.length}）</div>
-      <select id="bankFilterSelect" class="text-input">
-        <option value="all" ${fc==='all'?'selected':''}>全部章節</option>
-        ${CHAPTERS.map(c=>`<option value="${c.id}" ${fc===c.id?'selected':''}>${c.id===0?'概論':('第'+toChinese(c.id)+'章')} ${esc(c.title)}</option>`).join("")}
-      </select>
-      ${filtered.length===0 ? `<div class="empty-hint">目前還沒有題目，先用上面的方式新增吧。</div>` : ""}
-      ${filtered.map(q=>`<div class="q-item">
-        <div class="q-chapter">${q.chapter===0?'概論':('第'+toChinese(q.chapter)+'章')}</div>
-        <div class="q-text">${esc(q.text)}</div>
-        <div class="q-answer">正解：${esc(answerDisplay(q))}</div>
-        <button class="delete-btn" data-delq="${q.id}">刪除</button>
-      </div>`).join("")}
-    `;
-  }
-  function renderBankManual(){
-    const d = state.bankDraft;
-    return `<div class="form-card">
-      <label class="label">章節</label>
-      <select id="draftChapter" class="text-input">
-        ${CHAPTERS.map(c=>`<option value="${c.id}" ${d.chapter===c.id?'selected':''}>第${c.id}章 ${esc(c.title)}</option>`).join("")}
-      </select>
-      <label class="label">題目</label>
-      <textarea id="draftText" class="text-area" placeholder="貼上題目文字">${esc(d.text)}</textarea>
-      ${d.options.map((opt,i)=>`<div class="option-row">
-        <input type="radio" name="draftAnswer" ${d.answer===i?'checked':''} data-draftans="${i}">
-        <input class="option-input" data-draftopt="${i}" placeholder="選項 ${'ABCD'[i]}" value="${esc(opt)}">
-      </div>`).join("")}
-      <div style="font-size:12px;color:#9a9488;margin-bottom:8px;">點選圓圈標記正確答案</div>
-      <button class="primary-btn" id="addManualBtn">新增到題庫</button>
-    </div>`;
-  }
-  function renderBankBulk(){
-    const fc = state.bankFilterChapter==='all'?1:state.bankFilterChapter;
-    return `<div class="form-card">
-      <label class="label">匯入到章節</label>
-      <select id="bulkChapterSelect" class="text-input">
-        ${CHAPTERS.map(c=>`<option value="${c.id}" ${fc===c.id?'selected':''}>第${c.id}章 ${esc(c.title)}</option>`).join("")}
-      </select>
-      <div style="font-size:13px;color:#6b6356;margin:8px 0;">每題一段，題目與選項各佔一行，最後一行寫答案（1-4 或 A-D），題與題之間空一行。例如：</div>
-      <pre class="example-block">下列何者非屬危險性機械？
-1) 固定式起重機
-2) 升降機
-3) 堆高機
-4) 鍋爐
-3</pre>
-      <textarea id="bulkText" class="text-area" style="min-height:160px;" placeholder="把多題考古題貼在這裡">${esc(state.bankBulkText)}</textarea>
-      <button class="primary-btn" id="bulkImportBtn">批次匯入</button>
-      ${state.bankBulkMsg ? `<div class="bulk-msg">${esc(state.bankBulkMsg)}</div>` : ""}
-    </div>`;
-  }
-
   /* ---------- Quiz ---------- */
   function renderQuiz(){
     if(state.questions.length===0){
-      return `<div class="empty-hint">題庫目前是空的，請先到「題庫」分頁新增考古題再來練習。</div>`;
+      return `<div class="empty-hint">題庫目前是空的，請確認題庫檔案已正確載入。</div>`;
     }
     if(state.quizPool.length>0 && state.quizMode==="numeric"){
       return `<div class="result-card">🔢 目前有一輪「數字填空」進行中（第 ${state.quizIdx+1} / ${state.quizPool.length} 題）。</div>
@@ -966,6 +904,7 @@
       return `<div class="result-card">🅰 目前有一輪「甲業錯題複習」進行中（第 ${state.quizIdx+1} / ${state.quizPool.length} 題）。</div>
         <button class="primary-btn" data-goto="examA">前往甲種分頁繼續作答</button>`;
     }
+    if(state.quizPool.length>0 && TOPIC_META[state.quizMode]) return otherRoundNotice();
     if(state.quizPool.length===0){
       const chapterSelected = state.quizChapterFilter!=="all";
       return `
@@ -1263,6 +1202,7 @@
       return `<div class="result-card">🅰 目前有一輪「甲業錯題複習」進行中（第 ${state.quizIdx+1} / ${state.quizPool.length} 題）。</div>
         <button class="primary-btn" data-goto="examA">前往甲種分頁繼續作答</button>`;
     }
+    if(state.quizPool.length>0 && TOPIC_META[state.quizMode]) return otherRoundNotice();
     // 2026-10-27 甲業錯題本移到「甲種」分頁獨立看，這裡只剩乙級錯題本／已學會
     const book = state.wrongBook==='learned' ? 'learned' : 'main';
     const counts = {main:computeWrongQuestions('main').length, learned:computeLearnedQuestions().length};
@@ -1367,6 +1307,7 @@
         <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄）</button>
       `;
     }
+    if(state.quizPool.length>0 && TOPIC_META[state.quizMode]) return otherRoundNotice();
     if(state.quizPool.length>0){
       const back = state.quizMode==="wrongreview" ? "wrong" : state.quizMode==="examAwrong" ? "examA" : "quiz";
       return `<div class="result-card">目前有一輪${state.quizMode==="wrongreview"?"錯題複習":state.quizMode==="examAwrong"?"甲業錯題複習":"練習"}還沒做完（第 ${state.quizIdx+1} / ${state.quizPool.length} 題），要先結束那一輪才能開始數字填空。</div>
@@ -1493,6 +1434,7 @@
     if(state.quizPool.length>0 && state.quizMode==='examAwrong'){
       return renderWrongReview('甲業錯題複習');
     }
+    if(state.quizPool.length>0 && TOPIC_META[state.quizMode]) return otherRoundNotice();
     if(state.examAPool.length===0){
       const seenCount = state.examA.filter(q=>state.examASeenIds[q.id]).length;
       const coveragePct = state.examA.length>0 ? Math.round(seenCount/state.examA.length*100) : 0;
@@ -1628,8 +1570,19 @@
       examASeenIds: state.examASeenIds,
       examBHistory: state.examBHistory,
       examBSeenIds: state.examBSeenIds,
+      topicStats: state.topicStats,
       syncedAt: new Date().toISOString()
     };
+  }
+  // 計算／年份條號分頁的作答累計只會增加，兩邊同一題取作答次數較多的那筆
+  function mergeTopicStats(a, b){
+    const out = {calc:{}, ref:{}};
+    ["calc","ref"].forEach(k=>{
+      const x = (a||{})[k]||{}, y = (b||{})[k]||{};
+      out[k] = {...y};
+      Object.keys(x).forEach(id=>{ if(!y[id] || (x[id].n||0)>=(y[id].n||0)) out[k][id] = x[id]; });
+    });
+    return out;
   }
   const CHAPTER_STATUS_RANK = {todo:0, reading:1, done:2};
   function mergeProgress(local, cloud){
@@ -1677,6 +1630,7 @@
     merged.quizSeenIds = {...(cloud.quizSeenIds||{}), ...(local.quizSeenIds||{})};
     merged.examASeenIds = {...(cloud.examASeenIds||{}), ...(local.examASeenIds||{})};
     merged.examBSeenIds = {...(cloud.examBSeenIds||{}), ...(local.examBSeenIds||{})};
+    merged.topicStats = mergeTopicStats(local.topicStats, cloud.topicStats);
 
     function mergeHistory(a, b){
       const combined = [...(a||[]), ...(b||[])];
@@ -1707,6 +1661,8 @@
     state.examAHistory = merged.examAHistory;
     state.examBSeenIds = merged.examBSeenIds;
     state.examBHistory = merged.examBHistory;
+    state.topicStats = merged.topicStats;
+    saveData("topicStats", state.topicStats);
     saveData("meta", {examDate: state.examDate});
     saveData("chapterState", state.chapterState);
     saveData("wrongMap", state.wrongMap);
@@ -1790,45 +1746,129 @@
     `;
   }
 
-  /* ---------- Laws ---------- */
-  function renderLaws(){
-    const q = state.lawQuery.trim().toLowerCase();
-    const filtered = !q ? state.laws : state.laws.filter(l=>
-      [l.law,l.article,l.penalty,l.refs,l.note].join(" ").toLowerCase().includes(q));
-    const d = state.lawDraft;
+  /* ---------- 計算題／年份・條號題（2026-10-30 取代原本的「題庫」「法規」分頁） ---------- */
+  // 題目清單在 topic_sets.js（只放 id）；題目內容一律取自乙級40章＋乙級考古題，同一題只算一次。
+  // 作答累計另存 state.topicStats（每題 n＝作答次數、c＝答對次數），不寫進 quizHistory，
+  // 所以原本總覽、章節練習的刷題率／正確率都不受影響；答錯一樣會進錯題本。
+  const TOPIC_SETS = window.TOPIC_SETS || {calc:[], year:[], art:[]};
+  const TOPIC_META = {
+    calc:{icon:"🧮", name:"計算題", rank:"首要練習",
+      desc:"從乙級題庫挑出需要計算，或考計算公式、計算規則的題目，例如失能傷害頻率／嚴重率、噪音劑量、WBGT、換氣量、動壓風速、有機溶劑容許消費量。"},
+    ref:{icon:"📅", name:"年份・條號題", rank:"次要練習",
+      desc:"從乙級題庫挑出考年限、週期（每幾年）、紀錄保存年限、施行年份，以及題目或選項涉及法規條號的題目。"},
+  };
+  const TOPIC_ROUND = 20;
+  function topicIdSet(kind, filter){
+    if(kind==="calc") return new Set(TOPIC_SETS.calc);
+    const f = filter || state.refFilter;
+    return new Set([...(f!=="art" ? TOPIC_SETS.year : []), ...(f!=="year" ? TOPIC_SETS.art : [])]);
+  }
+  function topicQuestions(kind, filter){
+    const ids = topicIdSet(kind, filter), seen = new Set(), out = [];
+    [...state.questions, ...state.examB].forEach(q=>{
+      if(!ids.has(q.id) || seen.has(q.id) || !isActiveQ(q)) return;
+      seen.add(q.id); out.push(q);
+    });
+    return out;
+  }
+  function topicChKey(q){ return q.chapter!=null ? String(q.chapter) : 'none'; }
+  function topicChLabel(key){ return key==='none' ? '未分章' : bucketLabel(key); }
+  function topicChTitle(key){ return key==='none' ? '乙級考古題（無對應章節）' : bucketTitle(key); }
+  function topicProg(list, kind){
+    const st = state.topicStats[kind]||{};
+    let seen=0, accC=0, accT=0;
+    list.forEach(q=>{ const r = st[q.id]; if(r && r.n>0){ seen++; accT+=r.n; accC+=r.c||0; } });
+    const total = list.length;
+    return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC, accT, acc: accT>0?Math.round(accC/accT*100):null};
+  }
+  function computeTopic(kind){
+    const all = topicQuestions(kind), groups = {};
+    all.forEach(q=>{ const k = topicChKey(q); (groups[k] = groups[k] || []).push(q); });
+    const chapters = Object.keys(groups).map(key=>({key, list:groups[key], prog:topicProg(groups[key], kind)}));
+    return {all, chapters, prog:topicProg(all, kind)};
+  }
+  // 出題：這個分頁還沒做過的題目優先，其餘隨機；每輪最多 20 題
+  function topicRoundList(list, kind){
+    const st = state.topicStats[kind]||{};
+    const fresh = shuffleArr(list.filter(q=>!(st[q.id]&&st[q.id].n>0)));
+    const done = shuffleArr(list.filter(q=>st[q.id]&&st[q.id].n>0));
+    return fresh.concat(done).slice(0, TOPIC_ROUND);
+  }
+  // 練習題組（quizPool）全 App 共用一組，同時只能進行一輪；其他分頁有一輪進行中時顯示這個提示
+  const ROUND_TABS = {chapter:["quiz","練習"], random20:["quiz","練習"], wrongreview:["wrong","錯題複習"], examAwrong:["examA","甲業錯題複習"],
+    numeric:["numeric","數字填空"], calc:["calc","計算題"], ref:["ref","年份・條號題"]};
+  function otherRoundNotice(){
+    const [tab, name] = ROUND_TABS[state.quizMode] || ["quiz","練習"];
+    return `<div class="result-card">目前有一輪「${name}」還沒做完（第 ${state.quizIdx+1} / ${state.quizPool.length} 題），要先結束那一輪才能開始新的練習。</div>
+      <button class="primary-btn" data-goto="${tab}">回去繼續那一輪</button>
+      <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">結束那一輪（已作答的都會記錄）</button>`;
+  }
+  function renderTopicQuiz(kind){
+    const m = TOPIC_META[kind];
+    const current = state.quizPool[state.quizIdx];
+    const qtype = current.type || "single";
+    const scope = current._tpCh ? topicChLabel(current._tpCh) : '全章節隨機';
     return `
-      <div class="section-title">法規速查</div>
-      <div class="section-desc">輸入條號、關鍵字或罰鍰金額皆可搜尋，例如「46條之一」「職場霸凌」「20萬」「§22-2」。</div>
-      <input class="search-input" id="lawSearchInput" placeholder="搜尋條號 / 關鍵字" value="${esc(state.lawQuery)}">
-      <button class="toggle-btn" id="lawToggleForm">${state.lawShowForm?'取消新增':'+ 新增一筆法規'}</button>
-      ${state.lawShowForm ? `<div class="form-card">
-        <label class="label">法規名稱</label>
-        <input class="option-input" id="lawDraftLaw" value="${esc(d.law)}">
-        <label class="label">條號</label>
-        <input class="option-input" id="lawDraftArticle" placeholder="例：第50條" value="${esc(d.article)}">
-        <label class="label">罰則 / 處分內容</label>
-        <textarea class="text-area" id="lawDraftPenalty">${esc(d.penalty)}</textarea>
-        <label class="label">違反條文對照</label>
-        <textarea class="text-area" id="lawDraftRefs" placeholder="例：§6Ⅱ、§12Ⅳ…">${esc(d.refs)}</textarea>
-        <label class="label">備註（選填）</label>
-        <input class="option-input" id="lawDraftNote" value="${esc(d.note)}">
-        <button class="primary-btn" id="lawAddBtn" style="margin-top:10px;">新增</button>
-      </div>` : ""}
-      <div class="sub-title">共 ${filtered.length} 筆</div>
-      ${filtered.length===0?`<div class="empty-hint">找不到符合的條文。</div>`:""}
-      ${filtered.map(l=>`<div class="law-card">
-        <div class="law-top">
-          <span class="law-article">${esc(l.article)}</span>
-          <span class="law-name">${esc(l.law)}</span>
-          ${!l.seed?`<button class="delete-btn" style="position:static;margin-left:auto;" data-dellaw="${l.id}">刪除</button>`:""}
-        </div>
-        <div class="law-penalty">${esc(l.penalty)}</div>
-        ${l.refs?`<div class="law-refs">違反條文：${esc(l.refs)}</div>`:""}
-        ${l.note?`<div class="law-note">${esc(l.note)}</div>`:""}
-      </div>`).join("")}
+      <div class="quiz-progress">${m.icon} ${m.name}・${esc(scope)} 第 ${state.quizIdx+1} / ${state.quizPool.length} 題 · 答對 ${state.quizStats.correct}</div>
+      <div class="quiz-card">
+        <div class="quiz-chapter-tag">${esc(topicChLabel(topicChKey(current)))}${qtype==='multi'?' · 複選題':qtype==='fill'?' · 填空題':qtype==='truefalse'?' · 是非題':''}</div>
+        <div class="quiz-question">${esc(current.text)}</div>
+        ${qtype==='single' ? renderSingleOptions(current) : ""}
+        ${qtype==='multi' ? renderMultiOptions(current) : ""}
+        ${qtype==='fill' ? renderFillInput(current) : ""}
+        ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
+        ${state.quizRevealed ? renderExplain(current) : ""}
+        ${state.quizRevealed ? `<button class="primary-btn" id="nextQuizBtn">${state.quizIdx+1<state.quizPool.length?'下一題':'完成本輪'}</button>` : ""}
+      </div>
+      <button class="primary-btn" id="quizExitBtn" style="background:#8a8275;margin-top:8px;">🚪 先停在這裡（已作答的都會記錄，下次回來會接續）</button>
     `;
   }
-
+  function renderTopic(kind){
+    if(state.quizPool.length>0 && state.quizMode===kind) return renderTopicQuiz(kind);
+    if(state.quizPool.length>0) return otherRoundNotice();
+    const m = TOPIC_META[kind];
+    const d = computeTopic(kind);
+    const allSt = accStatus(d.prog.acc);
+    const chNo = c=>c.key==='none' ? 999 : parseInt(c.key,10);
+    const sorters = {
+      chapter: (x,y)=>chNo(x)-chNo(y),
+      cov: (x,y)=>x.prog.cov-y.prog.cov || chNo(x)-chNo(y),
+      acc: (x,y)=>((x.prog.acc===null?101:x.prog.acc)-(y.prog.acc===null?101:y.prog.acc)) || chNo(x)-chNo(y),
+    };
+    const chs = [...d.chapters].sort(sorters[state.topicSort]||sorters.chapter);
+    const reached = d.chapters.filter(c=>c.prog.cov>=100 && c.prog.acc!==null && c.prog.acc>=ACC_TARGET).length;
+    const sortBtn = (key,label)=>`<button class="toggle-btn ${state.topicSort===key?'active':''}" data-topicsort="${key}" style="padding:6px 0;font-size:12px;">${label}</button>`;
+    const filterBtn = (key,label)=>`<button class="toggle-btn ${state.refFilter===key?'active':''}" data-reffilter="${key}" style="padding:6px 0;font-size:12px;">${label}（${topicQuestions("ref", key).length}）</button>`;
+    const lastRound = (state.quizMode===kind && state.quizStats.total>0)
+      ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : "";
+    const filterRow = kind==="ref"
+      ? `<div class="toggle-row" style="margin:8px 0 0;">${filterBtn('all','全部')}${filterBtn('year','年份')}${filterBtn('art','條號')}</div>` : "";
+    return `
+      ${lastRound}
+      <div class="ov-card">
+        <div class="section-title" style="margin-top:0;">${m.icon} ${m.name}<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${m.rank}</span></div>
+        <div class="section-desc" style="margin-top:2px;">${m.desc}答錯一樣會進錯題本。<b>目標：刷題 100%、正確率 ${ACC_TARGET}%</b></div>
+        ${filterRow}
+        <div style="display:flex;justify-content:space-around;margin-top:10px;">
+          ${svgRing(d.prog.cov, "#5B6B82", `刷題 ${d.prog.seen}/${d.prog.total} 題`)}
+          ${svgRing(d.prog.acc, allSt.color, d.prog.acc===null ? "尚無作答記錄" : `${allSt.icon} 正確率 ${d.prog.accC}/${d.prog.accT}`)}
+        </div>
+        <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#3F7D5C;"></i>正確率（✅≥${ACC_TARGET}% ⚠️60~${ACC_TARGET-1}% 🔥<60%）</span><span><i class="ov-legend-target"></i>${ACC_TARGET}%目標線</span></div>
+        ${d.all.length>0 ? `<button class="primary-btn" data-topicmix="${kind}" style="margin:10px 0 4px;">🎲 全章節隨機 ${Math.min(TOPIC_ROUND,d.all.length)} 題</button>` : `<div class="empty-hint">目前沒有符合的題目。</div>`}
+        <div class="sub-title">各章節（雙達標 ${reached}/${d.chapters.length} 章）</div>
+        <div class="toggle-row" style="margin:6px 0 8px;">
+          ${sortBtn('chapter','依章節')}${sortBtn('cov','刷題率低→高')}${sortBtn('acc','正確率低→高')}
+        </div>
+        <div class="section-desc" style="margin-top:0;">刷題＝這章題目在本分頁做過的比例；正確＝本分頁作答的累計答對率。每輪最多 ${TOPIC_ROUND} 題，沒做過的優先出。</div>
+        ${chs.map(c=>`<div style="margin-bottom:6px;">
+          ${overviewRow(topicChLabel(c.key), `${topicChTitle(c.key)}（${c.list.length} 題）`, c.prog, `data-topicch="${kind}|${c.key}"`)}
+          <div class="toggle-row" style="margin:2px 0 0;">
+            <button class="toggle-btn active" data-topicch="${kind}|${c.key}" style="padding:6px 0;font-size:12px;">▶ 練這章（${Math.min(TOPIC_ROUND,c.list.length)} 題）</button>
+          </div>
+        </div>`).join("")}
+      </div>
+    `;
+  }
   /* ---------- events ---------- */
   function bindEvents(){
     root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.tab; render(); }));
@@ -1860,67 +1900,6 @@
       const id = parseInt(el.dataset.notes,10);
       state.chapterState[id] = {...state.chapterState[id], notes:el.value};
       persist("chapterState");
-    }));
-
-    root.querySelectorAll("[data-bankmode]").forEach(el=>el.addEventListener("click",()=>{
-      state.bankMode = el.dataset.bankmode; render();
-    }));
-
-    const draftChapter = document.getElementById("draftChapter");
-    if(draftChapter) draftChapter.addEventListener("change",e=>{ state.bankDraft.chapter=parseInt(e.target.value,10); });
-    const draftText = document.getElementById("draftText");
-    if(draftText) draftText.addEventListener("input",e=>{ state.bankDraft.text=e.target.value; });
-    root.querySelectorAll("[data-draftopt]").forEach(el=>el.addEventListener("input",e=>{
-      const i = parseInt(el.dataset.draftopt,10);
-      state.bankDraft.options[i] = e.target.value;
-    }));
-    root.querySelectorAll("[data-draftans]").forEach(el=>el.addEventListener("change",()=>{
-      state.bankDraft.answer = parseInt(el.dataset.draftans,10);
-    }));
-    const addManualBtn = document.getElementById("addManualBtn");
-    if(addManualBtn) addManualBtn.addEventListener("click",()=>{
-      const d = state.bankDraft;
-      if(!d.text.trim() || d.options.some(o=>!o.trim())){ alert("請完整填寫題目與四個選項"); return; }
-      state.questions.push({id:uid(), ...d, options:[...d.options]});
-      state.bankDraft = {chapter:1,text:"",options:["","","",""],answer:0,note:""};
-      persist("questions"); render();
-    });
-
-    const bulkChapterSelect = document.getElementById("bulkChapterSelect");
-    if(bulkChapterSelect) bulkChapterSelect.addEventListener("change",e=>{ state.bankFilterChapter=parseInt(e.target.value,10); });
-    const bulkText = document.getElementById("bulkText");
-    if(bulkText) bulkText.addEventListener("input",e=>{ state.bankBulkText=e.target.value; });
-    const bulkImportBtn = document.getElementById("bulkImportBtn");
-    if(bulkImportBtn) bulkImportBtn.addEventListener("click",()=>{
-      const blocks = state.bankBulkText.split(/\n\s*\n/).map(b=>b.trim()).filter(Boolean);
-      const parsed=[]; const errors=[];
-      const targetChapter = state.bankFilterChapter==='all'?1:state.bankFilterChapter;
-      blocks.forEach((block,idx)=>{
-        const lines = block.split("\n").map(l=>l.trim()).filter(Boolean);
-        if(lines.length<6){ errors.push(`第 ${idx+1} 段格式不足（需要題目+4選項+答案，共6行）`); return; }
-        const text = lines[0].replace(/^\d+[\.、]\s*/,"");
-        const options = lines.slice(1,5).map(l=>l.replace(/^[\(（]?[1234ABCD][\)）\.、]\s*/,""));
-        const ansRaw = lines[5].replace(/[^0-9ABCDabcd]/g,"");
-        let answer=-1;
-        if(/^[1-4]$/.test(ansRaw)) answer=parseInt(ansRaw,10)-1;
-        else if(/^[A-Da-d]$/.test(ansRaw)) answer="ABCD".indexOf(ansRaw.toUpperCase());
-        if(answer===-1){ errors.push(`第 ${idx+1} 段答案無法判讀：「${lines[5]}」`); return; }
-        parsed.push({id:uid(), chapter:targetChapter, text, options, answer, note:""});
-      });
-      if(parsed.length) state.questions.push(...parsed);
-      state.bankBulkMsg = `已匯入 ${parsed.length} 題${errors.length?`，${errors.length} 段失敗：\n`+errors.join("\n"):"。"}`;
-      if(parsed.length) state.bankBulkText="";
-      persist("questions"); render();
-    });
-
-    const bankFilterSelect = document.getElementById("bankFilterSelect");
-    if(bankFilterSelect) bankFilterSelect.addEventListener("change",e=>{
-      state.bankFilterChapter = e.target.value==="all"?"all":parseInt(e.target.value,10);
-      render();
-    });
-    root.querySelectorAll("[data-delq]").forEach(el=>el.addEventListener("click",()=>{
-      state.questions = state.questions.filter(q=>q.id!==el.dataset.delq);
-      persist("questions"); render();
     }));
 
     const quizChapterSelect = document.getElementById("quizChapterSelect");
@@ -2008,6 +1987,30 @@
       const done = shuffleArr(c.pending.filter(q=>q.meta.cN>0));
       startWrongRound(fresh.concat(done), 'ch', key);
     }));
+    // 計算／年份條號分頁：練單一章節或全章節隨機，每輪最多 20 題
+    function startTopicRound(kind, list, ch){
+      if(list.length===0) return;
+      state.quizPool = topicRoundList(list, kind).map(q=>({...presentQuestion(q), _tp:kind, _tpCh:ch}));
+      state.quizMode = kind;
+      state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
+      state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      persistQuizState();
+      render(); window.scrollTo(0,0);
+    }
+    root.querySelectorAll("[data-topicch]").forEach(el=>el.addEventListener("click",()=>{
+      const [kind, key] = el.dataset.topicch.split("|");
+      startTopicRound(kind, topicQuestions(kind).filter(q=>topicChKey(q)===key), key);
+    }));
+    root.querySelectorAll("[data-topicmix]").forEach(el=>el.addEventListener("click",()=>{
+      const kind = el.dataset.topicmix;
+      startTopicRound(kind, topicQuestions(kind), null);
+    }));
+    root.querySelectorAll("[data-topicsort]").forEach(el=>el.addEventListener("click",()=>{
+      state.topicSort = el.dataset.topicsort; render();
+    }));
+    root.querySelectorAll("[data-reffilter]").forEach(el=>el.addEventListener("click",()=>{
+      state.refFilter = el.dataset.reffilter; render();
+    }));
     const startWrongMixBtn = document.getElementById("startWrongMixBtn");
     if(startWrongMixBtn) startWrongMixBtn.addEventListener("click",()=>{
       // 跨全部章節隨機抽 20 題；全章節隨機還沒做過的錯題優先，刷題率才推得到 100%
@@ -2066,6 +2069,13 @@
         const [nK,cK] = current._rv==='mix' ? ['xN','xC'] : ['cN','cC'];
         state.wrongMap[current.id] = {...rec, [nK]:(rec[nK]||0)+1, [cK]:(rec[cK]||0)+(correct?1:0)};
         persist("wrongMap");
+      }
+      // 計算／年份條號分頁的作答另外累計，給這兩個分頁算刷題率、正確率
+      if(current._tp){
+        const st = state.topicStats[current._tp] = state.topicStats[current._tp] || {};
+        const r = st[current.id] || {n:0, c:0};
+        st[current.id] = {n:r.n+1, c:r.c+(correct?1:0)};
+        persist("topicStats");
       }
       state.quizSeenIds[current.id] = true;
       persist("quizSeenIds");
@@ -2238,34 +2248,6 @@
       persist("wrongMap"); render();
     }));
 
-    const lawSearchInput = document.getElementById("lawSearchInput");
-    if(lawSearchInput){
-      lawSearchInput.addEventListener("input",e=>{ state.lawQuery=e.target.value; render(); });
-      lawSearchInput.focus();
-      lawSearchInput.selectionStart = lawSearchInput.selectionEnd = lawSearchInput.value.length;
-    }
-    const lawToggleForm = document.getElementById("lawToggleForm");
-    if(lawToggleForm) lawToggleForm.addEventListener("click",()=>{ state.lawShowForm=!state.lawShowForm; render(); });
-    const bindLawField = (id,field)=>{
-      const el = document.getElementById(id);
-      if(el) el.addEventListener("input",e=>{ state.lawDraft[field]=e.target.value; });
-    };
-    bindLawField("lawDraftLaw","law"); bindLawField("lawDraftArticle","article");
-    bindLawField("lawDraftPenalty","penalty"); bindLawField("lawDraftRefs","refs"); bindLawField("lawDraftNote","note");
-    const lawAddBtn = document.getElementById("lawAddBtn");
-    if(lawAddBtn) lawAddBtn.addEventListener("click",()=>{
-      const d = state.lawDraft;
-      if(!d.article.trim() || !d.penalty.trim()){ alert("至少要填條號與罰則內容"); return; }
-      state.laws.unshift({id:uid(), ...d, seed:false});
-      state.lawDraft = {law:"職業安全衛生法",article:"",penalty:"",refs:"",note:""};
-      state.lawShowForm=false;
-      persist("laws"); render();
-    });
-    root.querySelectorAll("[data-dellaw]").forEach(el=>el.addEventListener("click",()=>{
-      state.laws = state.laws.filter(l=>l.id!==el.dataset.dellaw);
-      persist("laws"); render();
-    }));
-
     /* --- 備份/還原 --- */
     // 題庫本身（questions/examA/examB）故意不放進匯出檔：每台裝置一律以當下載入的
     // questions.js/examA_questions.js/examB_questions.js（GitHub Pages 上最新版）為準，
@@ -2278,6 +2260,7 @@
         studyLog:state.studyLog, laws:state.laws, quizHistory:state.quizHistory, quizSeenIds:state.quizSeenIds,
         examAHistory:state.examAHistory, examASeenIds:state.examASeenIds,
         examBHistory:state.examBHistory, examBSeenIds:state.examBSeenIds,
+        topicStats:state.topicStats,
         exportedAt:new Date().toISOString()
       };
     }
@@ -2294,6 +2277,8 @@
       state.examASeenIds = data.examASeenIds||{};
       state.examBHistory = data.examBHistory||[];
       state.examBSeenIds = data.examBSeenIds||{};
+      state.topicStats = {calc:{}, ref:{}, ...(data.topicStats||{})};
+      saveData("topicStats",state.topicStats);
       applyDupAlias(state);
       saveData("meta",{examDate:state.examDate});
       saveData("chapterState",state.chapterState);
