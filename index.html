@@ -12,6 +12,7 @@
 <script src="./study_tips.js"></script>
 <script src="./dedup.js"></script>
 <script src="./topic_sets.js"></script>
+<script src="./mnemonics.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -129,6 +130,20 @@
   .ov-legend i.ov-legend-target{ width:0; height:12px; border-left:2px dashed #2B2620; border-radius:0; opacity:.55; }
   .nav-btn{ min-width:0; }
   .nav-btn span:last-child{ white-space:nowrap; }
+  .mn-opt{ display:block; width:100%; text-align:left; border:1px solid #E7E1D4; background:#fff; border-radius:10px; padding:10px 12px; margin-top:8px; font-size:14px; color:#2B2620; }
+  .mn-phrase{ font-size:16px; font-weight:700; color:#A8631F; background:#FBF6EC; border-radius:10px; padding:8px 10px; letter-spacing:1px; }
+  .mn-grid{ display:grid; grid-template-columns:64px 1fr; gap:8px; margin-top:8px; }
+  .mn-grid.wide{ grid-template-columns:38% 1fr; }
+  .mn-col{ display:flex; flex-direction:column; gap:6px; }
+  .mn-cell{ border:1px solid #E7E1D4; background:#fff; border-radius:10px; padding:8px; font-size:13px; color:#2B2620; text-align:left; min-height:40px; line-height:1.35; }
+  .mn-left{ text-align:center; font-size:15px; font-weight:700; }
+  .mn-grid.wide .mn-left{ font-size:13px; }
+  .mn-sel{ border-color:#A8631F; background:#FBF1E2; box-shadow:0 0 0 2px #A8631F inset; }
+  .mn-ok{ border-color:#3F7D5C; background:#EAF3EC; color:#2E5E44; }
+  .mn-bad{ border-color:#B9554A; background:#F8E7E4; }
+  .mn-table{ width:100%; border-collapse:collapse; margin-top:8px; font-size:13px; }
+  .mn-table td{ border-top:1px solid #F1EDE4; padding:6px 4px; vertical-align:top; }
+  .mn-table td:first-child{ font-weight:700; color:#A8631F; white-space:nowrap; padding-right:8px; }
   .loading{ min-height:100vh; display:flex; align-items:center; justify-content:center; color:#9a9488; font-size:14px; }
 </style>
 <script>
@@ -497,7 +512,7 @@
     examBSeenIds:{},
     numeric:[], overviewSort:"chapter", wrongSort:"chapter",
     // 計算題／年份・條號分頁各自的作答累計：{calc:{題目id:{n:作答次數,c:答對次數}}, ref:{...}}
-    topicStats:{calc:{}, ref:{}}, refFilter:"all", topicSort:"chapter",
+    topicStats:{calc:{}, ref:{}, mnemo:{}}, refFilter:"all", topicSort:"chapter", mnemo:null,
     headerEditing:false,
     syncMsg:"",
     cloudSyncMsg:"",
@@ -541,7 +556,7 @@
     state.laws = loadData("laws", LAW_SEED);
     state.quizHistory = loadData("quizHistory", []);
     state.quizSeenIds = loadData("quizSeenIds", {});
-    state.topicStats = {calc:{}, ref:{}, ...loadData("topicStats", {})};
+    state.topicStats = {calc:{}, ref:{}, mnemo:{}, ...loadData("topicStats", {})};
     // 記住上次選的章節範圍，回來時預設停在同一章，才看得到「本章節成績記錄」而不是被重置成「全部章節」
     state.quizChapterFilter = loadData("quizChapterFilter", "all");
     // 練習進行到一半離開（關頁、切分頁）也要能接續，所以連同作答中的題組本身一併存本機
@@ -693,7 +708,7 @@
     const items = [
       // 2026-10-30：拿掉「題庫」「法規」分頁，改成「計算」（首要）與「年份/條號」（次要）
       ["dashboard","◆","總覽"],["chapters","▤","章節"],["calc","🧮","計算"],
-      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["numeric","🔢","數字"],["examA","🅰","甲種",examAWrongCount],["examB","🅱","乙級"],["ref","📅","年/條"],["sync","⇅","備份"],
+      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["numeric","🔢","數字"],["examA","🅰","甲種",examAWrongCount],["examB","🅱","乙級"],["ref","📅","年/條"],["mnemo","🔗","口訣"],["sync","⇅","備份"],
     ];
     return `<nav class="nav">${items.map(it=>{
       const [key,icon,label,badge] = it;
@@ -714,6 +729,7 @@
     if(state.tab==="examA") return renderExamA();
     if(state.tab==="examB") return renderExamB();
     if(state.tab==="ref") return renderTopic("ref");
+    if(state.tab==="mnemo") return renderMnemo();
     if(state.tab==="sync") return renderSync();
     return "";
   }
@@ -1576,8 +1592,9 @@
   }
   // 計算／年份條號分頁的作答累計只會增加，兩邊同一題取作答次數較多的那筆
   function mergeTopicStats(a, b){
-    const out = {calc:{}, ref:{}};
-    ["calc","ref"].forEach(k=>{
+    // mnemo（口訣配對）每組記完成次數 n，同樣取 n 較大的那筆
+    const out = {calc:{}, ref:{}, mnemo:{}};
+    ["calc","ref","mnemo"].forEach(k=>{
       const x = (a||{})[k]||{}, y = (b||{})[k]||{};
       out[k] = {...y};
       Object.keys(x).forEach(id=>{ if(!y[id] || (x[id].n||0)>=(y[id].n||0)) out[k][id] = x[id]; });
@@ -1870,6 +1887,122 @@
     `;
   }
   /* ---------- events ---------- */
+  /* ---------- 口訣配對（2026-10-30） ---------- */
+  // 資料在 mnemonics.js。每組先選出正確口訣（choice:true 才有），再把口訣的字配對到條文項目。
+  // 作答累計存在 state.topicStats.mnemo（每組 n＝完成次數、c＝配對答對次數、w＝配錯次數），跟著雲端同步／匯出匯入。
+  // 不用 quizPool，所以跟其他練習互不干擾；一組做到一半離開不記錄。
+  const MNEMONICS = window.MNEMONICS || [];
+  function mnemoStat(id){ return (state.topicStats.mnemo||{})[id] || {n:0,c:0,w:0}; }
+  function mnemoProg(list){
+    let seen=0, accC=0, accT=0;
+    list.forEach(m=>{ const r = mnemoStat(m.id); if(r.n>0) seen++; accC += r.c||0; accT += (r.c||0)+(r.w||0); });
+    const total = list.length;
+    return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC, accT, acc: accT>0?Math.round(accC/accT*100):null};
+  }
+  function startMnemo(id){
+    const m = MNEMONICS.find(x=>x.id===id); if(!m) return;
+    const others = shuffleArr(MNEMONICS.filter(x=>x.choice && x.id!==m.id)).slice(0,3).map(x=>x.mnemonic);
+    state.mnemo = {id, stage: m.choice ? 'choice' : 'match', opts: shuffleArr([m.mnemonic, ...others]), chosen:null,
+      right: shuffleArr(m.pairs.map((_,i)=>i)), doneL:{}, doneR:{}, selL:null, selR:null, bad:null, c:0, w:0};
+    render(); window.scrollTo(0,0);
+  }
+  // 下一組：還沒做過的優先，其次正確率最低的
+  function nextMnemoId(exceptId){
+    const pool = MNEMONICS.filter(m=>m.id!==exceptId);
+    const fresh = pool.filter(m=>mnemoStat(m.id).n===0);
+    if(fresh.length) return shuffleArr(fresh)[0].id;
+    const accOf = m=>{ const r = mnemoStat(m.id), t = (r.c||0)+(r.w||0); return t>0 ? r.c/t : 1; };
+    return [...pool].sort((a,b)=>accOf(a)-accOf(b))[0].id;
+  }
+  function mnemoTry(){
+    const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
+    if(s.selL===null || s.selR===null) return;
+    const li = s.selL, rj = s.selR;
+    if(m.pairs[li][1] === m.pairs[s.right[rj]][1]){
+      s.doneL[li] = true; s.doneR[rj] = {l:li}; s.c++; s.bad = null;
+    } else { s.w++; s.bad = {l:li, r:rj}; }
+    s.selL = null; s.selR = null;
+    if(Object.keys(s.doneL).length === m.pairs.length){
+      s.stage = 'done';
+      const all = state.topicStats.mnemo = state.topicStats.mnemo || {};
+      const r = all[m.id] || {n:0,c:0,w:0};
+      all[m.id] = {n:(r.n||0)+1, c:(r.c||0)+s.c, w:(r.w||0)+s.w, last:Math.round(s.c/(s.c+s.w)*100), at:todayStr()};
+      persist("topicStats");
+    }
+  }
+  function renderMnemoRound(){
+    const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
+    const head = `<div class="quiz-progress">🔗 口訣配對・${esc(m.law)} · 答對 ${s.c} · 配錯 ${s.w}</div>`;
+    const exitBtn = `<button class="primary-btn" id="mnExitBtn" style="background:#8a8275;margin-top:8px;">${s.stage==='done'?'回口訣清單':'🚪 回口訣清單（這組還沒做完，不記錄）'}</button>`;
+    if(s.stage==='choice'){
+      return `${head}<div class="quiz-card">
+        <div class="quiz-chapter-tag">第 1 步：選出口訣</div>
+        <div class="quiz-question">「${esc(m.title)}」（${esc(m.law)}）的口訣是哪一個？</div>
+        ${s.opts.map((o,i)=>{
+          let cls = "";
+          if(s.chosen!==null){ if(o===m.mnemonic) cls = "mn-ok"; else if(i===s.chosen) cls = "mn-bad"; }
+          return `<button class="mn-opt ${cls}" data-mnchoice="${i}" ${s.chosen!==null?'disabled':''}>${esc(o)}</button>`;
+        }).join("")}
+        ${s.chosen!==null ? `<div class="result-card">${s.opts[s.chosen]===m.mnemonic?'✅ 答對了':'❌ 正確的口訣是：'+esc(m.mnemonic)}</div>
+          <button class="primary-btn" id="mnToMatchBtn" style="margin-top:10px;">第 2 步：把每個字配對到條文 →</button>` : ""}
+      </div>${exitBtn}`;
+    }
+    const wide = m.pairs.some(p=>p[0].length>2);
+    if(s.stage==='match'){
+      return `${head}<div class="quiz-card">
+        <div class="quiz-chapter-tag">${m.choice?'第 2 步：':''}配對（先點左邊，再點右邊）</div>
+        <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
+        <div class="mn-phrase">${esc(m.mnemonic)}</div>
+        ${m.note?`<div class="section-desc" style="margin:4px 0 8px;">${esc(m.note)}</div>`:""}
+        <div class="mn-grid ${wide?'wide':''}">
+          <div class="mn-col">${m.pairs.map((p,i)=>{
+            const cls = s.doneL[i] ? "mn-ok" : (s.bad&&s.bad.l===i ? "mn-bad" : (s.selL===i ? "mn-sel" : ""));
+            return `<button class="mn-cell mn-left ${cls}" data-mnl="${i}" ${s.doneL[i]?'disabled':''}>${esc(p[0])}</button>`;
+          }).join("")}</div>
+          <div class="mn-col">${s.right.map((pi,j)=>{
+            const cls = s.doneR[j] ? "mn-ok" : (s.bad&&s.bad.r===j ? "mn-bad" : (s.selR===j ? "mn-sel" : ""));
+            const tag = s.doneR[j] ? `<b>${esc(m.pairs[s.doneR[j].l][0])}</b>　` : "";
+            return `<button class="mn-cell ${cls}" data-mnr="${j}" ${s.doneR[j]?'disabled':''}>${tag}${esc(m.pairs[pi][1])}</button>`;
+          }).join("")}</div>
+        </div>
+        <div class="section-desc" style="margin-top:8px;">已配對 ${Object.keys(s.doneL).length} / ${m.pairs.length}</div>
+      </div>${exitBtn}`;
+    }
+    const acc = Math.round(s.c/(s.c+s.w)*100), st = accStatus(acc);
+    return `${head}<div class="quiz-card">
+      <div class="quiz-chapter-tag">完成</div>
+      <div class="quiz-question">${esc(m.title)}</div>
+      <div class="result-card" style="margin-top:0;">${st.icon} 這組正確率 ${acc}%（答對 ${s.c}、配錯 ${s.w}）</div>
+      <div class="mn-phrase" style="margin-top:10px;">${esc(m.mnemonic)}</div>
+      <table class="mn-table">${m.pairs.map(p=>`<tr><td>${esc(p[0])}</td><td>${esc(p[1])}</td></tr>`).join("")}</table>
+      ${m.note?`<div class="section-desc">${esc(m.note)}</div>`:""}
+      <button class="primary-btn" data-mnstart="${m.id}" style="margin-top:10px;">🔁 再練這組</button>
+      <button class="primary-btn" data-mnstart="${nextMnemoId(m.id)}" style="margin-top:8px;">下一組 →</button>
+    </div>${exitBtn}`;
+  }
+  function renderMnemo(){
+    if(state.mnemo) return renderMnemoRound();
+    const p = mnemoProg(MNEMONICS), allSt = accStatus(p.acc);
+    const reached = MNEMONICS.filter(m=>{ const r = mnemoProg([m]); return r.cov>=100 && r.acc!==null && r.acc>=ACC_TARGET; }).length;
+    return `
+      <div class="ov-card">
+        <div class="section-title" style="margin-top:0;">🔗 口訣配對<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${MNEMONICS.length} 組</span></div>
+        <div class="section-desc" style="margin-top:2px;">先選出這個條文的口訣，再把口訣的每個字配對到條文項目，像連連看。答對、配錯都會計入正確率。<b>目標：每組都做過、正確率 ${ACC_TARGET}%</b></div>
+        <div style="display:flex;justify-content:space-around;margin-top:10px;">
+          ${svgRing(p.cov, "#5B6B82", `做過 ${p.seen}/${p.total} 組`)}
+          ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : `${allSt.icon} 正確率 ${p.accC}/${p.accT}`)}
+        </div>
+        ${MNEMONICS.length ? `<button class="primary-btn" data-mnstart="${nextMnemoId(null)}" style="margin:10px 0 4px;">🎲 下一組（沒做過的優先，再來是正確率最低的）</button>` : `<div class="empty-hint">找不到口訣資料（mnemonics.js）。</div>`}
+        <div class="sub-title">各組口訣（達標 ${reached}/${MNEMONICS.length} 組）</div>
+        <div class="section-desc" style="margin-top:0;">點任一組開始練習。</div>
+        ${MNEMONICS.map(m=>{
+          const r = mnemoStat(m.id), mp = mnemoProg([m]);
+          return overviewRow(m.law, `${m.title}${r.n>0?`（練過 ${r.n} 次）`:''}`, {...mp, seen:mp.seen, total:1}, `data-mnstart="${m.id}"`);
+        }).join("")}
+      </div>
+    `;
+  }
+
   function bindEvents(){
     root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.tab; render(); }));
     root.querySelectorAll("[data-goto]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.goto; render(); }));
@@ -2008,6 +2141,23 @@
     root.querySelectorAll("[data-topicsort]").forEach(el=>el.addEventListener("click",()=>{
       state.topicSort = el.dataset.topicsort; render();
     }));
+    root.querySelectorAll("[data-mnstart]").forEach(el=>el.addEventListener("click",()=>startMnemo(el.dataset.mnstart)));
+    root.querySelectorAll("[data-mnchoice]").forEach(el=>el.addEventListener("click",()=>{
+      const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
+      s.chosen = +el.dataset.mnchoice;
+      if(s.opts[s.chosen]===m.mnemonic) s.c++; else s.w++;
+      render();
+    }));
+    const mnToMatchBtn = document.getElementById("mnToMatchBtn");
+    if(mnToMatchBtn) mnToMatchBtn.addEventListener("click",()=>{ state.mnemo.stage='match'; render(); });
+    root.querySelectorAll("[data-mnl]").forEach(el=>el.addEventListener("click",()=>{
+      const s = state.mnemo; s.bad = null; s.selL = (s.selL===+el.dataset.mnl) ? null : +el.dataset.mnl; mnemoTry(); render();
+    }));
+    root.querySelectorAll("[data-mnr]").forEach(el=>el.addEventListener("click",()=>{
+      const s = state.mnemo; s.bad = null; s.selR = (s.selR===+el.dataset.mnr) ? null : +el.dataset.mnr; mnemoTry(); render();
+    }));
+    const mnExitBtn = document.getElementById("mnExitBtn");
+    if(mnExitBtn) mnExitBtn.addEventListener("click",()=>{ state.mnemo = null; render(); window.scrollTo(0,0); });
     root.querySelectorAll("[data-reffilter]").forEach(el=>el.addEventListener("click",()=>{
       state.refFilter = el.dataset.reffilter; render();
     }));
@@ -2277,7 +2427,7 @@
       state.examASeenIds = data.examASeenIds||{};
       state.examBHistory = data.examBHistory||[];
       state.examBSeenIds = data.examBSeenIds||{};
-      state.topicStats = {calc:{}, ref:{}, ...(data.topicStats||{})};
+      state.topicStats = {calc:{}, ref:{}, mnemo:{}, ...(data.topicStats||{})};
       saveData("topicStats",state.topicStats);
       applyDupAlias(state);
       saveData("meta",{examDate:state.examDate});
