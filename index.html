@@ -13,6 +13,7 @@
 <script src="./dedup.js"></script>
 <script src="./topic_sets.js"></script>
 <script src="./mnemonics.js"></script>
+<script src="./free_questions.js"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -358,6 +359,10 @@
   // 停止出題（題目仍保留在題庫，只是練習/模擬考/錯題複習都不會抽到）：四烷基鉛中毒預防規則已廢止
   const SUSPENDED_IDS = new Set(["chN31-032","examA-088","examB-303","examB-304","examB-W01-301","examB-W01-302"]);
   const isActiveQ = q => !SUSPENDED_IDS.has(String(q&&q.id||"").replace(/^num-/,""));
+  // 送分題（free_questions.js）：修法造成新舊答案不同，任何作答都算對；作答紀錄照常記，不另外改資料
+  const FREE_QS = window.FREE_QS || {};
+  const freeInfo = q => FREE_QS[String(q&&q.id||"").replace(/^num-/,"")] || null;
+  const isFreeQ = q => !!freeInfo(q);
   // 2026-10-27 重複題清理（dedup.js）：DUP_ALIAS 的 key 是被移除的重複題，value 是保留的同一題。
   // 載入時把重複題濾掉；它在錯題本／刷題紀錄上的進度，一律合併到保留的那題（數字填空 num- 前綴同理）。
   const DUP_ALIAS = window.DUP_ALIAS || {};
@@ -898,8 +903,10 @@
     const T = window.STUDY_TIPS;
     const tipKeys = (T && T.map && T.map[String(q.id||"").replace(/^num-/,"")]) || [];
     const tips = tipKeys.map(k=>T.topics[k]).filter(Boolean);
+    const fq = freeInfo(q);
     return `<div class="quiz-explain">
-      <div class="quiz-explain-ans">✅ 正確答案：${esc(ans)}</div>
+      ${fq ? `<div class="quiz-explain-ans" style="color:#A8631F;">🎁 送分題（115.7.1 修法，新舊答案不同，選哪個都算對）</div><div class="quiz-explain-body">新法答案：${esc(fq.now)}<br>修法前答案：${esc(fq.old)}</div>` : ""}
+      <div class="quiz-explain-ans">✅ ${fq?"新法答案":"正確答案"}：${esc(ans)}</div>
       ${ex ? `<div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(ex)}</div>` : ""}
       ${note ? `<div class="quiz-explain-title">${ex?"📝 備註":"📖 詳解"}</div><div class="quiz-explain-body">${esc(note)}</div>` : ""}
       ${tips.map(t=>`<div class="quiz-explain-title">💡 ${esc(t.title)}</div><div class="quiz-explain-body">${esc(t.body)}</div>`).join("")}
@@ -996,7 +1003,7 @@
       let cls="quiz-option";
       if(state.quizRevealed){
         if(i===current.answer) cls+=" correct";
-        else if(i===state.quizSelected) cls+=" wrong";
+        else if(i===state.quizSelected) cls+= isFreeQ(current) ? " correct" : " wrong";
       }
       return `<button class="${cls}" data-choose="${i}" ${state.quizRevealed?'disabled':''}>
         <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
@@ -1009,7 +1016,7 @@
       const picked = state.quizMultiSelected.includes(i);
       if(state.quizRevealed){
         if(current.answer.includes(i)) cls+=" correct";
-        else if(picked) cls+=" wrong";
+        else if(picked) cls+= isFreeQ(current) ? " correct" : " wrong";
       }
       return `<button class="${cls}" data-multitoggle="${i}" ${state.quizRevealed?'disabled':''}>
         <span class="quiz-option-label">${picked&&!state.quizRevealed?'✓':String.fromCharCode(65+i)}</span>${esc(opt)}
@@ -1034,7 +1041,7 @@
       let cls="quiz-option";
       if(state.quizRevealed){
         if(c.value===current.answer) cls+=" correct";
-        else if(c.value===state.quizSelected) cls+=" wrong";
+        else if(c.value===state.quizSelected) cls+= isFreeQ(current) ? " correct" : " wrong";
       }
       return `<button class="${cls}" data-choose="${c.value}" ${state.quizRevealed?'disabled':''}>
         <span class="quiz-option-label" style="font-size:15px;">${c.value==="true"?"○":"✕"}</span>${c.label.split(" ").slice(1).join(" ")}
@@ -1487,7 +1494,7 @@
           let cls="quiz-option";
           if(state.examARevealed){
             if(i===current.answer) cls+=" correct";
-            else if(i===state.examASelected) cls+=" wrong";
+            else if(i===state.examASelected) cls+= isFreeQ(current) ? " correct" : " wrong";
           }
           return `<button class="${cls}" data-examachoose="${i}" ${state.examARevealed?'disabled':''}>
             <span class="quiz-option-label">${String.fromCharCode(65+i)}</span>${esc(opt)}
@@ -1547,7 +1554,7 @@
             const isAns = isMulti ? current.answer.includes(i) : i===current.answer;
             const isPicked = isMulti ? picked.includes(i) : i===state.examBSelected;
             if(isAns) cls+=" correct";
-            else if(isPicked) cls+=" wrong";
+            else if(isPicked) cls+= isFreeQ(current) ? " correct" : " wrong";
           }
           const label = isMulti && picked.includes(i) && !state.examBRevealed ? '✓' : String.fromCharCode(65+i);
           return `<button class="${cls}" ${isMulti?'data-exambtoggle':'data-exambchoose'}="${i}" ${state.examBRevealed?'disabled':''}>
@@ -2212,6 +2219,7 @@
       render();
     });
     function recordAnswer(current, correct){
+      correct = correct || isFreeQ(current);
       markStudiedToday();
       state.quizStats = {correct: state.quizStats.correct+(correct?1:0), total: state.quizStats.total+1};
       recordWrongMapOutcome(current.id, correct);
@@ -2266,7 +2274,7 @@
     const fillSubmitBtn = document.getElementById("fillSubmitBtn");
     if(fillSubmitBtn) fillSubmitBtn.addEventListener("click",()=>{
       const current = state.quizPool[state.quizIdx];
-      const correct = isFillCorrect(current, state.quizFillInput);
+      const correct = isFreeQ(current) || isFillCorrect(current, state.quizFillInput);
       state.quizFillCorrect = correct;
       state.quizRevealed = true;
       recordAnswer(current, correct);
@@ -2307,7 +2315,7 @@
       const i = parseInt(el.dataset.examachoose,10);
       const current = state.examAPool[state.examAIdx];
       state.examASelected = i; state.examARevealed = true;
-      const correct = i===current.answer;
+      const correct = isFreeQ(current) || i===current.answer;
       state.examAStats = {correct: state.examAStats.correct+(correct?1:0), total: state.examAStats.total+1};
       state.examASeenIds[current.id] = true;
       persist("examASeenIds");
@@ -2370,6 +2378,7 @@
       finishExamBAnswer(current, a.length===b.length && a.every((v,i2)=>v===b[i2]));
     });
     function finishExamBAnswer(current, correct){
+      correct = correct || isFreeQ(current);
       state.examBStats = {correct: state.examBStats.correct+(correct?1:0), total: state.examBStats.total+1};
       state.examBSeenIds[current.id] = true;
       persist("examBSeenIds");
