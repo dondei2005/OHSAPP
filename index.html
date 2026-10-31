@@ -1892,6 +1892,8 @@
   // 作答累計存在 state.topicStats.mnemo（每組 n＝完成次數、c＝配對答對次數、w＝配錯次數），跟著雲端同步／匯出匯入。
   // 不用 quizPool，所以跟其他練習互不干擾；一組做到一半離開不記錄。
   const MNEMONICS = window.MNEMONICS || [];
+  // 配對時右邊選項不顯示「(11) 」這類編號，避免照順序猜答案；順序提示寫在 note
+  function mnemoItem(t){ return t.replace(/^\(\d+\)\s*/, ""); }
   function mnemoStat(id){ return (state.topicStats.mnemo||{})[id] || {n:0,c:0,w:0}; }
   function mnemoProg(list){
     let seen=0, accC=0, accT=0;
@@ -1962,7 +1964,7 @@
           <div class="mn-col">${s.right.map((pi,j)=>{
             const cls = s.doneR[j] ? "mn-ok" : (s.bad&&s.bad.r===j ? "mn-bad" : (s.selR===j ? "mn-sel" : ""));
             const tag = s.doneR[j] ? `<b>${esc(m.pairs[s.doneR[j].l][0])}</b>　` : "";
-            return `<button class="mn-cell ${cls}" data-mnr="${j}" ${s.doneR[j]?'disabled':''}>${tag}${esc(m.pairs[pi][1])}</button>`;
+            return `<button class="mn-cell ${cls}" data-mnr="${j}" ${s.doneR[j]?'disabled':''}>${tag}${esc(mnemoItem(m.pairs[pi][1]))}</button>`;
           }).join("")}</div>
         </div>
         <div class="section-desc" style="margin-top:8px;">已配對 ${Object.keys(s.doneL).length} / ${m.pairs.length}</div>
