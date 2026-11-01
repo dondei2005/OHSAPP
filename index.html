@@ -1128,7 +1128,7 @@
       .sort((a,b)=>(b.meta.wrongCount||0)-(a.meta.wrongCount||0) || (a.meta.correctStreak||0)-(b.meta.correctStreak||0));
   }
   // 2026-10-17「已學會錯題本」：乙級錯題本中連續答對 3 次（或手動按已熟記）的題目（wrongMap.mastered），
-  // 不再從錯題本消失，而是集中在這裡隨時抽考；依答錯次數由多到少排序、出題，次數相同時最久沒考的優先。
+  // 不再從錯題本消失，而是集中在這裡隨時抽考；清單依答錯次數排序，抽考完全隨機（2026-11-01 起）。
   // 在這裡又答錯，會自動回到乙級錯題本（mastered 改回 false、連續答對歸零）。甲業題目不列入。
   function computeLearnedQuestions(){
     const qmap = idToQuestionMap();
@@ -1239,8 +1239,8 @@
       return `
       <div class="toggle-row" style="margin:0 0 10px;">${wrongTabs()}</div>
       <div class="section-title">已學會錯題本</div>
-      <div class="section-desc">乙級錯題本裡連續答對 3 次的題目會移到這裡，方便隨時再抽考自己。抽考依「答錯次數」由多到少出題，錯越多次越優先（次數相同時，最久沒考的先出）。在這裡又答錯的題目，會自動回到乙級錯題本重新累計連續答對。</div>
-      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🎯 開始已學會錯題抽考（本輪 ${Math.min(20,wq.length)} 題，錯越多次越先出）</button>` : ""}
+      <div class="section-desc">乙級錯題本裡連續答對 3 次的題目會移到這裡，方便隨時再抽考自己。抽考從所有已學會錯題中完全隨機抽 20 題。在這裡又答錯的題目，會自動回到乙級錯題本重新累計連續答對。</div>
+      ${wq.length>0 ? `<button class="primary-btn" id="startWrongReviewBtn" style="margin-bottom:14px;">🎯 開始已學會錯題抽考（完全隨機 ${Math.min(20,wq.length)} 題）</button>` : ""}
       <div class="sub-title">已學會錯題（${wq.length}，依錯誤次數排序）</div>
       ${wq.length===0?`<div class="empty-hint">目前還沒有已學會的錯題，錯題本的題目連續答對 3 次就會移過來。</div>`:""}
       ${wq.map(q=>card(q)).join("")}
@@ -2184,13 +2184,9 @@
     if(startWrongReviewBtn) startWrongReviewBtn.addEventListener("click",()=>{
       // 2026-10-12 改：全部錯題完全隨機抽 20 題（不再優先抽錯最多次的）；
       // 錯題每次進入複習都重新打亂選項順序，避免記住「答案在C」而不是真的記住內容
-      let wq;
-      if(state.wrongBook==='learned'){
-        wq = computeLearnedQuestions();   // 已學會錯題本：不打亂，錯越多次越先出
-      } else {
-        wq = computeWrongQuestions('main').filter(isActiveQ);
-        for(let i=wq.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [wq[i],wq[j]]=[wq[j],wq[i]]; }
-      }
+      // 2026-11-01 改：已學會錯題本也完全隨機抽 20 題（不再錯越多次越先出）
+      let wq = state.wrongBook==='learned' ? computeLearnedQuestions() : computeWrongQuestions('main').filter(isActiveQ);
+      for(let i=wq.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [wq[i],wq[j]]=[wq[j],wq[i]]; }
       state.quizPool = wq.slice(0,20).map(presentQuestion);
       state.quizMode = "wrongreview";
       state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
