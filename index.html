@@ -360,7 +360,13 @@
   // 「何者錯誤/何者非」這類反向題、答案含超過3個數字的題目不納入（拿掉選項後無從作答或太難判斷）。
   // 停止出題（題目仍保留在題庫，只是練習/模擬考/錯題複習都不會抽到）：四烷基鉛中毒預防規則已廢止
   const SUSPENDED_IDS = new Set(["chN31-032","examA-088","examB-303","examB-304","examB-W01-301","examB-W01-302"]);
-  const isActiveQ = q => !SUSPENDED_IDS.has(String(q&&q.id||"").replace(/^num-/,""));
+  // 只問「規定在第幾章／第幾條」的題目（topic_sets.js 的 loc）：只在年份・條號分頁出現、而且排最後；
+  // 其他地方（章節練習、隨機、錯題本、模擬考、數字填空）都當作停止出題。錯題本原有紀錄不刪，只是不顯示。
+  const LOC_IDS = new Set((window.TOPIC_SETS && window.TOPIC_SETS.loc) || []);
+  const qBaseId = q => String(q&&q.id||"").replace(/^num-/,"");
+  const isSuspendedQ = q => SUSPENDED_IDS.has(qBaseId(q));
+  const isLocQ = q => LOC_IDS.has(qBaseId(q));
+  const isActiveQ = q => !isSuspendedQ(q) && !isLocQ(q);
   // 送分題（free_questions.js）：修法造成新舊答案不同，任何作答都算對；作答紀錄照常記，不另外改資料
   const FREE_QS = window.FREE_QS || {};
   const freeInfo = q => FREE_QS[String(q&&q.id||"").replace(/^num-/,"")] || null;
@@ -841,8 +847,8 @@
   }
   // 點擊章節後展開的互動式數據圖：刷題覆蓋率＋正確率兩個環形圖，加上最近幾輪成績的長條圖（可以看趨勢）
   function renderChapterChart(chapterId){
-    const total = state.questions.filter(q=>q.chapter===chapterId).length;
-    const seenCount = state.questions.filter(q=>q.chapter===chapterId && state.quizSeenIds[q.id]).length;
+    const total = state.questions.filter(q=>q.chapter===chapterId && isActiveQ(q)).length;
+    const seenCount = state.questions.filter(q=>q.chapter===chapterId && isActiveQ(q) && state.quizSeenIds[q.id]).length;
     const coveragePct = total>0 ? Math.round(seenCount/total*100) : null;
     const acc = computeChapterAccuracy(chapterId);
     let accColor="#9a9488", accLabel="尚無作答記錄";
@@ -996,8 +1002,8 @@
   }
   // 單一章節的刷題覆蓋率：已刷過（作答過）幾題／該章節總題數
   function renderChapterCoverage(chapterId){
-    const total = state.questions.filter(q=>q.chapter===chapterId).length;
-    const seenCount = state.questions.filter(q=>q.chapter===chapterId && state.quizSeenIds[q.id]).length;
+    const total = state.questions.filter(q=>q.chapter===chapterId && isActiveQ(q)).length;
+    const seenCount = state.questions.filter(q=>q.chapter===chapterId && isActiveQ(q) && state.quizSeenIds[q.id]).length;
     const pct = total>0 ? Math.round(seenCount/total*100) : 0;
     return `<div class="result-card" style="margin-top:8px;">本章節刷題進度：已刷過 ${seenCount} / ${total} 題（${pct}%）</div>`;
   }
@@ -1107,7 +1113,7 @@
     let totalAll=0, masteredAll=0;
     Object.keys(state.wrongMap).forEach(qid=>{
       const q = qmap[qid];
-      if(!q || !inWrongBook(qid, book)) return;
+      if(!q || !inWrongBook(qid, book) || !isActiveQ(q)) return;
       const key = bucketKey(q);
       const meta = state.wrongMap[qid];
       if(!byBucket[key]) byBucket[key] = {total:0, mastered:0};
@@ -1141,7 +1147,7 @@
     const qmap = idToQuestionMap();
     // 不依複習日排程，改依「容易錯」優先：答錯次數越多排越前面；次數相同時，離熟記越遠（連續答對次數越少）的優先
     return Object.keys(state.wrongMap)
-      .filter(id=>qmap[id] && !state.wrongMap[id].mastered && inWrongBook(id, book))
+      .filter(id=>qmap[id] && !state.wrongMap[id].mastered && inWrongBook(id, book) && isActiveQ(qmap[id]))
       .map(id=>({...qmap[id], meta:state.wrongMap[id]}))
       .sort((a,b)=>(b.meta.wrongCount||0)-(a.meta.wrongCount||0) || (a.meta.correctStreak||0)-(b.meta.correctStreak||0));
   }
@@ -1910,7 +1916,7 @@
   function topicQuestions(kind, filter){
     const ids = topicIdSet(kind, filter), seen = new Set(), out = [];
     [...state.questions, ...state.examB].forEach(q=>{
-      if(!ids.has(q.id) || seen.has(q.id) || !isActiveQ(q)) return;
+      if(!ids.has(q.id) || seen.has(q.id) || isSuspendedQ(q)) return;
       seen.add(q.id); out.push(q);
     });
     return out;
@@ -1934,9 +1940,10 @@
   // 出題：這個分頁還沒做過的題目優先，其餘隨機；每輪最多 20 題
   function topicRoundList(list, kind){
     const st = state.topicStats[kind]||{};
-    const fresh = shuffleArr(list.filter(q=>!(st[q.id]&&st[q.id].n>0)));
-    const done = shuffleArr(list.filter(q=>st[q.id]&&st[q.id].n>0));
-    return fresh.concat(done).slice(0, TOPIC_ROUND);
+    const isDone = q=>st[q.id]&&st[q.id].n>0;
+    // 「第幾章／第幾條」題最低優先：一般題沒做過的 → 章條題沒做過的 → 一般題做過的 → 章條題做過的
+    const part = (loc, done)=>shuffleArr(list.filter(q=>isLocQ(q)===loc && !!isDone(q)===done));
+    return [...part(false,false), ...part(true,false), ...part(false,true), ...part(true,true)].slice(0, TOPIC_ROUND);
   }
   // 練習題組（quizPool）全 App 共用一組，同時只能進行一輪；其他分頁有一輪進行中時顯示這個提示
   const ROUND_TABS = {chapter:["quiz","練習"], random20:["quiz","練習"], wrongreview:["wrong","錯題複習"], examAwrong:["examA","甲業錯題複習"],
@@ -2445,7 +2452,7 @@
         persist("topicStats");
         return;
       }
-      recordWrongMapOutcome(current.id, correct);
+      if(!isLocQ(current)) recordWrongMapOutcome(current.id, correct);
       // 錯題本的章節練習（_rv='ch'）／全章節隨機（_rv='mix'）另外累計作答與答對次數，給錯題本算刷題率、正確率
       const rec = state.wrongMap[current.id];
       if(current._rv && rec){
