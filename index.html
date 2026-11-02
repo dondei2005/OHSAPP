@@ -494,7 +494,7 @@
     const answer = t==='multi'
       ? idx.map((orig,newI)=>correctSet.has(orig)?newI:-1).filter(i=>i>=0)
       : idx.indexOf(q.answer);
-    return {...q, options, answer};
+    return {...q, options, answer, _ord:idx};
   }
   // 正確率依目標 ACC_TARGET% 分級：達標／加強中／待加強，配合圖示＋文字，不單靠顏色辨識（2026-10-27 目標由85%改80%）
   const ACC_TARGET = 80;
@@ -610,6 +610,7 @@
     saveData("examB", state.examB);
     state.examBHistory = loadData("examBHistory", []);
     state.examBSeenIds = loadData("examBSeenIds", {});
+    restoreExamBRound();
     // 被移除的重複題，本機已有的錯題／刷題紀錄併到保留的那題
     applyDupAlias(state);
     saveData("wrongMap", state.wrongMap);
@@ -1550,20 +1551,78 @@
     state.examBHistory.forEach(h=>{ correct+=h.correct; total+=h.total; });
     return {correct, total, pct: total>0?Math.round(correct/total*100):0};
   }
+  // 2026-11-02 乙級模擬考可中斷：進行中的一輪存在 localStorage「examBRound」（只存本機，不上雲端），
+  // 題目只存 id 和選項順序（_ord），重開時用目前題庫重建，題庫修正後也會套用。
+  // 「⏸ 暫停」回總覽、下次從同一題繼續；「結束這輪」把已作答的題數記入成績（標示中斷）。
+  function saveExamBRound(){
+    if(!state.examBPool.length){ saveData("examBRound", null); return; }
+    saveData("examBRound", {pool: state.examBPool.map(q=>({id:q.id, ord:q._ord||null})), idx: state.examBIdx,
+      stats: state.examBStats, selected: state.examBSelected, revealed: state.examBRevealed, paused: !!state.examBPaused});
+  }
+  function restoreExamBRound(){
+    const r = loadData("examBRound", null);
+    if(!r || !Array.isArray(r.pool) || !r.pool.length) return;
+    const byId = {}; state.examB.forEach(q=>{ byId[q.id] = q; });
+    const pool = [];
+    r.pool.forEach(p=>{
+      const q = byId[p.id]; if(!q) return;
+      const t = q.type||'single';
+      if(Array.isArray(p.ord) && Array.isArray(q.options) && p.ord.every(k=>k>=0 && k<q.options.length)){
+        const cs = new Set(t==='multi' ? q.answer : [q.answer]);
+        pool.push({...q, options:p.ord.map(k=>q.options[k]), _ord:p.ord,
+          answer: t==='multi' ? p.ord.map((o,n)=>cs.has(o)?n:-1).filter(n=>n>=0) : p.ord.indexOf(q.answer)});
+      } else pool.push(q);
+    });
+    if(!pool.length) return;
+    state.examBPool = pool;
+    state.examBIdx = Math.min(r.idx||0, pool.length-1);
+    state.examBStats = r.stats || {correct:0,total:0};
+    state.examBSelected = r.selected===undefined ? null : r.selected;
+    state.examBRevealed = !!r.revealed;
+    state.examBPaused = true;   // 重開 App 一律先回總覽，按「繼續」再進題目
+  }
+  function finishExamBRound(){
+    if(state.examBStats.total>0){
+      const partial = state.examBStats.total < state.examBPool.length;
+      state.examBHistory = [{date:todayStr(), correct:state.examBStats.correct, total:state.examBStats.total,
+        ...(partial?{of:state.examBPool.length}:{})}, ...state.examBHistory].slice(0,50);
+      persist("examBHistory");
+      runCloudSync({silent:true});
+    }
+    state.examBLast = {...state.examBStats};
+    state.examBPool=[]; state.examBIdx=0; state.examBSelected=null; state.examBRevealed=false; state.examBPaused=false;
+    state.examBStats={correct:0,total:0};
+    saveExamBRound();
+  }
   function renderExamB(){
     if(state.examB.length===0){
       return `<div class="empty-hint">乙級學科考古題庫尚未載入，請確認題庫檔案已正確引入。</div>`;
     }
-    if(state.examBPool.length===0){
-      const seenCount = state.examB.filter(q=>state.examBSeenIds[q.id]).length;
-      const coveragePct = state.examB.length>0 ? Math.round(seenCount/state.examB.length*100) : 0;
+    const inRound = state.examBPool.length>0;
+    if(!inRound || state.examBPaused){
+      const active = state.examB.filter(isActiveQ);
+      const seenCount = active.filter(q=>state.examBSeenIds[q.id]).length;
+      const coveragePct = active.length>0 ? Math.round(seenCount/active.length*100) : 0;
       const acc = computeExamBAccuracy();
+      // 正確率含暫停中那一輪已作答的題目
+      const accC = acc.correct + (inRound ? state.examBStats.correct : 0), accT = acc.total + (inRound ? state.examBStats.total : 0);
+      const accPct = accT>0 ? Math.round(accC/accT*100) : null;
+      const st = accStatus(accPct);
+      const last = state.examBLast;
       return `
         <div class="section-title">22200 職業安全衛生管理乙級 學科考古題模擬考</div>
-        <div class="section-desc">題庫共 ${state.examB.length} 題，每次模擬考隨機抽 50 題作答，優先抽還沒刷過的題目、刷完一輪才會重複；答錯會自動送入錯題本，跟乙級章節練習共用同一本錯題本。</div>
-        <div class="section-desc">已刷過 ${seenCount} / ${state.examB.length} 題（${coveragePct}%）　累計正確率 ${acc.pct}%（${acc.correct}/${acc.total}）</div>
-        <button class="primary-btn" id="startExamBBtn">📝 開始模擬考（50 題）</button>
-        ${state.examBStats.total>0 ? `<div class="result-card">上一輪結果：${state.examBStats.correct} / ${state.examBStats.total} 答對</div>` : ""}
+        <div class="section-desc">題庫共 ${active.length} 題，每次模擬考隨機抽 50 題作答，優先抽還沒刷過的題目、刷完一輪才會重複；答錯會自動送入錯題本，跟乙級章節練習共用同一本錯題本。<b>做到一半可以按「⏸ 暫停」，下次從同一題繼續</b>，關掉 App 也會保留。</div>
+        <div style="display:flex;justify-content:space-around;background:#fff;border:1px solid #E7E1D4;border-radius:14px;padding:14px;">
+          ${svgRing(coveragePct, "#5B6B82", `乙級刷題 ${seenCount}/${active.length} 題`)}
+          ${svgRing(accPct, st.color, accPct===null ? "尚無作答記錄" : `${st.icon} 乙級正確率 ${accC}/${accT}`)}
+        </div>
+        <div class="section-desc" style="margin-top:0;">目標：刷題 100%、正確率 ${ACC_TARGET}%</div>
+        ${inRound ? `
+          <div class="result-card">⏸ 有一輪模擬考暫停中：已作答 ${state.examBStats.total} / ${state.examBPool.length} 題，答對 ${state.examBStats.correct} 題</div>
+          <button class="primary-btn" id="resumeExamBBtn">▶ 繼續模擬考（從第 ${state.examBIdx+1} 題）</button>
+          <button class="primary-btn" id="endExamBBtn" style="background:#8a8275;margin-top:8px;">結束這輪（已作答 ${state.examBStats.total} 題記入成績）</button>`
+        : `<button class="primary-btn" id="startExamBBtn">📝 開始模擬考（50 題）</button>
+          ${last && last.total>0 ? `<div class="result-card">上一輪結果：${last.correct} / ${last.total} 答對</div>` : ""}`}
         ${renderExamBHistory()}
       `;
     }
@@ -1592,6 +1651,7 @@
         ${state.examBRevealed ? renderExplain(current) : ""}
         ${state.examBRevealed ? `<button class="primary-btn" id="nextExamBBtn">${state.examBIdx+1<state.examBPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
+      <button class="primary-btn" id="pauseExamBBtn" style="background:#8a8275;margin-top:8px;">⏸ 暫停（已作答 ${state.examBStats.total} 題，下次從這裡繼續）</button>
     `;
   }
   function renderExamBHistory(){
@@ -1600,7 +1660,7 @@
       const pct = h.total>0 ? Math.round(h.correct/h.total*100) : 0;
       return `<div class="wrong-top" style="justify-content:space-between;">
         <span class="q-chapter">${esc(h.date)}</span>
-        <span>${h.correct} / ${h.total} 答對（${pct}%）</span>
+        <span>${h.correct} / ${h.total} 答對（${pct}%）${h.of?`<span style="color:#9a9488;">・中斷（${h.total}/${h.of} 題）</span>`:""}</span>
       </div>`;
     }).join("");
     return `<div class="section-title" style="margin-top:18px;">模擬考成績記錄</div>${rows}`;
@@ -2582,9 +2642,20 @@
         pool = [...shuffledUnseen, ...shuffledSeen].slice(0,50);
       }
       state.examBPool = pool.map(presentQuestion);
-      state.examBIdx=0; state.examBSelected=null; state.examBRevealed=false; state.examBStats={correct:0,total:0};
+      state.examBIdx=0; state.examBSelected=null; state.examBRevealed=false; state.examBStats={correct:0,total:0}; state.examBPaused=false;
+      saveExamBRound();
       render();
     });
+    const pauseExamBBtn = document.getElementById("pauseExamBBtn");
+    if(pauseExamBBtn) pauseExamBBtn.addEventListener("click",()=>{
+      // 已看過解答的題目，下次直接從下一題開始
+      if(state.examBRevealed && state.examBIdx+1<state.examBPool.length){ state.examBIdx++; state.examBSelected=null; state.examBRevealed=false; }
+      state.examBPaused = true; saveExamBRound(); runCloudSync({silent:true}); render(); window.scrollTo(0,0);
+    });
+    const resumeExamBBtn = document.getElementById("resumeExamBBtn");
+    if(resumeExamBBtn) resumeExamBBtn.addEventListener("click",()=>{ state.examBPaused = false; saveExamBRound(); render(); window.scrollTo(0,0); });
+    const endExamBBtn = document.getElementById("endExamBBtn");
+    if(endExamBBtn) endExamBBtn.addEventListener("click",()=>{ finishExamBRound(); render(); });
     root.querySelectorAll("[data-exambchoose]").forEach(el=>el.addEventListener("click",()=>{
       if(state.examBRevealed) return;
       const i = parseInt(el.dataset.exambchoose,10);
@@ -2599,6 +2670,7 @@
       const at = sel.indexOf(i);
       if(at>=0) sel.splice(at,1); else sel.push(i);
       state.examBSelected = sel;
+      saveExamBRound();
       render();
     }));
     const examBMultiSubmitBtn = document.getElementById("examBMultiSubmitBtn");
@@ -2617,18 +2689,15 @@
       persist("examBSeenIds");
       markStudiedToday();
       recordWrongMapOutcome(current.id, correct);
+      saveExamBRound();
       render();
     }
     const nextExamBBtn = document.getElementById("nextExamBBtn");
     if(nextExamBBtn) nextExamBBtn.addEventListener("click",()=>{
       if(state.examBIdx+1<state.examBPool.length){
         state.examBIdx++; state.examBSelected=null; state.examBRevealed=false;
-      } else {
-        state.examBHistory = [{date:todayStr(), correct:state.examBStats.correct, total:state.examBStats.total}, ...state.examBHistory].slice(0,50);
-        persist("examBHistory");
-        runCloudSync({silent:true});
-        state.examBPool=[];
-      }
+        saveExamBRound();
+      } else finishExamBRound();
       render();
     });
 
