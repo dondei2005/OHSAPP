@@ -2054,16 +2054,41 @@
     } else { s.w++; s.bad = {l:li, r:rj}; }
     s.selL = null; s.selR = null;
     if(Object.keys(s.doneL).length === m.pairs.length){
-      s.stage = 'done';
-      const all = state.topicStats.mnemo = state.topicStats.mnemo || {};
-      const r = all[m.id] || {n:0,c:0,w:0};
-      all[m.id] = {n:(r.n||0)+1, c:(r.c||0)+s.c, w:(r.w||0)+s.w, last:Math.round(s.c/(s.c+s.w)*100), at:todayStr()};
-      persist("topicStats");
+      s.fills = mnemoFills(m);
+      if(s.fills.length){ s.stage = 'fill'; s.fi = 0; s.fAns = null; s.fOk = false; }
+      else mnemoFinish();
     }
+  }
+  // 配對完的填空：有 fills 就照 fills（最多 6 題，順序打亂）；沒有的話，左邊都是 1～2 個字的組自動出 3 題「這項是口訣哪個字」
+  function mnemoFills(m){
+    if(m.fills && m.fills.length) return shuffleArr(m.fills.slice()).slice(0,6);
+    if(m.pairs.some(p=>p[0].length>2)) return [];
+    return shuffleArr(m.pairs.map((_,i)=>i)).slice(0,3).map(i=>{
+      const item = m.pairs[i][1];
+      return {q:`「${m.title}」口訣「${m.mnemonic}」中，「${mnemoItem(item)}」是哪一個字？`,
+        a: m.pairs.filter(p=>p[1]===item).map(p=>p[0])};
+    });
+  }
+  function mnemoFillOk(f, input){
+    const v = normalizeFillAnswer(input);
+    if(!v) return false;
+    return f.a.some(a=>{
+      const n = normalizeFillAnswer(a);
+      if(/^\d+(\.\d+)?$/.test(n)){ const x = v.match(/\d*\.?\d+/); return !!x && Math.abs(parseFloat(x[0])-parseFloat(n))<1e-9; }
+      return v===n;
+    });
+  }
+  function mnemoFinish(){
+    const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
+    s.stage = 'done';
+    const all = state.topicStats.mnemo = state.topicStats.mnemo || {};
+    const r = all[m.id] || {n:0,c:0,w:0};
+    all[m.id] = {n:(r.n||0)+1, c:(r.c||0)+s.c, w:(r.w||0)+s.w, last:Math.round(s.c/(s.c+s.w)*100), at:todayStr()};
+    persist("topicStats");
   }
   function renderMnemoRound(){
     const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
-    const head = `<div class="quiz-progress">🔗 口訣配對・${esc(m.law)} · 答對 ${s.c} · 配錯 ${s.w}</div>`;
+    const head = `<div class="quiz-progress">🔗 口訣配對・${esc(m.law)} · 答對 ${s.c} · 答錯 ${s.w}</div>`;
     const exitBtn = `<button class="primary-btn" id="mnExitBtn" style="background:#8a8275;margin-top:8px;">${s.stage==='done'?'回口訣清單':'🚪 回口訣清單（這組還沒做完，不記錄）'}</button>`;
     if(s.stage==='choice'){
       return `${head}<div class="quiz-card">
@@ -2099,11 +2124,23 @@
         <div class="section-desc" style="margin-top:8px;">已配對 ${Object.keys(s.doneL).length} / ${m.pairs.length}</div>
       </div>${exitBtn}`;
     }
+    if(s.stage==='fill'){
+      const f = s.fills[s.fi], last = s.fi===s.fills.length-1;
+      return `${head}<div class="quiz-card">
+        <div class="quiz-chapter-tag">填空 ${s.fi+1} / ${s.fills.length}</div>
+        <div class="quiz-question">${esc(f.q)}</div>
+        <input class="text-input" id="mnFillInput" placeholder="輸入答案" autocomplete="off" ${f.a.every(a=>/^[\d.]+$/.test(a))?'inputmode="decimal"':''} value="${esc(s.fAns||"")}" ${s.fAns!==null?'disabled':''} style="margin:8px 0 10px;font-size:18px;">
+        ${s.fAns===null ? `<button class="primary-btn" id="mnFillBtn">提交答案</button>`
+          : `<div class="result-card" style="margin-top:0;">${s.fOk?'✅ 答對了':'❌ 正確答案：'+esc(f.a[0])}</div>
+            ${f.tip?`<div class="section-desc" style="margin-top:6px;">${esc(f.tip)}</div>`:""}
+            <button class="primary-btn" id="mnFillNext" style="margin-top:10px;">${last?'看結果 →':'下一題 →'}</button>`}
+      </div>${exitBtn}`;
+    }
     const acc = Math.round(s.c/(s.c+s.w)*100), st = accStatus(acc);
     return `${head}<div class="quiz-card">
       <div class="quiz-chapter-tag">完成</div>
       <div class="quiz-question">${esc(m.title)}</div>
-      <div class="result-card" style="margin-top:0;">${st.icon} 這組正確率 ${acc}%（答對 ${s.c}、配錯 ${s.w}）</div>
+      <div class="result-card" style="margin-top:0;">${st.icon} 這組正確率 ${acc}%（答對 ${s.c}、答錯 ${s.w}）</div>
       <div class="mn-phrase" style="margin-top:10px;">${esc(m.mnemonic)}</div>
       <table class="mn-table">${m.pairs.map(p=>`<tr><td>${esc(p[0])}</td><td>${esc(p[1])}</td></tr>`).join("")}</table>
       ${m.note?`<div class="section-desc">${esc(m.note)}</div>`:""}
@@ -2118,7 +2155,7 @@
     return `
       <div class="ov-card">
         <div class="section-title" style="margin-top:0;">🔗 口訣配對<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${MNEMONICS.length} 組</span></div>
-        <div class="section-desc" style="margin-top:2px;">先選出這個條文的口訣，再把口訣的每個字配對到條文項目，像連連看。答對、配錯都會計入正確率。<b>目標：每組都做過、正確率 ${ACC_TARGET}%</b></div>
+        <div class="section-desc" style="margin-top:2px;">先選出這個條文的口訣，再把口訣的每個字配對到條文項目，像連連看，最後做幾題填空。答對、答錯都會計入正確率。<b>目標：每組都做過、正確率 ${ACC_TARGET}%</b></div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(p.cov, "#5B6B82", `做過 ${p.seen}/${p.total} 組`)}
           ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : `${allSt.icon} 正確率 ${p.accC}/${p.accT}`)}
@@ -2326,6 +2363,26 @@
     root.querySelectorAll("[data-mnr]").forEach(el=>el.addEventListener("click",()=>{
       const s = state.mnemo; s.bad = null; s.selR = (s.selR===+el.dataset.mnr) ? null : +el.dataset.mnr; mnemoTry(); render();
     }));
+    const mnFillInput = document.getElementById("mnFillInput");
+    const mnFillSubmit = ()=>{
+      const s = state.mnemo, f = s.fills[s.fi], v = mnFillInput.value;
+      if(!v.trim()) return;
+      s.fAns = v; s.fOk = mnemoFillOk(f, v);
+      if(s.fOk) s.c++; else s.w++;
+      render();
+    };
+    const mnFillBtn = document.getElementById("mnFillBtn");
+    if(mnFillBtn) mnFillBtn.addEventListener("click", mnFillSubmit);
+    if(mnFillInput && !mnFillInput.disabled){
+      mnFillInput.addEventListener("keydown", e=>{ if(e.key==="Enter") mnFillSubmit(); });
+      mnFillInput.focus();
+    }
+    const mnFillNext = document.getElementById("mnFillNext");
+    if(mnFillNext) mnFillNext.addEventListener("click",()=>{
+      const s = state.mnemo;
+      if(s.fi < s.fills.length-1){ s.fi++; s.fAns = null; s.fOk = false; } else mnemoFinish();
+      render();
+    });
     const mnExitBtn = document.getElementById("mnExitBtn");
     if(mnExitBtn) mnExitBtn.addEventListener("click",()=>{ state.mnemo = null; render(); window.scrollTo(0,0); });
     root.querySelectorAll("[data-reffilter]").forEach(el=>el.addEventListener("click",()=>{
