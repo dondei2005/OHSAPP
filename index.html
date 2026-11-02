@@ -12,6 +12,7 @@
 <script src="./study_tips.js"></script>
 <script src="./dedup.js"></script>
 <script src="./topic_sets.js"></script>
+<script src="./calc_variants.js"></script>
 <script src="./mnemonics.js"></script>
 <script src="./free_questions.js"></script>
 </head>
@@ -433,7 +434,17 @@
     return out;
   }
   // 填空題判斷對錯：數字填空題只比對數字序列，一般填空題沿用原本的模糊比對
+  // 計算題「數字變化題」（calc_variants.js）：取作答的第一個數字，和公式算出的答案差在容許誤差內就算對；
+  // 問「幾分之一」的題目（cvDenom）填分母或「1/分母」都算對
+  function calcVarCorrect(q, input){
+    const s = toHalfWidthNum(String(input||"")).replace(/[−－—–]/g,"-").replace(/,/g,"");
+    const xs = [], fr = s.match(/(-?\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)/);
+    if(fr){ const a = +fr[1], b = +fr[2]; if(b) xs.push(a/b); if(q.cvDenom && a) xs.push(b/a); }
+    else { const m = s.match(/-?\d+(?:\.\d+)?/); if(m) xs.push(+m[0]); }
+    return xs.some(x=>Math.abs(x-q.cvAns) <= q.cvTol+1e-9);
+  }
   function isFillCorrect(q, input){
+    if(q._cv) return calcVarCorrect(q, input);
     if(q.numeric){
       const a = extractNumbers(q.answer), b = extractNumbers(input);
       return a.length>0 && a.length===b.length && a.every((v,i)=>v===b[i]);
@@ -1032,7 +1043,9 @@
     const numCount = current.numeric ? extractNumbers(current.answer).length : 0;
     const hint = current.numeric && !state.quizRevealed
       ? `<div class="section-desc" style="margin:0 0 8px;">答案格式：<b style="color:#2B2620;">${esc(current.numHint)}</b>　${numCount>1?'（依序輸入 '+numCount+' 個數字，用空格隔開）':'（輸入數字即可）'}</div>` : "";
-    const input = hint + `<input class="text-input" id="fillInput" placeholder="${current.numeric?'輸入數字':'輸入答案'}" ${numCount===1?'inputmode="decimal"':''} autocomplete="off" value="${esc(state.quizFillInput)}" ${state.quizRevealed?'disabled':''} style="margin-bottom:10px;font-size:18px;">`;
+    const cvHint = current._cv && !state.quizRevealed
+      ? `<div class="section-desc" style="margin:0 0 8px;">輸入數字即可${current.cvUnit && !current.cvUnit.startsWith("（") ? `（單位：<b style="color:#2B2620;">${esc(current.cvUnit)}</b>）` : ""}，小數尾數有一點誤差也算對</div>` : "";
+    const input = hint + cvHint + `<input class="text-input" id="fillInput" placeholder="${current.numeric||current._cv?'輸入數字':'輸入答案'}" ${numCount===1||(current._cv&&current.cvAns>=0)?'inputmode="decimal"':''} autocomplete="off" value="${esc(state.quizFillInput)}" ${state.quizRevealed?'disabled':''} style="margin-bottom:10px;font-size:18px;">`;
     const submit = !state.quizRevealed ? `<button class="primary-btn" id="fillSubmitBtn" style="margin-bottom:10px;">提交答案</button>` : "";
     const result = state.quizRevealed ? `<div class="q-answer" style="margin-bottom:10px;">正確答案：${esc(current.answer)}　${state.quizFillCorrect?'（你答對了 ✓）':'（你的答案：'+esc(state.quizFillInput||'（空白）')+'）'}</div>` : "";
     return input + submit + result;
@@ -1602,8 +1615,8 @@
   // 計算／年份條號分頁的作答累計只會增加，兩邊同一題取作答次數較多的那筆
   function mergeTopicStats(a, b){
     // mnemo（口訣配對）每組記完成次數 n，同樣取 n 較大的那筆
-    const out = {calc:{}, ref:{}, mnemo:{}};
-    ["calc","ref","mnemo"].forEach(k=>{
+    const out = {calc:{}, ref:{}, mnemo:{}, calcv:{}};
+    ["calc","ref","mnemo","calcv"].forEach(k=>{
       const x = (a||{})[k]||{}, y = (b||{})[k]||{};
       out[k] = {...y};
       Object.keys(x).forEach(id=>{ if(!y[id] || (x[id].n||0)>=(y[id].n||0)) out[k][id] = x[id]; });
@@ -1782,7 +1795,26 @@
       desc:"從乙級題庫挑出需要計算，或考計算公式、計算規則的題目，例如失能傷害頻率／嚴重率、噪音劑量、WBGT、換氣量、動壓風速、有機溶劑容許消費量。"},
     ref:{icon:"📅", name:"年份・條號題", rank:"次要練習",
       desc:"從乙級題庫挑出考年限、週期（每幾年）、紀錄保存年限、施行年份，以及題目或選項涉及法規條號的題目。"},
+    calcv:{icon:"🔀", name:"數字變化題", rank:"計算題延伸", desc:""},
   };
+  // 數字變化題（calc_variants.js）：觀念同原計算題，每次出題換數字、答案由公式現算。
+  // 作答累計存 state.topicStats.calcv[題型key]（n、c），不進錯題本、不寫 quizHistory。
+  const CALC_VARIANTS = window.CALC_VARIANTS || {list:[], build:()=>null};
+  function calcVarProg(){
+    const st = state.topicStats.calcv||{}, list = CALC_VARIANTS.list;
+    let seen=0, accC=0, accT=0;
+    list.forEach(v=>{ const r = st[v.key]; if(r && r.n>0){ seen++; accT+=r.n; accC+=r.c||0; } });
+    const total = list.length;
+    return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC, accT, acc: accT>0?Math.round(accC/accT*100):null};
+  }
+  function renderCalcVarBox(){
+    if(!CALC_VARIANTS.list.length) return "";
+    const p = calcVarProg(), st = accStatus(p.acc);
+    return `<div class="sub-title">🔀 數字變化題</div>
+      <div class="section-desc" style="margin-top:0;">觀念跟原本的計算題一樣，但<b>每次出題數字都不同</b>、答案用公式現算，背答案沒用，要真的會算。共 ${p.total} 種題型（失能傷害頻率、換氣量、動壓風速、噪音劑量、WBGT…）。作答後有逐步算式；答錯不會進錯題本。</div>
+      <div class="section-desc">練過 ${p.seen}/${p.total} 種題型${p.acc===null?"":`・${st.icon} 正確率 ${p.acc}%（${p.accC}/${p.accT}）`}</div>
+      <button class="primary-btn" id="startCalcVarBtn" style="margin:6px 0 4px;background:#2f6b4f;">🔀 數字變化題 ${Math.min(TOPIC_ROUND,p.total)} 題（沒練過的題型優先）</button>`;
+  }
   const TOPIC_ROUND = 20;
   function topicIdSet(kind, filter){
     if(kind==="calc") return new Set(TOPIC_SETS.calc);
@@ -1822,7 +1854,7 @@
   }
   // 練習題組（quizPool）全 App 共用一組，同時只能進行一輪；其他分頁有一輪進行中時顯示這個提示
   const ROUND_TABS = {chapter:["quiz","練習"], random20:["quiz","練習"], wrongreview:["wrong","錯題複習"], examAwrong:["examA","甲業錯題複習"],
-    numeric:["numeric","數字填空"], calc:["calc","計算題"], ref:["ref","年份・條號題"]};
+    numeric:["numeric","數字填空"], calc:["calc","計算題"], calcv:["calc","數字變化題"], ref:["ref","年份・條號題"]};
   function otherRoundNotice(){
     const [tab, name] = ROUND_TABS[state.quizMode] || ["quiz","練習"];
     return `<div class="result-card">目前有一輪「${name}」還沒做完（第 ${state.quizIdx+1} / ${state.quizPool.length} 題），要先結束那一輪才能開始新的練習。</div>
@@ -1833,7 +1865,7 @@
     const m = TOPIC_META[kind];
     const current = state.quizPool[state.quizIdx];
     const qtype = current.type || "single";
-    const scope = current._tpCh ? topicChLabel(current._tpCh) : '全章節隨機';
+    const scope = current._cv ? current.cvTitle : current._tpCh ? topicChLabel(current._tpCh) : '全章節隨機';
     return `
       <div class="quiz-progress">${m.icon} ${m.name}・${esc(scope)} 第 ${state.quizIdx+1} / ${state.quizPool.length} 題 · 答對 ${state.quizStats.correct}</div>
       <div class="quiz-card">
@@ -1851,6 +1883,7 @@
   }
   function renderTopic(kind){
     if(state.quizPool.length>0 && state.quizMode===kind) return renderTopicQuiz(kind);
+    if(state.quizPool.length>0 && kind==="calc" && state.quizMode==="calcv") return renderTopicQuiz("calcv");
     if(state.quizPool.length>0) return otherRoundNotice();
     const m = TOPIC_META[kind];
     const d = computeTopic(kind);
@@ -1865,7 +1898,7 @@
     const reached = d.chapters.filter(c=>c.prog.cov>=100 && c.prog.acc!==null && c.prog.acc>=ACC_TARGET).length;
     const sortBtn = (key,label)=>`<button class="toggle-btn ${state.topicSort===key?'active':''}" data-topicsort="${key}" style="padding:6px 0;font-size:12px;">${label}</button>`;
     const filterBtn = (key,label)=>`<button class="toggle-btn ${state.refFilter===key?'active':''}" data-reffilter="${key}" style="padding:6px 0;font-size:12px;">${label}（${topicQuestions("ref", key).length}）</button>`;
-    const lastRound = (state.quizMode===kind && state.quizStats.total>0)
+    const lastRound = ((state.quizMode===kind || (kind==="calc" && state.quizMode==="calcv")) && state.quizStats.total>0)
       ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : "";
     const filterRow = kind==="ref"
       ? `<div class="toggle-row" style="margin:8px 0 0;">${filterBtn('all','全部')}${filterBtn('year','年份')}${filterBtn('art','條號')}</div>` : "";
@@ -1881,6 +1914,7 @@
         </div>
         <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#3F7D5C;"></i>正確率（✅≥${ACC_TARGET}% ⚠️60~${ACC_TARGET-1}% 🔥<60%）</span><span><i class="ov-legend-target"></i>${ACC_TARGET}%目標線</span></div>
         ${d.all.length>0 ? `<button class="primary-btn" data-topicmix="${kind}" style="margin:10px 0 4px;">🎲 全章節隨機 ${Math.min(TOPIC_ROUND,d.all.length)} 題</button>` : `<div class="empty-hint">目前沒有符合的題目。</div>`}
+        ${kind==="calc" ? renderCalcVarBox() : ""}
         <div class="sub-title">各章節（雙達標 ${reached}/${d.chapters.length} 章）</div>
         <div class="toggle-row" style="margin:6px 0 8px;">
           ${sortBtn('chapter','依章節')}${sortBtn('cov','刷題率低→高')}${sortBtn('acc','正確率低→高')}
@@ -2141,6 +2175,24 @@
       persistQuizState();
       render(); window.scrollTo(0,0);
     }
+    // 數字變化題：沒練過的題型優先，其餘隨機；章節標籤沿用對應原題的章節
+    const startCalcVarBtn = document.getElementById("startCalcVarBtn");
+    if(startCalcVarBtn) startCalcVarBtn.addEventListener("click",()=>{
+      const st = state.topicStats.calcv||{}, keys = CALC_VARIANTS.list.map(v=>v.key);
+      const order = shuffleArr(keys.filter(k=>!(st[k]&&st[k].n>0))).concat(shuffleArr(keys.filter(k=>st[k]&&st[k].n>0)));
+      const byId = {};
+      [...state.questions, ...state.examB].forEach(q=>{ if(!byId[q.id]) byId[q.id] = q; });
+      state.quizPool = order.slice(0, TOPIC_ROUND).map(k=>{
+        const q = CALC_VARIANTS.build(k), v = CALC_VARIANTS.list.find(x=>x.key===k);
+        const src = v.src.map(id=>byId[id]).find(Boolean);
+        return {...q, chapter: src ? src.chapter : null};
+      });
+      state.quizMode = "calcv";
+      state.quizIdx=0; state.quizSelected=null; state.quizRevealed=false; state.quizStats={correct:0,total:0};
+      state.quizMultiSelected=[]; state.quizFillInput=""; state.quizFillCorrect=false;
+      persistQuizState();
+      render(); window.scrollTo(0,0);
+    });
     root.querySelectorAll("[data-topicch]").forEach(el=>el.addEventListener("click",()=>{
       const [kind, key] = el.dataset.topicch.split("|");
       startTopicRound(kind, topicQuestions(kind).filter(q=>topicChKey(q)===key), key);
@@ -2221,6 +2273,14 @@
       correct = correct || isFreeQ(current);
       markStudiedToday();
       state.quizStats = {correct: state.quizStats.correct+(correct?1:0), total: state.quizStats.total+1};
+      // 數字變化題不是題庫裡的題目：只記在 topicStats.calcv，不進錯題本、不算刷題
+      if(current._cv){
+        const st = state.topicStats.calcv = state.topicStats.calcv || {};
+        const r = st[current._cv] || {n:0, c:0};
+        st[current._cv] = {n:r.n+1, c:r.c+(correct?1:0)};
+        persist("topicStats");
+        return;
+      }
       recordWrongMapOutcome(current.id, correct);
       // 錯題本的章節練習（_rv='ch'）／全章節隨機（_rv='mix'）另外累計作答與答對次數，給錯題本算刷題率、正確率
       const rec = state.wrongMap[current.id];
