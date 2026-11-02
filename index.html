@@ -14,7 +14,7 @@
 <script src="./topic_sets.js"></script>
 <script src="./calc_variants.js"></script>
 <script src="./practical_questions.js"></script>
-<script src="./mnemonics.js"></script>
+<script src="./mnemonics.js?v=20261103"></script>
 <script src="./free_questions.js"></script>
 </head>
 <body>
@@ -2222,6 +2222,10 @@
     if(state.mnemo) return renderMnemoRound();
     const p = mnemoProg(MNEMONICS), allSt = accStatus(p.acc);
     const reached = MNEMONICS.filter(m=>{ const r = mnemoProg([m]); return r.cov>=100 && r.acc!==null && r.acc>=ACC_TARGET; }).length;
+    // 2026-11-03 公式／單位配對組（kind:"formula"）另列一區，放在口訣清單前面
+    const formulas = MNEMONICS.filter(m=>m.kind==="formula");
+    const row = m=>{ const r = mnemoStat(m.id), mp = mnemoProg([m]);
+      return overviewRow(m.law, `${m.title}${r.n>0?`（練過 ${r.n} 次）`:''}`, {...mp, seen:mp.seen, total:1}, `data-mnstart="${m.id}"`); };
     return `
       <div class="ov-card">
         <div class="section-title" style="margin-top:0;">🔗 口訣配對<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${MNEMONICS.length} 組</span></div>
@@ -2231,12 +2235,12 @@
           ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : `${allSt.icon} 正確率 ${p.accC}/${p.accT}`)}
         </div>
         ${MNEMONICS.length ? `<button class="primary-btn" data-mnstart="${nextMnemoId(null)}" style="margin:10px 0 4px;">🎲 下一組（沒做過的優先，再來是正確率最低的）</button>` : `<div class="empty-hint">找不到口訣資料（mnemonics.js）。</div>`}
+        <div class="sub-title">🧮 公式與單位配對（${formulas.length} 組）</div>
+        <div class="section-desc" style="margin-top:0;">把公式配對到名稱、把單位配對到物理量，再做幾題計算填空。</div>
+        ${formulas.map(row).join("")}
         <div class="sub-title">各組口訣（達標 ${reached}/${MNEMONICS.length} 組）</div>
         <div class="section-desc" style="margin-top:0;">點任一組開始練習。</div>
-        ${MNEMONICS.map(m=>{
-          const r = mnemoStat(m.id), mp = mnemoProg([m]);
-          return overviewRow(m.law, `${m.title}${r.n>0?`（練過 ${r.n} 次）`:''}`, {...mp, seen:mp.seen, total:1}, `data-mnstart="${m.id}"`);
-        }).join("")}
+        ${MNEMONICS.filter(m=>m.kind!=="formula").map(row).join("")}
       </div>
     `;
   }
