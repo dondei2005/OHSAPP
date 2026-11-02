@@ -435,6 +435,9 @@
         const opt = q.options[q.answer];
         if(opt==null || String(opt).length>20 || reverseAsk.test(q.text)) return;
         if(!q.options.every(o=>hasDigit(o))) return;
+        // 每個選項的數字都一樣（例如都是「10⁶」「1人」），代表考的不是數字，挖空成數字填空會無從作答
+        const sig = o=>extractNumbers(o).join(",");
+        if(q.options.every(o=>sig(o)===sig(q.options[0]))) return;
         push(q, opt, origin);
       }
     });
