@@ -124,6 +124,18 @@ window.STUDY_TIPS = {
 "spwork": {
 "title": "口訣：特殊作業人員（教育訓練規則§14）",
 "body": "「陸火山海」\n・陸：鍋堆起車掛＝小型鍋爐、堆高機（1 t 以上）、起重機（0.5～未滿 3 t；斯達卡式未滿 1 t）、高空工作車、吊掛\n・火：乙炔熔接、火藥爆破\n・山：伐木（胸高直徑 70 cm 以上）、機械集材運材\n・海：高壓室內、潛水、油輪清艙\n陷阱：起重機 3 t 以上、一般鍋爐、第一種壓力容器 → 危險性機械／設備操作人員；電焊機不算。（口訣為 Claude 自編）"
+},
+"chemreg": {
+"title": "口訣：化學品法規範圍＋特化甲乙丙丁類",
+"body": "範圍「通識全都標、優先報備查、管制要許可」：通識（全部）＞優先管理（備查）＞管制性（約 18 種＝甲 12＋乙 6，許可 5 年）\n特化「甲禁、乙許、丙毒、丁腐」，數量 12、6、50（30＋2＋18）、8＝76\n・β-萘胺甲、α-萘胺乙；甲基汞是甲類；青／褐石綿甲類，其他石綿丙三\n・丁類「三酸三氣加光酚」：硝酸、硫酸、氯化氫、氨、CO、SO₂、光氣、酚\n・甲醛：考古題 examB-288 答丁類（修法前），講義列丙一\n（口訣為 Claude 自編）"
+},
+"orgsolv": {
+"title": "口訣：有機溶劑第一、二、三種",
+"body": "「一氯、三油、其餘二」\n・第一種 7 種：三氯甲烷、四氯乙烷、四氯化碳、二氯乙烯、二氯乙烷、三氯乙烯＋二硫化碳\n・第三種 7 種：汽油、煤焦油精、石油醚、石油精、輕油精、松節油、礦油精\n・其他（丙酮、甲苯、二甲苯、甲醇、乙醚）是第二種\n陷阱：四氯乙烯、二氯甲烷含氯但屬第二種。共 55 種。（口訣為 Claude 自編）"
+},
+"jiayi": {
+"title": "口訣：其他甲乙丙丁（危險性工作場所、火災）",
+"body": "危險性工作場所「甲化、乙炸、丙壓、丁營」\n・甲：石化裂解、危險物達量；乙：農藥合成、爆竹煙火、火藥；丙：鍋爐 500 m²、高壓氣體；丁：營造\n・甲乙丙做製程安全評估，丁做施工安全評估；丙 45 日前申請，甲、丁 30 日\n火災「普、油、電、金」：甲普通固體、乙油類與可燃氣體、丙電氣、丁金屬\n高壓氣體甲類製造事業單位：每日 30 m³ 以上（口訣為 Claude 自編）"
 }
 },
 "map": {
@@ -279,23 +291,28 @@ window.STUDY_TIPS = {
 "keep"
 ],
 "ch14-003": [
-"org1"
+"org1",
+"orgsolv"
 ],
 "ch14-004": [
-"org1"
+"org1",
+"orgsolv"
 ],
 "ch14-005": [
-"org1"
+"org1",
+"orgsolv"
 ],
 "ch14-006": [
-"org1"
+"org1",
+"orgsolv"
 ],
 "ch14-008": [
 "orgmix"
 ],
 "ch14-009": [
 "org1",
-"orgmix"
+"orgmix",
+"orgsolv"
 ],
 "ch14-012": [
 "org1"
@@ -736,7 +753,8 @@ window.STUDY_TIPS = {
 "keep"
 ],
 "chN31-021": [
-"org1"
+"org1",
+"orgsolv"
 ],
 "chN35-014": [
 "fall"
@@ -768,7 +786,8 @@ window.STUDY_TIPS = {
 "cycle"
 ],
 "examA-081": [
-"org1"
+"org1",
+"orgsolv"
 ],
 "examA-089": [
 "heat"
@@ -1014,7 +1033,8 @@ window.STUDY_TIPS = {
 "cycle"
 ],
 "examB-281": [
-"org1"
+"org1",
+"orgsolv"
 ],
 "examB-305": [
 "heat"
@@ -1502,6 +1522,201 @@ window.STUDY_TIPS = {
 ],
 "examA2-0485": [
 "spwork"
+],
+"ch14-026": [
+"chemreg"
+],
+"ch14-027": [
+"chemreg"
+],
+"ch14-028": [
+"chemreg"
+],
+"ch14-029": [
+"chemreg"
+],
+"ch14-030": [
+"chemreg"
+],
+"ch14-031": [
+"chemreg"
+],
+"ch14-032": [
+"chemreg"
+],
+"ch14-033": [
+"chemreg"
+],
+"ch14-034": [
+"chemreg"
+],
+"ch14-035": [
+"chemreg"
+],
+"ch14-036": [
+"chemreg"
+],
+"chN02-016": [
+"chemreg"
+],
+"chN13-001": [
+"chemreg"
+],
+"chN13-050": [
+"chemreg"
+],
+"chN13-051": [
+"chemreg"
+],
+"chN13-060": [
+"chemreg"
+],
+"chN31-028": [
+"chemreg"
+],
+"chN31-029": [
+"chemreg"
+],
+"chN31-030": [
+"chemreg"
+],
+"examB-275": [
+"chemreg"
+],
+"examB-288": [
+"chemreg"
+],
+"examB-289": [
+"chemreg"
+],
+"examB-290": [
+"chemreg"
+],
+"examB-291": [
+"chemreg"
+],
+"examB-293": [
+"chemreg"
+],
+"examB-W01-291": [
+"chemreg"
+],
+"examA-083": [
+"chemreg"
+],
+"examA2-0885": [
+"chemreg"
+],
+"ch14-007": [
+"orgsolv"
+],
+"chN31-022": [
+"orgsolv"
+],
+"examB-282": [
+"orgsolv"
+],
+"examB-283": [
+"orgsolv"
+],
+"examB-W01-371": [
+"orgsolv"
+],
+"examB-W03-273": [
+"orgsolv"
+],
+"examA-198": [
+"orgsolv"
+],
+"chN07-001": [
+"jiayi"
+],
+"chN07-006": [
+"jiayi"
+],
+"chN07-007": [
+"jiayi"
+],
+"chN07-008": [
+"jiayi"
+],
+"chN07-009": [
+"jiayi"
+],
+"chN07-010": [
+"jiayi"
+],
+"chN07-031": [
+"jiayi"
+],
+"chN07-033": [
+"jiayi"
+],
+"examA-276": [
+"jiayi"
+],
+"examA-277": [
+"jiayi"
+],
+"examA2-0182": [
+"jiayi"
+],
+"examA2-0854": [
+"jiayi"
+],
+"ch03-002": [
+"jiayi"
+],
+"ch03-006": [
+"jiayi"
+],
+"ch03-011": [
+"jiayi"
+],
+"ch03-018": [
+"jiayi"
+],
+"ch03-029": [
+"jiayi"
+],
+"ch03-030": [
+"jiayi"
+],
+"ch25-002": [
+"jiayi"
+],
+"ch25-014": [
+"jiayi"
+],
+"examB-W03-102": [
+"jiayi"
+],
+"examA-161": [
+"jiayi"
+],
+"examA2-0007": [
+"jiayi"
+],
+"examA2-0053": [
+"jiayi"
+],
+"examA2-0145": [
+"jiayi"
+],
+"examA2-0275": [
+"jiayi"
+],
+"examA2-0370": [
+"jiayi"
+],
+"examA2-0805": [
+"jiayi"
+],
+"ch13-002": [
+"jiayi"
+],
+"ch13-027": [
+"jiayi"
 ]
 }
 };
