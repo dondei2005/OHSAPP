@@ -503,6 +503,17 @@
   const WRONG_ACC_TARGET = 85, WRONG_ACC_WARN = 70;
   // 2026-11-03 錯題本整體正確率只算最近 WRONG_RECENT_N 題（章節練習＋全章節隨機），舊的作答自動滾出去
   const WRONG_RECENT_N = 200;
+  // 刷題總覽的整體正確率同樣只算最近 200 題（章節練習、綜合隨機、數字填空、乙級模擬考，跟原本累計的來源相同）
+  function pushRecent(key, id, correct){
+    state[key] = [...state[key], {t:new Date().toISOString(), id, c:correct?1:0}].slice(-WRONG_RECENT_N);
+    persist(key);
+  }
+  function mergeRecent(a, b){
+    const seen = new Set();
+    return [...(a||[]), ...(b||[])]
+      .filter(r=>{ const k = r.t+'|'+r.id; if(seen.has(k)) return false; seen.add(k); return true; })
+      .sort((x,y)=>String(x.t).localeCompare(String(y.t))).slice(-WRONG_RECENT_N);
+  }
   function accStatus(pct, target, warn){
     target = target || ACC_TARGET; warn = warn || 60;
     if(pct===null || pct===undefined) return {color:"#9a9488", icon:"—", label:"尚無記錄"};
@@ -530,7 +541,7 @@
     examDate:"",
     chapterState: Object.fromEntries(CHAPTERS.map(c=>[c.id,{status:"todo",notes:""}])),
     questions: [],
-    wrongMap: {}, wrongBook:"main", wrongRecent:[],
+    wrongMap: {}, wrongBook:"main", wrongRecent:[], ovRecent:[],
     studyLog: {},
     laws: LAW_SEED,
     quizChapterFilter:"all", quizPool:[], quizIdx:0, quizSelected:null, quizRevealed:false, quizStats:{correct:0,total:0},
@@ -589,6 +600,7 @@
     state.quizSeenIds = loadData("quizSeenIds", {});
     state.topicStats = {calc:{}, ref:{}, mnemo:{}, ...loadData("topicStats", {})};
     state.wrongRecent = loadData("wrongRecent", []);
+    state.ovRecent = loadData("ovRecent", []);
     // 記住上次選的章節範圍，回來時預設停在同一章，才看得到「本章節成績記錄」而不是被重置成「全部章節」
     state.quizChapterFilter = loadData("quizChapterFilter", "all");
     // 練習進行到一半離開（關頁、切分頁）也要能接續，所以連同作答中的題組本身一併存本機
@@ -642,6 +654,7 @@
       quizSeenIds: ()=>saveData("quizSeenIds",state.quizSeenIds),
       topicStats: ()=>saveData("topicStats",state.topicStats),
       wrongRecent: ()=>saveData("wrongRecent",state.wrongRecent),
+      ovRecent: ()=>saveData("ovRecent",state.ovRecent),
       quizChapterFilter: ()=>saveData("quizChapterFilter",state.quizChapterFilter),
       quizPool: ()=>saveData("quizPool",state.quizPool),
       quizIdx: ()=>saveData("quizIdx",state.quizIdx),
@@ -1428,8 +1441,12 @@
     const allSeen = chSeen + bSeen - overlap.filter(q=>state.quizSeenIds[q.id] && state.examBSeenIds[q.id]).length;
     const allC = chAcc.correct + bAcc.correct + num.correct;
     const allT = chAcc.total + bAcc.total + num.answered;
+    // 整體正確率：最近 WRONG_RECENT_N 題；紀錄未滿 20 題（剛改版）時先沿用累計值
+    const rc = state.ovRecent, rcC = rc.filter(r=>r.c).length;
+    const recent = rc.length>=20;
     return {chapters, banks, allTotal, allSeen, allCov: allTotal>0?Math.round(allSeen/allTotal*100):0,
-      allAcc: allT>0?Math.round(allC/allT*100):null, allC, allT};
+      allAcc: recent ? Math.round(rcC/rc.length*100) : (allT>0?Math.round(allC/allT*100):null),
+      allC: recent ? rcC : allC, allT: recent ? rc.length : allT, allRecent: recent};
   }
   // 一列＝一個章節/題庫：上條「刷題率」、下條「正確率」，同一個 0~100% 刻度；正確率條上畫出目標線（ACC_TARGET）
   function overviewRow(label, title, item, attrs, target, warn){
@@ -1462,10 +1479,10 @@
     return `
       <div class="ov-card">
         <div class="section-title" style="margin-top:0;">📊 刷題總覽（乙級）</div>
-        <div class="section-desc" style="margin-top:2px;">目標：全部題庫刷題 100%、正確率 ${ACC_TARGET}%　（甲種題庫在「甲種」分頁獨立計算）</div>
+        <div class="section-desc" style="margin-top:2px;">目標：全部題庫刷題 100%、正確率 ${ACC_TARGET}%　（甲種題庫在「甲種」分頁獨立計算；右邊整體正確率只算最近 ${WRONG_RECENT_N} 題）</div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(d.allCov, "#5B6B82", `整體刷題 ${d.allSeen}/${d.allTotal} 題`)}
-          ${svgRing(d.allAcc, allSt.color, d.allAcc===null ? "尚無作答記錄" : `${allSt.icon} 整體正確率 ${d.allC}/${d.allT}`)}
+          ${svgRing(d.allAcc, allSt.color, d.allAcc===null ? "尚無作答記錄" : `${allSt.icon} ${d.allRecent?`最近 ${d.allT} 題`:'整體累計'}正確率 ${d.allC}/${d.allT}`)}
         </div>
         <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#3F7D5C;"></i>正確率（✅≥${ACC_TARGET}% ⚠️60~${ACC_TARGET-1}% 🔥<60%）</span><span><i class="ov-legend-target"></i>${ACC_TARGET}%目標線</span></div>
         <div class="sub-title">各題庫</div>
@@ -1692,7 +1709,7 @@
       examBHistory: state.examBHistory,
       examBSeenIds: state.examBSeenIds,
       topicStats: state.topicStats,
-      wrongRecent: state.wrongRecent,
+      wrongRecent: state.wrongRecent, ovRecent: state.ovRecent,
       syncedAt: new Date().toISOString()
     };
   }
@@ -1755,10 +1772,8 @@
     merged.examBSeenIds = {...(cloud.examBSeenIds||{}), ...(local.examBSeenIds||{})};
     merged.topicStats = mergeTopicStats(local.topicStats, cloud.topicStats);
     // 最近作答紀錄：兩邊聯集（時間＋題目 id 去重），依時間排序後留最後 WRONG_RECENT_N 筆
-    const wrSeen = new Set();
-    merged.wrongRecent = [...(cloud.wrongRecent||[]), ...(local.wrongRecent||[])]
-      .filter(r=>{ const k = r.t+'|'+r.id; if(wrSeen.has(k)) return false; wrSeen.add(k); return true; })
-      .sort((a,b)=>String(a.t).localeCompare(String(b.t))).slice(-WRONG_RECENT_N);
+    merged.wrongRecent = mergeRecent(cloud.wrongRecent, local.wrongRecent);
+    merged.ovRecent = mergeRecent(cloud.ovRecent, local.ovRecent);
 
     function mergeHistory(a, b){
       const combined = [...(a||[]), ...(b||[])];
@@ -1793,6 +1808,8 @@
     saveData("topicStats", state.topicStats);
     state.wrongRecent = merged.wrongRecent||[];
     saveData("wrongRecent", state.wrongRecent);
+    state.ovRecent = merged.ovRecent||[];
+    saveData("ovRecent", state.ovRecent);
     saveData("meta", {examDate: state.examDate});
     saveData("chapterState", state.chapterState);
     saveData("wrongMap", state.wrongMap);
@@ -2530,6 +2547,7 @@
       correct = correct || isFreeQ(current);
       markStudiedToday();
       state.quizStats = {correct: state.quizStats.correct+(correct?1:0), total: state.quizStats.total+1};
+      if(state.quizMode==="random20" || state.quizMode==="chapter" || state.quizMode==="numeric") pushRecent("ovRecent", current.id||current._cv, correct);
       // 數字變化題不是題庫裡的題目：只記在 topicStats.calcv，不進錯題本、不算刷題
       if(current._cv){
         const st = state.topicStats.calcv = state.topicStats.calcv || {};
@@ -2546,8 +2564,7 @@
         state.wrongMap[current.id] = {...rec, [nK]:(rec[nK]||0)+1, [cK]:(rec[cK]||0)+(correct?1:0)};
         persist("wrongMap");
         if(!isExamABookId(current.id)){
-          state.wrongRecent = [...state.wrongRecent, {t:new Date().toISOString(), id:current.id, c:correct?1:0}].slice(-WRONG_RECENT_N);
-          persist("wrongRecent");
+          pushRecent("wrongRecent", current.id, correct);
         }
       }
       // 計算／年份條號分頁的作答另外累計，給這兩個分頁算刷題率、正確率
@@ -2712,6 +2729,7 @@
     function finishExamBAnswer(current, correct){
       correct = correct || isFreeQ(current);
       state.examBStats = {correct: state.examBStats.correct+(correct?1:0), total: state.examBStats.total+1};
+      pushRecent("ovRecent", current.id, correct);
       state.examBSeenIds[current.id] = true;
       persist("examBSeenIds");
       markStudiedToday();
@@ -2750,7 +2768,7 @@
         studyLog:state.studyLog, laws:state.laws, quizHistory:state.quizHistory, quizSeenIds:state.quizSeenIds,
         examAHistory:state.examAHistory, examASeenIds:state.examASeenIds,
         examBHistory:state.examBHistory, examBSeenIds:state.examBSeenIds,
-        topicStats:state.topicStats, wrongRecent:state.wrongRecent,
+        topicStats:state.topicStats, wrongRecent:state.wrongRecent, ovRecent:state.ovRecent,
         exportedAt:new Date().toISOString()
       };
     }
@@ -2771,6 +2789,8 @@
       saveData("topicStats",state.topicStats);
       state.wrongRecent = data.wrongRecent||[];
       saveData("wrongRecent",state.wrongRecent);
+      state.ovRecent = data.ovRecent||[];
+      saveData("ovRecent",state.ovRecent);
       applyDupAlias(state);
       saveData("meta",{examDate:state.examDate});
       saveData("chapterState",state.chapterState);
