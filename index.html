@@ -2132,7 +2132,7 @@
   // 作答累計存在 state.topicStats.mnemo（每組 n＝完成次數、c＝配對答對次數、w＝配錯次數），跟著雲端同步／匯出匯入。
   // 不用 quizPool，所以跟其他練習互不干擾；一組做到一半離開不記錄。
   // 2026-11-03 術科考完整條文，口訣組（非 formula）改成：第 1 關從「全部口訣」中選出正確的，第 2 關看關鍵字直接打條文，
-  // 依錯字扣分（重要詞每錯一詞扣 2 分、連接詞每字扣 0.5 分、標點不扣），100 分起算＝這組成績。
+  // 依錯字扣分（重要詞每錯一詞扣 2 分、連接詞與標點不扣），100 分起算＝這組成績。（2026-11-04 連接詞由每字 0.5 分改為不扣）
   // 成績重新計算，改存 state.topicStats.mnemo2（n＝完成次數、s＝最近一次分數、best、chC/chN＝第 1 關答對/作答次數）；
   // 舊的 mnemo 紀錄保留不刪。公式組仍是配對＋填空，記 n/c/w。
   const MNEMONICS = window.MNEMONICS || [];
@@ -2153,7 +2153,7 @@
     return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC: acc===null?0:acc, accT: 100, acc};
   }
   // 打條文評分：去掉空白與標點後逐字比對（編輯距離對齊），連續的錯誤算一段；
-  // 一段裡的連接詞每字扣 0.5，其餘每 2 個字算一個詞、每詞扣 2（不滿 2 字也算 1 詞）
+  // 一段裡的連接詞不扣分，其餘每 2 個字算一個詞、每詞扣 2（不滿 2 字也算 1 詞）
   const MN_CONN = new Set("及或和與並之的暨且等".split(""));
   function mnemoNorm(t){ return String(t||"").normalize("NFKC").replace(/[\s\p{P}]/gu, ""); }
   function mnemoDiff(ans, typed){
@@ -2175,7 +2175,7 @@
     const flush = ()=>{
       if(!seg.length) return;
       const conn = seg.filter(c=>MN_CONN.has(c)).length, other = seg.length - conn;
-      pen += conn*0.5 + Math.ceil(other/2)*2; seg = [];
+      pen += Math.ceil(other/2)*2; seg = [];
     };
     ops.forEach(o=>{ if(o.t==='eq') flush(); else seg.push(o.t==='ins' ? o.b : o.a); });
     flush();
@@ -2279,7 +2279,7 @@
         <div class="quiz-chapter-tag">第 2 關：看關鍵字打出條文（共 ${m.pairs.length} 項）</div>
         <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
         <div class="mn-phrase">${esc(m.mnemonic)}</div>
-        <div class="section-desc" style="margin:6px 0 8px;">100 分起算：重要詞每錯一詞扣 2 分（約 2 個字算一詞，漏打、打錯、多打都算），連接詞（及、或、和、與、並、之、的、暨、且、等）每字扣 0.5 分，標點符號和空白不扣分。</div>
+        <div class="section-desc" style="margin:6px 0 8px;">100 分起算：重要詞每錯一詞扣 2 分（約 2 個字算一詞，漏打、打錯、多打都算），連接詞（及、或、和、與、並、之、的、暨、且、等）打錯、漏打都不扣分，標點符號和空白也不扣分。</div>
         ${m.pairs.map((p,i)=>`<div class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</div>
           <textarea class="mn-tin" data-mntype="${i}" rows="2" placeholder="打出這一項的條文內容">${esc(s.typed[i]||"")}</textarea>`).join("")}
         <button class="primary-btn" id="mnTypeSubmit">交卷評分</button>
@@ -2294,8 +2294,8 @@
         <div class="mn-phrase" style="margin-top:10px;">${esc(m.mnemonic)}</div>
         <div class="section-desc" style="margin:6px 0 0;"><span class="mn-miss">紅底</span>＝漏打或打錯的字（正確內容），<span class="mn-extra">刪除線</span>＝你多打或打錯的字。</div>
         ${r.items.map(x=>{ const p = m.pairs[x.i];
-          return `<div class="mn-titem"><span class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</span>　${x.pen>0?`<span style="color:#B9554A;">−${x.pen}</span>`:'<span style="color:#3F7D5C;">✅ 全對</span>'}
-            <div style="margin-top:3px;">${x.pen>0 ? mnemoDiffHtml(x.ops) : esc(mnemoItem(p[1]))}</div>
+          return `<div class="mn-titem"><span class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</span>　${x.pen>0?`<span style="color:#B9554A;">−${x.pen}</span>`:x.ops.some(o=>o.t!=='eq')?'<span style="color:#3F7D5C;">✅ 不扣分（只有連接詞不同）</span>':'<span style="color:#3F7D5C;">✅ 全對</span>'}
+            <div style="margin-top:3px;">${x.ops.some(o=>o.t!=='eq') ? mnemoDiffHtml(x.ops) : esc(mnemoItem(p[1]))}</div>
             ${x.pen>0?`<div style="color:#6b655a;margin-top:2px;">正確：${esc(mnemoItem(p[1]))}</div>`:""}</div>`; }).join("")}
         ${m.note?`<div class="section-desc">${esc(m.note)}</div>`:""}
         <button class="primary-btn" data-mnstart="${m.id}" style="margin-top:10px;">🔁 再練這組</button>
@@ -2359,7 +2359,7 @@
     return `
       <div class="ov-card">
         <div class="section-title" style="margin-top:0;">🔗 口訣配對<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${MNEMONICS.length} 組</span></div>
-        <div class="section-desc" style="margin-top:2px;">第 1 關：從全部口訣中選出這個條文的口訣；第 2 關：看口訣的關鍵字，直接打出每一項條文，依錯字扣分（重要詞每詞扣 2 分、連接詞每字扣 0.5 分、標點不扣），100 分起算。每組成績＝最近一次的分數（2026-11-03 起重新計分）。<b>目標：每組都做過、成績 ${ACC_TARGET} 分</b></div>
+        <div class="section-desc" style="margin-top:2px;">第 1 關：從全部口訣中選出這個條文的口訣；第 2 關：看口訣的關鍵字，直接打出每一項條文，依錯字扣分（重要詞每詞扣 2 分，連接詞和標點不扣），100 分起算。每組成績＝最近一次的分數（2026-11-03 起重新計分）。<b>目標：每組都做過、成績 ${ACC_TARGET} 分</b></div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(p.cov, "#5B6B82", `做過 ${p.seen}/${p.total} 組`)}
           ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : `${allSt.icon} 平均成績 ${p.acc} 分`)}
