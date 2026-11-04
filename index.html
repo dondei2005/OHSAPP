@@ -1208,6 +1208,8 @@
     return {seen, total, cov: total>0?Math.round(seen/total*100):100, accC, accT, acc: accT>0?Math.round(accC/accT*100):null};
   }
   function wrongReached(p){ return p.total===0 || (p.cov>=100 && p.acc!==null && p.acc>=WRONG_ACC_TARGET); }
+  // 2026-11-04 分章節不設正確率目標（同一題錯過就很難拉回 85%）：這章待複習的錯題都刷過＝完成
+  function wrongChDone(p){ return p.total===0 || p.cov>=100; }
   function computeWrongChapters(){
     const qmap = idToQuestionMap();
     const groups = {}, all = [];
@@ -1311,7 +1313,7 @@
     // 2026-10-27 乙級錯題本改成章節分類：① 每章獨立加強 → ② 全章節隨機 20 題，兩關都達標才算錯題練好
     const wc = computeWrongChapters();
     const chs = wc.chapters.filter(c=>c.pending.length>0 || c.learned>0);
-    const chReached = chs.filter(c=>wrongReached(c.prog)).length;
+    const chReached = chs.filter(c=>wrongChDone(c.prog)).length;
     const stage1Done = chs.length>0 && chReached===chs.length;
     const mixDone = wrongReached(wc.mix);
     const allSt = accStatus(wc.recent.acc, WRONG_ACC_TARGET, WRONG_ACC_WARN);
@@ -1330,7 +1332,7 @@
       const open = state.wrongOpenCh===c.key;
       const n = c.pending.length;
       return `<div style="margin-bottom:6px;">
-        ${overviewRow(wrongChLabel(c.key), `${wrongChTitle(c.key)}（待複習 ${n}・已學會 ${c.learned}）${wrongReached(c.prog)?' ✅':''}`, c.prog, `data-wrongview="${c.key}"`, WRONG_ACC_TARGET, WRONG_ACC_WARN)}
+        ${overviewRow(wrongChLabel(c.key), `${wrongChTitle(c.key)}（待複習 ${n}・已學會 ${c.learned}）${wrongChDone(c.prog)?' ✅':''}`, c.prog, `data-wrongview="${c.key}"`, 0)}
         <div class="toggle-row" style="margin:2px 0 0;">
           ${n>0 ? `<button class="toggle-btn active" data-wrongch="${c.key}" style="padding:6px 0;font-size:12px;">▶ 練這章（${Math.min(20,n)} 題）</button>` : `<button class="toggle-btn" disabled style="padding:6px 0;font-size:12px;">本章錯題都已學會</button>`}
           <button class="toggle-btn" data-wrongview="${c.key}" style="padding:6px 0;font-size:12px;">${open?'▲ 收起題目':'📋 看題目'}</button>
@@ -1343,23 +1345,23 @@
       ${lastRound}
       <div class="ov-card">
         <div class="section-title" style="margin-top:0;">📊 錯題本總覽</div>
-        <div class="section-desc" style="margin-top:2px;">乙級章節練習、乙級考古題、數字填空的錯題，依章節分類（甲種錯題在「甲種」分頁）。先每章獨立加強，各章都達標後，再用全章節隨機 20 題把全部錯題混在一起練。<b>錯題目標：刷題 100%、正確率 ${WRONG_ACC_TARGET}%</b>（右邊整體正確率只算最近 ${WRONG_RECENT_N} 題，越練越會反映現在的程度）</div>
+        <div class="section-desc" style="margin-top:2px;">乙級章節練習、乙級考古題、數字填空的錯題，依章節分類（甲種錯題在「甲種」分頁）。先每章獨立加強，各章錯題都刷過一輪後，再用全章節隨機 20 題把全部錯題混在一起練。<b>錯題目標：各章節錯題都刷過（刷題 100%，不設正確率目標）；全章節隨機：刷題 100%、正確率 ${WRONG_ACC_TARGET}%</b>（右邊整體正確率只算最近 ${WRONG_RECENT_N} 題，越練越會反映現在的程度）</div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(wc.chAll.cov, "#5B6B82", `章節錯題刷題 ${wc.chAll.seen}/${wc.chAll.total} 題`)}
           ${svgRing(wc.recent.acc, allSt.color, wc.recent.acc===null ? "尚無作答記錄" : `${allSt.icon} ${wc.recent.recent?`最近 ${wc.recent.accT} 題`:'累計'}正確率 ${wc.recent.accC}/${wc.recent.accT}`)}
         </div>
-        <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#3F7D5C;"></i>正確率（✅≥${WRONG_ACC_TARGET}% ⚠️${WRONG_ACC_WARN}~${WRONG_ACC_TARGET-1}% 🔥<${WRONG_ACC_WARN}%）</span><span><i class="ov-legend-target"></i>${WRONG_ACC_TARGET}%目標線</span></div>
+        <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#3F7D5C;"></i>正確率（✅≥${WRONG_ACC_TARGET}% ⚠️${WRONG_ACC_WARN}~${WRONG_ACC_TARGET-1}% 🔥<${WRONG_ACC_WARN}%）</span><span><i class="ov-legend-target"></i>${WRONG_ACC_TARGET}%目標線（只用在全章節隨機）</span></div>
         <div class="sub-title">練習流程</div>
-        <div class="section-desc" style="margin-top:0;">① 各章節錯題加強：${chReached} / ${chs.length} 章達標 ${stage1Done?'✅':''}</div>
+        <div class="section-desc" style="margin-top:0;">① 各章節錯題加強：${chReached} / ${chs.length} 章刷完 ${stage1Done?'✅':''}</div>
         ${overviewRow('② 全章節隨機', `20 題一輪${mixDone && wc.mix.total>0?' ✅':''}`, wc.mix, '', WRONG_ACC_TARGET, WRONG_ACC_WARN)}
         ${stage1Done && mixDone ? `<div class="result-card" style="font-weight:600;">🎉 各章節與全章節錯題都練好了！</div>` : ""}
         ${wc.pendingAll.length>0 ? `<button class="primary-btn" id="startWrongMixBtn" style="margin:10px 0 4px;${stage1Done?'':'background:#8a8275;'}">🎲 全章節錯題隨機 20 題</button>
-        <div class="section-desc" style="margin-top:0;">${stage1Done?'各章節都已達標，現在用全章節隨機把錯題練到刷題 100%、正確率 '+WRONG_ACC_TARGET+'%。':'建議先把下面各章節練到達標（還差 '+(chs.length-chReached)+' 章），再來做全章節隨機。'}</div>` : ""}
-        <div class="sub-title">各章節錯題（雙達標 ${chReached}/${chs.length} 章・${wc.pendingAll.length} 題待複習）</div>
+        <div class="section-desc" style="margin-top:0;">${stage1Done?'各章節錯題都刷過了，現在用全章節隨機把錯題練到刷題 100%、正確率 '+WRONG_ACC_TARGET+'%。':'建議先把下面各章節的錯題都刷過一輪（還差 '+(chs.length-chReached)+' 章），再來做全章節隨機。'}</div>` : ""}
+        <div class="sub-title">各章節錯題（刷完 ${chReached}/${chs.length} 章・${wc.pendingAll.length} 題待複習）</div>
         <div class="toggle-row" style="margin:6px 0 8px;">
           ${sortBtn('chapter','依章節')}${sortBtn('cov','刷題率低→高')}${sortBtn('acc','正確率低→高')}
         </div>
-        <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；正確＝這章錯題在「練這章」的答對率。每輪最多 20 題，沒練過的錯題優先出。點任一列可展開題目。</div>
+        <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；正確＝這章錯題在「練這章」的答對率（只供參考，不設目標；刷題 100% 就打 ✅）。每輪最多 20 題，沒練過的錯題優先出。點任一列可展開題目。</div>
         ${chs.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
         ${sorted.map(chBlock).join("")}
       </div>
@@ -1459,8 +1461,9 @@
       allC: recent ? rcC : allC, allT: recent ? rc.length : allT, allRecent: recent};
   }
   // 一列＝一個章節/題庫：上條「刷題率」、下條「正確率」，同一個 0~100% 刻度；正確率條上畫出目標線（ACC_TARGET）
+  // target===0：不設正確率目標（只顯示答對率供參考，不畫目標線、不標 ✅⚠️🔥）
   function overviewRow(label, title, item, attrs, target, warn){
-    const st = accStatus(item.acc, target, warn);
+    const st = target===0 ? {color:"#9a9488", icon:""} : accStatus(item.acc, target, warn);
     const tip = `已刷 ${item.seen}/${item.total} 題（${item.cov}%）；` + (item.acc===null ? "尚無正確率記錄" : `正確 ${item.accC}/${item.accT} 題（${item.acc}%）`);
     return `<div class="ov-row" ${attrs||""} title="${esc(tip)}">
       <div class="ov-label"><b>${esc(label)}</b> ${esc(title)} <span class="ov-go">›</span></div>
@@ -1468,8 +1471,8 @@
         <div class="ov-track"><div class="ov-fill" style="width:${item.cov}%;background:#5B6B82;"></div></div>
         <span class="ov-v">${item.cov}%</span></div>
       <div class="ov-line"><span class="ov-k">正確</span>
-        <div class="ov-track">${item.acc===null?"":`<div class="ov-fill" style="width:${item.acc}%;background:${st.color};"></div>`}<div class="ov-target" ${target?`style="left:${target}%;"`:""}></div></div>
-        <span class="ov-v">${item.acc===null?"—":st.icon+" "+item.acc+"%"}</span></div>
+        <div class="ov-track">${item.acc===null?"":`<div class="ov-fill" style="width:${item.acc}%;background:${st.color};"></div>`}${target===0?"":`<div class="ov-target" ${target?`style="left:${target}%;"`:""}></div>`}</div>
+        <span class="ov-v">${item.acc===null?"—":(st.icon?st.icon+" ":"")+item.acc+"%"}</span></div>
     </div>`;
   }
   function renderOverview(){
