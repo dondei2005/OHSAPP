@@ -14,7 +14,7 @@
 <script src="./topic_sets.js"></script>
 <script src="./calc_variants.js"></script>
 <script src="./practical_questions.js"></script>
-<script src="./mnemonics.js?v=20261104a"></script>
+<script src="./mnemonics.js?v=20261104b"></script>
 <script src="./free_questions.js"></script>
 </head>
 <body>
@@ -2160,7 +2160,7 @@
         <div class="ov-track">${v===null?"":`<div class="ov-fill" style="width:${v}%;background:${st.color};"></div>`}<div class="ov-target"></div></div>
         <span class="ov-v">${v===null?"—":st.icon+" "+v+"分"}</span></div>`; };
     return `<div class="ov-row" data-mnstart="${m.id}">
-      <div class="ov-label"><b>${esc(m.law)}</b> ${esc(m.title)}${r.n>0?`（練過 ${r.n} 次）`:''} <span class="ov-go">›</span></div>
+      <div class="ov-label"><b>${esc(m.law)}</b> ${esc(m.title)}${m.mode==="fill"?'・填空':''}${r.n>0?`（練過 ${r.n} 次）`:''} <span class="ov-go">›</span></div>
       ${line("前次", last)}${line("最高", best)}
     </div>`;
   }
@@ -2246,7 +2246,7 @@
     });
   }
   function mnemoFillOk(f, input){
-    const v = normalizeFillAnswer(input);
+    const v = normalizeFillAnswer(String(input||"").replace(/²/g,"2").replace(/³/g,"3").replace(/\^/g,""));
     if(!v) return false;
     return f.a.some(a=>{
       const n = normalizeFillAnswer(a);
@@ -2260,6 +2260,10 @@
     const all = state.topicStats.mnemo2 = state.topicStats.mnemo2 || {};
     const r = all[m.id] || {n:0,c:0,w:0};
     const last = Math.round(s.c/(s.c+s.w)*100);
+    if(m.mode==="fill"){
+      all[m.id] = {n:(r.n||0)+1, s:last, best:Math.max(r.best||0, last), chC:(r.chC||0)+(s.chOk?1:0), chN:(r.chN||0)+1, c:(r.c||0)+s.c, w:(r.w||0)+s.w, at:todayStr()};
+      persist("topicStats"); return;
+    }
     all[m.id] = {n:(r.n||0)+1, c:(r.c||0)+s.c, w:(r.w||0)+s.w, last, best:Math.max(r.best!=null?r.best:(r.last||0), last), at:todayStr()};
     persist("topicStats");
   }
@@ -2290,7 +2294,7 @@
           return `<button class="mn-opt ${cls}" data-mnchoice="${i}" ${s.chosen!==null?'disabled':''}>${esc(o)}</button>`;
         }).join("")}
         ${s.chosen!==null ? `<div class="result-card">${s.opts[s.chosen]===m.mnemonic?'✅ 答對了':'❌ 正確的口訣是：'+esc(m.mnemonic)}</div>
-          <button class="primary-btn" id="mnToMatchBtn" style="margin-top:10px;">第 2 關：看關鍵字打出條文 →</button>` : ""}
+          <button class="primary-btn" id="mnToMatchBtn" style="margin-top:10px;">${m.mode==="fill"?`第 2 關：填空（${m.fills.length} 題）→`:'第 2 關：看關鍵字打出條文 →'}</button>` : ""}
       </div>${exitBtn}`;
     }
     if(s.stage==='type'){
@@ -2347,7 +2351,7 @@
       return `${head}<div class="quiz-card">
         <div class="quiz-chapter-tag">填空 ${s.fi+1} / ${s.fills.length}</div>
         <div class="quiz-question">${esc(f.q)}</div>
-        <input class="text-input" id="mnFillInput" placeholder="輸入答案" autocomplete="off" ${f.a.every(a=>/^[\d.]+$/.test(a))?'inputmode="decimal"':''} value="${esc(s.fAns||"")}" ${s.fAns!==null?'disabled':''} style="margin:8px 0 10px;font-size:18px;">
+        <input class="text-input" id="mnFillInput" placeholder="${f.a.some(a=>/^[\d.]+$/.test(a))?'只填數字就好（單位、超過、以上都不用打）':'輸入答案'}" autocomplete="off" ${f.a.some(a=>/^[\d.]+$/.test(a))?'inputmode="decimal"':''} value="${esc(s.fAns||"")}" ${s.fAns!==null?'disabled':''} style="margin:8px 0 10px;font-size:18px;">
         ${s.fAns===null ? `<button class="primary-btn" id="mnFillBtn">提交答案</button>`
           : `<div class="result-card" style="margin-top:0;">${s.fOk?'✅ 答對了':'❌ 正確答案：'+esc(f.a[0])}</div>
             ${f.tip?`<div class="section-desc" style="margin-top:6px;">${esc(f.tip)}</div>`:""}
@@ -2580,7 +2584,13 @@
       render();
     }));
     const mnToMatchBtn = document.getElementById("mnToMatchBtn");
-    if(mnToMatchBtn) mnToMatchBtn.addEventListener("click",()=>{ state.mnemo.stage='type'; render(); window.scrollTo(0,0); });
+    if(mnToMatchBtn) mnToMatchBtn.addEventListener("click",()=>{
+      const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
+      // 填空模式（mode:"fill"，危險性機械／設備等數字門檻組）：第 2 關改成做完全部填空，不打條文
+      if(m.mode==="fill"){ s.chOk = s.opts[s.chosen]===m.mnemonic; s.c = 0; s.w = 0;
+        s.fills = shuffleArr(m.fills.slice()); s.stage = 'fill'; s.fi = 0; s.fAns = null; s.fOk = false; }
+      else s.stage = 'type';
+      render(); window.scrollTo(0,0); });
     // 打條文：輸入時只存字、不重畫，避免游標跳掉
     root.querySelectorAll("[data-mntype]").forEach(el=>el.addEventListener("input",()=>{ state.mnemo.typed[+el.dataset.mntype] = el.value; }));
     const mnTypeSubmit = document.getElementById("mnTypeSubmit");
