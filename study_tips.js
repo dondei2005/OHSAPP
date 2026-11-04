@@ -2068,6 +2068,15 @@ window.STUDY_TIPS = {
 "sk-ven-33": [
 "ventdecay"
 ],
+"sk-ven-07": [
+"ventdecay"
+],
+"sk-ven-08": [
+"ventdecay"
+],
+"examB-S10803-21": [
+"ventdecay"
+],
 "chN03-063": [
 "mechvent"
 ],
