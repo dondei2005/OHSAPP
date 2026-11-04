@@ -947,8 +947,13 @@
     else if(t==="multi") ans = q.answer.map(i=>`(${String.fromCharCode(65+i)}) ${q.options[i]}`).join("、");
     else if(t==="truefalse") ans = String(q.answer)==="true" ? "○ 正確" : "✕ 錯誤";
     else ans = String(q.answer);
-    const ex = (window.EXPLANATIONS && window.EXPLANATIONS[String(q.id||"").replace(/^num-/,"")]) || "";
-    const note = (q.note||"").trim();
+    // 2026-11-04 詳解／備註裡的 (A)～(D) 是原始題目的代號，選項打亂後要換成目前畫面上的代號；本次被拿掉的選項標「本次未出的選項」
+    const relabel = txt=>!Array.isArray(q._ord) ? txt : txt.replace(/[（(]([A-D])[)）]/g, (m0, L)=>{
+      const k = q._ord.indexOf(L.charCodeAt(0)-65);
+      return k>=0 ? `(${String.fromCharCode(65+k)})` : "（本次未出的選項）";
+    });
+    const ex = relabel((window.EXPLANATIONS && window.EXPLANATIONS[String(q.id||"").replace(/^num-/,"")]) || "");
+    const note = relabel((q.note||"").trim());
     const T = window.STUDY_TIPS;
     const tipKeys = (T && T.map && T.map[String(q.id||"").replace(/^num-/,"")]) || [];
     const tips = tipKeys.map(k=>T.topics[k]).filter(Boolean);
