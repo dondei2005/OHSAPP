@@ -557,7 +557,7 @@
     examASeenIds:{},
     examB:[], examBHistory:[], examBPool:[], examBIdx:0, examBSelected:null, examBRevealed:false, examBStats:{correct:0,total:0},
     examBSeenIds:{},
-    numeric:[], overviewSort:"chapter", wrongSort:"chapter",
+    numeric:[], overviewSort:"chapter", wrongSort:"cnt",
     // 計算題／年份・條號分頁各自的作答累計：{calc:{題目id:{n:作答次數,c:答對次數}}, ref:{...}}
     topicStats:{calc:{}, ref:{}, mnemo:{}}, refFilter:"all", topicSort:"chapter", mnemo:null,
     headerEditing:false,
@@ -1322,17 +1322,28 @@
     const sorters = {
       chapter: (x,y)=>chNo(x)-chNo(y),
       cov: (x,y)=>x.prog.cov-y.prog.cov || chNo(x)-chNo(y),
-      acc: (x,y)=>((x.prog.acc===null?101:x.prog.acc)-(y.prog.acc===null?101:y.prog.acc)) || chNo(x)-chNo(y),
+      // 2026-11-04 改依錯過的題數（待複習＋已學會）多→少，不再依正確率
+      cnt: (x,y)=>((y.pending.length+y.learned)-(x.pending.length+x.learned)) || (y.pending.length-x.pending.length) || chNo(x)-chNo(y),
     };
+    const maxCnt = Math.max(1, ...chs.map(c=>c.pending.length+c.learned));
     const sorted = [...chs].sort(sorters[state.wrongSort]||sorters.chapter);
     const sortBtn = (key,label)=>`<button class="toggle-btn ${state.wrongSort===key?'active':''}" data-wrongsort="${key}" style="padding:6px 0;font-size:12px;">${label}</button>`;
     const lastRound = (state.quizMode==='wrongreview' && state.quizStats.total>0)
       ? `<div class="result-card">上一輪結果：${state.quizStats.correct} / ${state.quizStats.total} 答對</div>` : "";
     const chBlock = c=>{
       const open = state.wrongOpenCh===c.key;
-      const n = c.pending.length;
+      const n = c.pending.length, tot = n + c.learned;
       return `<div style="margin-bottom:6px;">
-        ${overviewRow(wrongChLabel(c.key), `${wrongChTitle(c.key)}（待複習 ${n}・已學會 ${c.learned}）${wrongChDone(c.prog)?' ✅':''}`, c.prog, `data-wrongview="${c.key}"`, 0)}
+        <div class="ov-row" data-wrongview="${c.key}">
+          <div class="ov-label"><b>${esc(wrongChLabel(c.key))}</b> ${esc(wrongChTitle(c.key))}${wrongChDone(c.prog)?' ✅':''} <span class="ov-go">›</span></div>
+          <div class="ov-line"><span class="ov-k">刷題</span>
+            <div class="ov-track"><div class="ov-fill" style="width:${c.prog.cov}%;background:#5B6B82;"></div></div>
+            <span class="ov-v">${c.prog.cov}%</span></div>
+          <div class="ov-line"><span class="ov-k">錯過</span>
+            <div class="ov-track"><div class="ov-fill" style="width:${Math.round(tot/maxCnt*100)}%;background:#B5562F;"></div></div>
+            <span class="ov-v">${tot} 題</span></div>
+          <div class="section-desc" style="margin:2px 0 0;">待複習 ${n}・已學會 ${c.learned}</div>
+        </div>
         <div class="toggle-row" style="margin:2px 0 0;">
           ${n>0 ? `<button class="toggle-btn active" data-wrongch="${c.key}" style="padding:6px 0;font-size:12px;">▶ 練這章（${Math.min(20,n)} 題）</button>` : `<button class="toggle-btn" disabled style="padding:6px 0;font-size:12px;">本章錯題都已學會</button>`}
           <button class="toggle-btn" data-wrongview="${c.key}" style="padding:6px 0;font-size:12px;">${open?'▲ 收起題目':'📋 看題目'}</button>
@@ -1350,7 +1361,7 @@
           ${svgRing(wc.chAll.cov, "#5B6B82", `章節錯題刷題 ${wc.chAll.seen}/${wc.chAll.total} 題`)}
           ${svgRing(wc.recent.acc, allSt.color, wc.recent.acc===null ? "尚無作答記錄" : `${allSt.icon} ${wc.recent.recent?`最近 ${wc.recent.accT} 題`:'累計'}正確率 ${wc.recent.accC}/${wc.recent.accT}`)}
         </div>
-        <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#3F7D5C;"></i>正確率（✅≥${WRONG_ACC_TARGET}% ⚠️${WRONG_ACC_WARN}~${WRONG_ACC_TARGET-1}% 🔥<${WRONG_ACC_WARN}%）</span><span><i class="ov-legend-target"></i>${WRONG_ACC_TARGET}%目標線（只用在全章節隨機）</span></div>
+        <div class="ov-legend"><span><i style="background:#5B6B82;"></i>刷題率（目標100%）</span><span><i style="background:#B5562F;"></i>各章錯過題數</span><span><i style="background:#3F7D5C;"></i>全章節隨機正確率（✅≥${WRONG_ACC_TARGET}% ⚠️${WRONG_ACC_WARN}~${WRONG_ACC_TARGET-1}% 🔥<${WRONG_ACC_WARN}%）</span><span><i class="ov-legend-target"></i>${WRONG_ACC_TARGET}%目標線（只用在全章節隨機）</span></div>
         <div class="sub-title">練習流程</div>
         <div class="section-desc" style="margin-top:0;">① 各章節錯題加強：${chReached} / ${chs.length} 章刷完 ${stage1Done?'✅':''}</div>
         ${overviewRow('② 全章節隨機', `20 題一輪${mixDone && wc.mix.total>0?' ✅':''}`, wc.mix, '', WRONG_ACC_TARGET, WRONG_ACC_WARN)}
@@ -1359,9 +1370,9 @@
         <div class="section-desc" style="margin-top:0;">${stage1Done?'各章節錯題都刷過了，現在用全章節隨機把錯題練到刷題 100%、正確率 '+WRONG_ACC_TARGET+'%。':'建議先把下面各章節的錯題都刷過一輪（還差 '+(chs.length-chReached)+' 章），再來做全章節隨機。'}</div>` : ""}
         <div class="sub-title">各章節錯題（刷完 ${chReached}/${chs.length} 章・${wc.pendingAll.length} 題待複習）</div>
         <div class="toggle-row" style="margin:6px 0 8px;">
-          ${sortBtn('chapter','依章節')}${sortBtn('cov','刷題率低→高')}${sortBtn('acc','正確率低→高')}
+          ${sortBtn('chapter','依章節')}${sortBtn('cov','刷題率低→高')}${sortBtn('cnt','錯過題數多→少')}
         </div>
-        <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；正確＝這章錯題在「練這章」的答對率（只供參考，不設目標；刷題 100% 就打 ✅）。每輪最多 20 題，沒練過的錯題優先出。點任一列可展開題目。</div>
+        <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；錯過＝這章錯過的題數（待複習＋已學會）；刷題 100% 就打 ✅。每輪最多 20 題，沒練過的錯題優先出。點任一列可展開題目。</div>
         ${chs.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
         ${sorted.map(chBlock).join("")}
       </div>
