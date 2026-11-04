@@ -14,6 +14,7 @@
 <script src="./topic_sets.js"></script>
 <script src="./calc_variants.js"></script>
 <script src="./practical_questions.js"></script>
+<script src="./practical_blanks.js?v=20261104a"></script>
 <script src="./mnemonics.js?v=20261104d"></script>
 <script src="./free_questions.js"></script>
 </head>
@@ -1946,6 +1947,40 @@
   // 一輪題目存 state.prac（localStorage ohs_prac），不用 quizPool，跟其他練習互不干擾。
   const PRACTICAL_QS = window.PRACTICAL_QS || [];
   const PRAC_ROUND = 10;
+  // 2026-11-04 填空對答案：practical_blanks.js 把每題答案拆成格子，作答後自動判對錯（全部格子對＝算對）；
+  // 數字格依答案的小數位數比對（四捨五入後相同就對），單位、逗號、全形數字都不用管；沒有格子的題目沿用自評
+  const PRAC_BLANKS = window.PRAC_BLANKS || {};
+  function pracBlankOk(b, v){
+    v = String(v==null?"":v).trim();
+    if(!v) return false;
+    if(b.n!=null){
+      const t = v.normalize("NFKC").replace(/[,，\s]/g,"").replace(/[−–—]/g,"-");
+      const m = t.match(/[-+]?\d*\.?\d+/); if(!m) return false;
+      const x = parseFloat(m[0]), a = parseFloat(b.n), d = (String(b.n).split(".")[1]||"").length;
+      const tol = b.tol!=null ? b.tol : 0.5*Math.pow(10,-d)+1e-9;
+      return Math.abs(x-a) <= tol;
+    }
+    const norm = x=>String(x).normalize("NFKC").replace(/[\s()（）]/g,"");
+    return [b.t, ...(b.x||[])].some(a=>norm(a)===norm(v));
+  }
+  function pracRecord(id, ok){
+    const all = state.topicStats.prac = state.topicStats.prac || {};
+    const r = all[id] || {n:0, c:0};
+    all[id] = {n:r.n+1, c:r.c+(ok?1:0), last:ok?1:0, at:todayStr()};
+    persist("topicStats"); markStudiedToday();
+    state.prac.n++; if(ok) state.prac.c++;
+  }
+  function pracNext(){
+    const s = state.prac;
+    s.idx++; s.shown = false; s.inp = {}; s.res = null; s.fixed = false;
+    if(s.idx>=s.ids.length) s.done = true;
+    saveData("prac", s);
+  }
+  function pracHistory(id){
+    const r = (state.topicStats.prac||{})[id];
+    if(!r || !(r.n>0)) return `<div class="section-desc" style="margin:2px 0 6px;">📊 這題還沒做過</div>`;
+    return `<div class="section-desc" style="margin:2px 0 6px;">📊 這題對過 <b style="color:#3F7D5C;">${r.c||0}</b> 次、錯過 <b style="color:#B5532F;">${r.n-(r.c||0)}</b> 次${r.last===0?'（上次算錯）':r.last===1?'（上次算對）':''}</div>`;
+  }
   function calcSubToggle(){
     return `<div class="toggle-row" style="margin:0 0 10px;">
       <button class="toggle-btn ${state.calcSub!=="sk"?"active":""}" data-calcsub="mc">🧮 學科計算題</button>
@@ -1969,7 +2004,7 @@
     return `
       <div class="ov-card">
         <div class="section-title" style="margin-top:0;">✍️ 術科實戰練習題<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${PRACTICAL_QS.length} 題</span></div>
-        <div class="section-desc" style="margin-top:2px;">歷屆術科計算題（職安乙級技能檢定計算題彙整）。<b>先在紙上把算式寫完，再看詳解自己對答案</b>，按「算對了／算錯了」記錄。算錯的題目會集中到「算錯的題目」重練。</div>
+        <div class="section-desc" style="margin-top:2px;">歷屆術科計算題（職安乙級技能檢定計算題彙整）。<b>先在紙上把算式寫完，再把答案填進格子</b>（只填數字，單位不用打），系統自動對答案，每一格都對才算對。算錯的題目會集中到「算錯的題目」重練。</div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(p.cov, "#5B6B82", `做過 ${p.seen}/${p.total} 題`)}
           ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : `${allSt.icon} 算對 ${p.accC}/${p.accT}`)}
@@ -2005,11 +2040,42 @@
     }
     const q = PRACTICAL_QS.find(x=>x.id===s.ids[s.idx]);
     if(!q){ state.prac = null; saveData("prac", null); return renderPractical(); }
-    return `
+    const B = PRAC_BLANKS[q.id];
+    const top = `
       <div class="quiz-progress">✍️ 術科・${esc(s.label)} 第 ${s.idx+1} / ${s.ids.length} 題 · 算對 ${s.c}</div>
       <div class="quiz-card">
         <div class="quiz-chapter-tag">${esc(q.topic)} · 【${esc(q.code)}】</div>
-        <div class="quiz-question" style="white-space:pre-wrap;">${esc(q.q)}</div>
+        ${pracHistory(q.id)}
+        <div class="quiz-question" style="white-space:pre-wrap;">${esc(q.q)}</div>`;
+    if(B && B.length){
+      const inp = s.inp || {};
+      const explain = `<div class="quiz-explain">
+            <div class="quiz-explain-ans">✅ 答案：${esc(q.ans)}</div>
+            <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(q.sol)}</div>
+          </div>`;
+      if(!s.shown){
+        return `${top}
+        <div class="section-desc" style="margin:8px 0;">先在紙上算好，再把答案填進下面的格子（注意題目要求的小數位數；單位不用打）。</div>
+        ${B.map((b,i)=>`<div style="margin:8px 0;">
+          <div style="font-weight:600;margin-bottom:4px;">${esc(b.l)}</div>
+          ${b.o ? `<div class="toggle-row" style="margin:0;flex-wrap:wrap;">${b.o.map(o=>`<button class="toggle-btn ${inp[i]===o?'active':''}" data-skpick="${i}" data-v="${esc(o)}" style="padding:6px 8px;font-size:13px;">${esc(o)}</button>`).join("")}</div>`
+            : `<div style="display:flex;align-items:center;gap:8px;"><input class="text-input" data-skin="${i}" ${b.n!=null?'inputmode="decimal"':''} autocomplete="off" placeholder="${b.n!=null?'填數字':'輸入答案'}" value="${esc(inp[i]||"")}" style="margin:0;font-size:18px;flex:1;">${b.u?`<span style="white-space:nowrap;color:#6b6458;">${esc(b.u)}</span>`:''}</div>`}
+        </div>`).join("")}
+        <button class="primary-btn" id="skSubmitBtn" style="margin-top:6px;">✅ 提交答案</button>
+        <button class="primary-btn" id="skGiveUpBtn" style="margin-top:8px;background:#8a8275;">🤔 不會，直接看答案（記為算錯）</button>
+      </div>${exitBtn}`;
+      }
+      const allOk = s.res && s.res.every(Boolean);
+      return `${top}
+        <div class="result-card" style="margin-top:8px;">${s.fixed?'✅ 已改成算對':allOk?'✅ 全部答對，記為算對':`❌ 有 ${s.res?s.res.filter(x=>!x).length:B.length} 格不對，記為算錯`}</div>
+        ${B.map((b,i)=>{ const ok = s.res && s.res[i];
+          return `<div class="section-desc" style="margin:4px 0;">${ok?'✅':'❌'} <b>${esc(b.l)}</b>：你填 ${esc(inp[i]||'（空白）')}${ok?'':`　→ 正確 <b>${esc(b.n!=null?b.n:b.t)}</b> ${esc(b.u||'')}`}</div>`; }).join("")}
+        ${explain}
+        <button class="primary-btn" id="skNextBtn" style="margin-top:10px;">${s.idx+1>=s.ids.length?'看結果 →':'下一題 →'}</button>
+        ${!allOk && !s.fixed ? `<button class="primary-btn" id="skFixBtn" style="margin-top:8px;background:#8a8275;font-size:13px;">其實我算對了（只是寫法不同）→ 改成算對</button>` : ""}
+      </div>${exitBtn}`;
+    }
+    return `${top}
         ${!s.shown ? `<div class="section-desc" style="margin:8px 0;">先在紙上寫出公式、代入數字、算出答案（注意題目要求的小數位數），再看詳解。</div>
           <button class="primary-btn" id="skShowBtn">👀 看答案與詳解</button>` : `
           <div class="quiz-explain">
@@ -2553,17 +2619,40 @@
     const skShowBtn = document.getElementById("skShowBtn");
     if(skShowBtn) skShowBtn.addEventListener("click",()=>{ state.prac.shown = true; saveData("prac", state.prac); render(); });
     root.querySelectorAll("[data-skmark]").forEach(el=>el.addEventListener("click",()=>{
-      const s = state.prac, id = s.ids[s.idx], ok = el.dataset.skmark==="1";
-      const all = state.topicStats.prac = state.topicStats.prac || {};
-      const r = all[id] || {n:0, c:0};
-      all[id] = {n:r.n+1, c:r.c+(ok?1:0), last:ok?1:0, at:todayStr()};
-      persist("topicStats"); markStudiedToday();
-      s.n++; if(ok) s.c++;
-      s.idx++; s.shown = false;
-      if(s.idx>=s.ids.length) s.done = true;
-      saveData("prac", s);
+      const s = state.prac;
+      pracRecord(s.ids[s.idx], el.dataset.skmark==="1"); pracNext();
       render(); window.scrollTo(0,0);
     }));
+    // 術科填空：輸入時只存字、不重畫；選項按鈕重畫；提交後自動判分並記錄
+    root.querySelectorAll("[data-skin]").forEach(el=>{
+      el.addEventListener("input",()=>{ const s = state.prac; s.inp = s.inp || {}; s.inp[+el.dataset.skin] = el.value; });
+      el.addEventListener("keydown", e=>{ if(e.key==="Enter"){ const b = document.getElementById("skSubmitBtn"); if(b) b.click(); } });
+    });
+    root.querySelectorAll("[data-skpick]").forEach(el=>el.addEventListener("click",()=>{
+      const s = state.prac; s.inp = s.inp || {}; s.inp[+el.dataset.skpick] = el.dataset.v; render();
+    }));
+    const skSubmitBtn = document.getElementById("skSubmitBtn");
+    if(skSubmitBtn) skSubmitBtn.addEventListener("click",()=>{
+      const s = state.prac, id = s.ids[s.idx], B = PRAC_BLANKS[id] || [], inp = s.inp || {};
+      if(!B.some((_,i)=>String(inp[i]||"").trim())) return;
+      s.res = B.map((b,i)=>pracBlankOk(b, inp[i]));
+      s.shown = true; pracRecord(id, s.res.every(Boolean)); saveData("prac", s);
+      render(); window.scrollTo(0,0);
+    });
+    const skGiveUpBtn = document.getElementById("skGiveUpBtn");
+    if(skGiveUpBtn) skGiveUpBtn.addEventListener("click",()=>{
+      const s = state.prac, id = s.ids[s.idx], B = PRAC_BLANKS[id] || [];
+      s.res = B.map(()=>false); s.shown = true; pracRecord(id, false); saveData("prac", s);
+      render(); window.scrollTo(0,0);
+    });
+    const skNextBtn = document.getElementById("skNextBtn");
+    if(skNextBtn) skNextBtn.addEventListener("click",()=>{ pracNext(); render(); window.scrollTo(0,0); });
+    const skFixBtn = document.getElementById("skFixBtn");
+    if(skFixBtn) skFixBtn.addEventListener("click",()=>{
+      const s = state.prac, id = s.ids[s.idx], all = state.topicStats.prac || {}, r = all[id];
+      if(r){ all[id] = {...r, c:(r.c||0)+1, last:1}; persist("topicStats"); }
+      s.c++; s.fixed = true; saveData("prac", s); render();
+    });
     const skExitBtn = document.getElementById("skExitBtn");
     if(skExitBtn) skExitBtn.addEventListener("click",()=>{ state.prac = null; saveData("prac", null); render(); window.scrollTo(0,0); });
     // 數字變化題：沒練過的題型優先，其餘隨機；章節標籤沿用對應原題的章節
