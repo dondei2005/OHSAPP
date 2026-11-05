@@ -2351,7 +2351,9 @@
     const m = MNEMONICS.find(x=>x.id===id); if(!m) return;
     // 口訣組：第 1 關從全部口訣組（不含公式組）裡選；公式組維持配對＋填空
     const isF = m.kind==="formula";
-    const opts = isF ? [] : shuffleArr([...new Set(MNEMONICS.filter(x=>x.kind!=="formula").map(x=>x.mnemonic))]);
+    // 2026-11-05 選項依字數排序（不含標點），字數相同再依字碼排，每次位置固定比較好找
+    const mnLen = t=>[...String(t).replace(/[\s\p{P}]/gu,"")].length;
+    const opts = isF ? [] : [...new Set(MNEMONICS.filter(x=>x.kind!=="formula").map(x=>x.mnemonic))].sort((a,b)=>mnLen(a)-mnLen(b) || a.localeCompare(b,"zh-Hant"));
     state.mnemo = {id, stage: isF ? 'match' : 'choice', opts, chosen:null, typed: m.pairs.map(()=>""), res:null,
       right: shuffleArr(m.pairs.map((_,i)=>i)), doneL:{}, doneR:{}, selL:null, selR:null, bad:null, c:0, w:0};
     render(); window.scrollTo(0,0);
