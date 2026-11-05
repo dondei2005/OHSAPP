@@ -9,7 +9,7 @@
 <script src="./examA_questions_2.js"></script>
 <script src="./examB_questions.js"></script>
 <script src="./explanations.js?v=20261105a"></script>
-<script src="./study_tips.js?v=20261105d"></script>
+<script src="./study_tips.js?v=20261106a"></script>
 <script src="./dedup.js"></script>
 <script src="./topic_sets.js"></script>
 <script src="./calc_variants.js"></script>
@@ -958,7 +958,8 @@
     const ex = relabel((window.EXPLANATIONS && window.EXPLANATIONS[String(q.id||"").replace(/^num-/,"")]) || "");
     const note = relabel((q.note||"").trim());
     const T = window.STUDY_TIPS;
-    const tipKeys = (T && T.map && T.map[String(q.id||"").replace(/^num-/,"")]) || [];
+    const tipKeys = [...((T && T.map && T.map[String(q.id||"").replace(/^num-/,"")]) || [])];
+    if(airTipHit([q.question, ...(q.options||[]), ex, note].join(" ")) && !tipKeys.includes("air4m150")) tipKeys.push("air4m150");
     const tips = tipKeys.map(k=>T.topics[k]).filter(Boolean);
     const fq = freeInfo(q);
     return `<div class="quiz-explain">
@@ -1953,6 +1954,12 @@
   const PRACTICAL_CALC = window.PRACTICAL_QS || [], PRACTICAL_LAW = window.PRACTICAL_LAW || [];
   const PRACTICAL_QS = PRACTICAL_CALC.concat(PRACTICAL_LAW);
   const PRAC_BLANK_SETS = window.PRAC_BLANK_SETS || {};
+  // 2026-11-06 換氣量／氣積／容許消費量相關的題目，詳解後自動附上「4 m vs 150 m³」速記
+  function airTipHit(txt){ return /容許消費量|換氣量|換氣次數|每一勞工所占|氣積|立方公尺以上之空間|§309|§312|第\s*309\s*條|第\s*312\s*條/.test(String(txt||"")); }
+  function airTipHtml(txt){
+    const t = window.STUDY_TIPS && window.STUDY_TIPS.topics && window.STUDY_TIPS.topics.air4m150;
+    return t && airTipHit(txt) ? `<div class="quiz-explain-title">💡 ${esc(t.title)}</div><div class="quiz-explain-body">${esc(t.body)}</div>` : "";
+  }
   function pracIsLaw(){ return state.calcSub==="law"; }
   function pracPool(){ return pracIsLaw() ? PRACTICAL_LAW : PRACTICAL_CALC; }
   const PRAC_ROUND = 10;
@@ -2065,7 +2072,7 @@
       const inp = s.inp || {};
       const explain = `<div class="quiz-explain">
             <div class="quiz-explain-ans">✅ 答案：${esc(q.ans)}</div>
-            <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(q.sol)}</div>
+            <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(q.sol)}</div>${airTipHtml(q.q+" "+q.sol)}
           </div>`;
       if(!s.shown){
         return `${top}
@@ -2101,7 +2108,7 @@
           </div>` : ""}
           <div class="quiz-explain">
             <div class="quiz-explain-ans">✅ 答案：${esc(q.ans)}</div>
-            <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(q.sol)}</div>
+            <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(q.sol)}</div>${airTipHtml(q.q+" "+q.sol)}
           </div>
           <div class="toggle-row" style="margin-top:10px;">
             <button class="toggle-btn active" data-skmark="1" style="background:#3F7D5C;border-color:#3F7D5C;">✅ ${/^sk-law-/.test(q.id)?"我寫對了":"我算對了"}</button>
