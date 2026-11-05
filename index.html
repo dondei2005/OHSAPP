@@ -2089,9 +2089,16 @@
         ${!allOk && !s.fixed ? `<button class="primary-btn" id="skFixBtn" style="margin-top:8px;background:#8a8275;font-size:13px;">其實我算對了（只是寫法不同）→ 改成算對</button>` : ""}
       </div>${exitBtn}`;
     }
+    // 2026-11-05 法規題：用打字作答（存在 s.inp.txt，換題自動清空），看答案後並排顯示自己寫的內容，再自評
+    const isLaw = /^sk-law-/.test(q.id), myTxt = (s.inp && s.inp.txt) || "";
     return `${top}
-        ${!s.shown ? `<div class="section-desc" style="margin:8px 0;">${/^sk-law-/.test(q.id)?"先在紙上寫出答案（法源條號、要列舉的項目、數字），再看詳解。":"先在紙上寫出公式、代入數字、算出答案（注意題目要求的小數位數），再看詳解。"}</div>
-          <button class="primary-btn" id="skShowBtn">👀 看答案與詳解</button>` : `
+        ${!s.shown ? (isLaw ? `<div class="section-desc" style="margin:8px 0;">把答案打在下面（法源條號、要列舉的項目、數字），寫完按「看答案」再自己對。</div>
+          <textarea class="text-input" id="skLawTxt" rows="8" autocomplete="off" placeholder="在這裡輸入你的答案…" style="margin:0 0 8px;font-size:16px;width:100%;box-sizing:border-box;resize:vertical;line-height:1.6;">${esc(myTxt)}</textarea>
+          <button class="primary-btn" id="skShowBtn">👀 看答案</button>` : `<div class="section-desc" style="margin:8px 0;">先在紙上寫出公式、代入數字、算出答案（注意題目要求的小數位數），再看詳解。</div>
+          <button class="primary-btn" id="skShowBtn">👀 看答案與詳解</button>`) : `
+          ${isLaw ? `<div class="quiz-explain" style="background:#F4F1EA;">
+            <div class="quiz-explain-title">✍️ 你的答案</div><div class="quiz-explain-body" style="white-space:pre-wrap;">${myTxt.trim() ? esc(myTxt) : '（沒有輸入）'}</div>
+          </div>` : ""}
           <div class="quiz-explain">
             <div class="quiz-explain-ans">✅ 答案：${esc(q.ans)}</div>
             <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(q.sol)}</div>
@@ -2767,6 +2774,8 @@
     root.querySelectorAll("[data-skstart]").forEach(el=>el.addEventListener("click",()=>startPrac(el.dataset.skstart)));
     const skShowBtn = document.getElementById("skShowBtn");
     if(skShowBtn) skShowBtn.addEventListener("click",()=>{ state.prac.shown = true; saveData("prac", state.prac); render(); });
+    const skLawTxt = document.getElementById("skLawTxt");
+    if(skLawTxt) skLawTxt.addEventListener("input",()=>{ const s = state.prac; s.inp = s.inp || {}; s.inp.txt = skLawTxt.value; saveData("prac", s); });
     root.querySelectorAll("[data-skmark]").forEach(el=>el.addEventListener("click",()=>{
       const s = state.prac;
       pracRecord(s.ids[s.idx], el.dataset.skmark==="1"); pracNext();
