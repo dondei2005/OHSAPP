@@ -1239,6 +1239,8 @@
     return {chapters, chAll, recent, mix:wrongProg(all,'xN','xC'), pendingAll:all.filter(q=>!q.meta.mastered)};
   }
   function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  // 2026-11-05 乙級錯題本出題順序：連續答對次數多→少（差一點就移到已學會的先出，加快消化），次數相同的隨機
+  function byStreakDesc(list){ return shuffleArr(list.slice()).sort((a,b)=>(b.meta.correctStreak||0)-(a.meta.correctStreak||0)); }
   function wrongReviewTitle(current){
     if(state.wrongBook==='learned' && !current._rv) return '已學會錯題抽考';
     if(current._rv==='mix') return '全章節錯題隨機';
@@ -1373,7 +1375,7 @@
         <div class="toggle-row" style="margin:6px 0 8px;">
           ${sortBtn('chapter','依章節')}${sortBtn('cov','刷題率低→高')}${sortBtn('cnt','錯過題數多→少')}
         </div>
-        <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；錯過＝這章錯過的題數（待複習＋已學會）；刷題 100% 就打 ✅。每輪最多 20 題，沒練過的錯題優先出。點任一列可展開題目。</div>
+        <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；錯過＝這章錯過的題數（待複習＋已學會）；刷題 100% 就打 ✅。每輪最多 20 題，連續答對次數多的先出（同次數隨機），快移到已學會的題目先消化。點任一列可展開題目。</div>
         ${chs.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
         ${sorted.map(chBlock).join("")}
       </div>
@@ -2597,9 +2599,7 @@
       const key = el.dataset.wrongch;
       const c = computeWrongChapters().chapters.find(x=>x.key===key);
       if(!c || c.pending.length===0) return;
-      const fresh = shuffleArr(c.pending.filter(q=>!(q.meta.cN>0)));
-      const done = shuffleArr(c.pending.filter(q=>q.meta.cN>0));
-      startWrongRound(fresh.concat(done), 'ch', key);
+      startWrongRound(byStreakDesc(c.pending), 'ch', key);
     }));
     // 計算／年份條號分頁：練單一章節或全章節隨機，每輪最多 20 題
     function startTopicRound(kind, list, ch){
@@ -2736,9 +2736,8 @@
     }));
     const startWrongMixBtn = document.getElementById("startWrongMixBtn");
     if(startWrongMixBtn) startWrongMixBtn.addEventListener("click",()=>{
-      // 跨全部章節隨機抽 20 題；全章節隨機還沒做過的錯題優先，刷題率才推得到 100%
-      const all = computeWrongChapters().pendingAll;
-      startWrongRound(shuffleArr(all.filter(q=>!(q.meta.xN>0))).concat(shuffleArr(all.filter(q=>q.meta.xN>0))), 'mix', null);
+      // 跨全部章節抽 20 題：連續答對次數多→少，次數相同的隨機
+      startWrongRound(byStreakDesc(computeWrongChapters().pendingAll), 'mix', null);
     });
     root.querySelectorAll("[data-wrongbook]").forEach(el=>el.addEventListener("click",()=>{
       state.wrongBook = el.dataset.wrongbook;
