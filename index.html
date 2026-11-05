@@ -2272,11 +2272,13 @@
   // 一段裡的連接詞不算，其餘 2～3 個字算錯 1 個詞（1 字也算 1 詞，4～5 字算 2 詞…）
   // 2026-11-05 計分改成：100 分平均分給各項（「其他…」那項不計分），每項錯 1 個詞扣該項一半，錯 2 個詞以上該項 0 分
   // 2026-11-05（後）順序錯：漏打的詞若在別處打出來（2 字以上相同），算「順序錯」，每詞只扣該項 1/4（錯詞的一半）
-  const MN_CONN = new Set("及或和與並之的暨且等".split(""));
+  // 虛字（連接詞、助詞）打錯、漏打都不扣分；2026-11-05 加入 所、者、於、而、則、即、亦、乃、係
+  const MN_CONN_STR = "及或和與並之的暨且等所者於而則即亦乃係";
+  const MN_CONN = new Set(MN_CONN_STR.split(""));
   // 把答案切成關鍵詞：去掉連接詞分段，每段 2 字一詞，最後剩 3 字就併成一詞（1～3 字的段直接當一詞）
   function mnWords(ans){
     const out = [];
-    mnemoNorm(ans).split(/[及或和與並之的暨且等]/).filter(Boolean).forEach(c=>{
+    mnemoNorm(ans).split(new RegExp("["+MN_CONN_STR+"]")).filter(Boolean).forEach(c=>{
       const ch = [...c];
       if(ch.length<=3){ out.push(c); return; }
       for(let i=0;i<ch.length;i+=2){ if(ch.length-i===3){ out.push(ch.slice(i).join("")); break; } out.push(ch.slice(i,i+2).join("")); }
@@ -2483,7 +2485,7 @@
         <div class="quiz-chapter-tag">第 2 關：看關鍵字打出條文（共 ${m.pairs.length} 項）</div>
         <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
         <div class="mn-phrase">${esc(m.mnemonic)}</div>
-        <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。每項錯 1 個詞（2～3 個字算一詞，漏打、打錯、多打都算）扣該項一半，錯 2 個詞以上該項 0 分；詞有打到但順序錯，每詞只扣該項 1/4。連接詞（及、或、和、與、並、之、的、暨、且、等）、標點符號和空白不算錯。</div>
+        <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。每項錯 1 個詞（2～3 個字算一詞，漏打、打錯、多打都算）扣該項一半，錯 2 個詞以上該項 0 分；詞有打到但順序錯，每詞只扣該項 1/4。連接詞和虛字（及、或、和、與、並、之、的、暨、且、等、所、者、於、而、則、即、亦、乃、係）、標點符號和空白不算錯。</div>
         ${m.pairs.map((p,i)=>`<div class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</div>
           <textarea class="mn-tin" data-mntype="${i}" rows="2" placeholder="打出這一項的條文內容">${esc(s.typed[i]||"")}</textarea>`).join("")}
         <button class="primary-btn" id="mnTypeSubmit">交卷評分</button>
@@ -2500,7 +2502,7 @@
         ${(()=>{ const bad = r.items.filter(x=>!x.free && (x.words||x.moved||x.pen)>0 && !mnNoteOn(m, x.i));
           return bad.length ? `<button class="primary-btn" data-mnnoteall="${bad.map(x=>x.i).join(",")}" style="margin:8px 0 0;background:#A8631F;">📒 錯的 ${bad.length} 項全部加入條文筆記</button>` : ""; })()}
         ${r.items.map(x=>{ const p = m.pairs[x.i];
-          return `<div class="mn-titem">${mnNoteBtn(m, x.i)}<span class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</span>　${x.free?'<span style="color:#8a8275;">（不計分）</span>':x.pen!=null?(x.pen>0?`<span style="color:#B9554A;">−${x.pen}</span>`:'<span style="color:#3F7D5C;">✅ 全對</span>'):(x.words>0||x.moved>0)?`<span style="color:#B9554A;">${[x.words>0?`錯 ${x.words} 詞`:"", x.moved>0?`順序錯 ${x.moved} 詞`:""].filter(Boolean).join("、")}・得 ${Math.round(x.got*10)/10} / ${Math.round(x.per*10)/10} 分</span>`:x.ops.some(o=>o.t!=='eq')?'<span style="color:#3F7D5C;">✅ 不扣分（只有連接詞不同）</span>':'<span style="color:#3F7D5C;">✅ 全對</span>'}
+          return `<div class="mn-titem">${mnNoteBtn(m, x.i)}<span class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</span>　${x.free?'<span style="color:#8a8275;">（不計分）</span>':x.pen!=null?(x.pen>0?`<span style="color:#B9554A;">−${x.pen}</span>`:'<span style="color:#3F7D5C;">✅ 全對</span>'):(x.words>0||x.moved>0)?`<span style="color:#B9554A;">${[x.words>0?`錯 ${x.words} 詞`:"", x.moved>0?`順序錯 ${x.moved} 詞`:""].filter(Boolean).join("、")}・得 ${Math.round(x.got*10)/10} / ${Math.round(x.per*10)/10} 分</span>`:x.ops.some(o=>o.t!=='eq')?'<span style="color:#3F7D5C;">✅ 不扣分（只有連接詞、虛字不同）</span>':'<span style="color:#3F7D5C;">✅ 全對</span>'}
             <div style="margin-top:3px;">${x.ops.some(o=>o.t!=='eq') ? mnemoDiffHtml(x.ops) : esc(mnemoItem(p[1]))}</div>
             ${(x.words||x.moved||x.pen)>0?`<div style="color:#6b655a;margin-top:2px;">正確：${esc(mnemoItem(p[1]))}</div>`:""}</div>`; }).join("")}
         ${m.note?`<div class="section-desc">${esc(m.note)}</div>`:""}
