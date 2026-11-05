@@ -613,6 +613,7 @@
     // 練習進行到一半離開（關頁、切分頁）也要能接續，所以連同作答中的題組本身一併存本機
     state.quizPool = loadData("quizPool", []);
     state.calcSub = loadData("calcSub", "mc");
+    state.mnSort = loadData("mnSort", "fresh");
     state.prac = loadData("prac", null);
     state.quizIdx = loadData("quizIdx", 0);
     state.quizSelected = loadData("quizSelected", null);
@@ -2615,7 +2616,21 @@
         ${formulas.map(row).join("")}
         <div class="sub-title">各組口訣（達標 ${reached}/${MNEMONICS.length} 組）</div>
         <div class="section-desc" style="margin-top:0;">點任一組開始練習。</div>
-        ${MNEMONICS.filter(m=>m.kind!=="formula").map(row).join("")}
+        <div class="toggle-row" style="margin:6px 0 8px;">
+          <button class="toggle-btn ${state.mnSort!=="score"?"active":""}" data-mnsort="fresh">🆕 沒練過的優先</button>
+          <button class="toggle-btn ${state.mnSort==="score"?"active":""}" data-mnsort="score">📊 前次分數高→低</button>
+        </div>
+        ${(()=>{
+          // 2026-11-05 排序：fresh＝沒練過的最前面，其餘依前次分數高→低；score＝前次分數高→低，沒練過的放最後
+          const list = MNEMONICS.filter(m=>m.kind!=="formula").map((m,i)=>({m, i, sc: mnemoScore(m)}));
+          list.sort((a,b)=>{
+            const na = a.sc===null, nb = b.sc===null;
+            if(na!==nb) return state.mnSort==="score" ? (na?1:-1) : (na?-1:1);
+            if(!na && a.sc!==b.sc) return b.sc-a.sc;
+            return a.i-b.i;
+          });
+          return list.map(x=>row(x.m)).join("");
+        })()}
       </div>
     `;
   }
@@ -2825,6 +2840,7 @@
       state.topicSort = el.dataset.topicsort; render();
     }));
     root.querySelectorAll("[data-mnstart]").forEach(el=>el.addEventListener("click",()=>startMnemo(el.dataset.mnstart)));
+    root.querySelectorAll("[data-mnsort]").forEach(el=>el.addEventListener("click",()=>{ state.mnSort = el.dataset.mnsort; saveData("mnSort", state.mnSort); render(); }));
     // 條文筆記：加入／移除不跳回頁首
     root.querySelectorAll("[data-mnnote]").forEach(el=>el.addEventListener("click",e=>{
       e.stopPropagation();
