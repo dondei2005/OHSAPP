@@ -2269,7 +2269,8 @@
     return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC: acc===null?0:acc, accT: 100, acc};
   }
   // 打條文評分：去掉空白與標點後逐字比對（編輯距離對齊），連續的錯誤算一段；
-  // 一段裡的連接詞不扣分，其餘每 2 個字算一個詞、每詞扣 2（不滿 2 字也算 1 詞）
+  // 一段裡的連接詞不算，其餘 2～3 個字算錯 1 個詞（1 字也算 1 詞，4～5 字算 2 詞…）
+  // 2026-11-05 計分改成：100 分平均分給各項（「其他…」那項不計分），每項錯 1 個詞扣該項一半，錯 2 個詞以上該項 0 分
   const MN_CONN = new Set("及或和與並之的暨且等".split(""));
   function mnemoNorm(t){ return String(t||"").normalize("NFKC").replace(/[\s\p{P}]/gu, ""); }
   function mnemoDiff(ans, typed){
@@ -2287,15 +2288,16 @@
       else { ops.push({t:'ins', b:b[j-1]}); j--; }
     }
     ops.reverse();
-    let pen = 0, seg = [];
+    let words = 0, seg = [];
     const flush = ()=>{
       if(!seg.length) return;
       const conn = seg.filter(c=>MN_CONN.has(c)).length, other = seg.length - conn;
-      pen += Math.ceil(other/2)*2; seg = [];
+      if(other>0) words += Math.max(1, Math.floor(other/2));
+      seg = [];
     };
     ops.forEach(o=>{ if(o.t==='eq') flush(); else seg.push(o.t==='ins' ? o.b : o.a); });
     flush();
-    return {ops, pen};
+    return {ops, words};
   }
   function mnemoDiffHtml(ops){
     return ops.map(o=>o.t==='eq' ? esc(o.a) : o.t==='del' ? `<span class="mn-miss">${esc(o.a)}</span>`
@@ -2365,13 +2367,20 @@
     all[m.id] = {n:(r.n||0)+1, c:(r.c||0)+s.c, w:(r.w||0)+s.w, last, best:Math.max(r.best!=null?r.best:(r.last||0), last), at:todayStr()};
     persist("topicStats");
   }
-  // 口訣組第 2 關交卷：逐項評分，100 分扣到 0 為止
+  // 「其他經中央主管機關…」「其他資料」這類項目不計分
+  function mnemoFree(p){ return /^其他/.test(mnemoItem(p[1])); }
+  // 口訣組第 2 關交卷：100 分平均分給計分的項目；每項錯 1 個詞扣該項一半，錯 2 個詞以上該項 0 分
   function mnemoTypeFinish(){
     const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
-    const items = m.pairs.map((p,i)=>({...mnemoDiff(mnemoItem(p[1]), s.typed[i]), i}));
-    const pen = items.reduce((a,x)=>a+x.pen, 0);
-    const score = Math.max(0, Math.round((100-pen)*10)/10);
-    s.res = {items, pen, score}; s.stage = 'tdone';
+    const nScored = m.pairs.filter(p=>!mnemoFree(p)).length || 1, per = 100/nScored;
+    const items = m.pairs.map((p,i)=>{
+      const d = mnemoDiff(mnemoItem(p[1]), s.typed[i]), free = mnemoFree(p);
+      const got = free ? 0 : per*Math.max(0, 1-0.5*d.words);
+      return {...d, i, free, per, got};
+    });
+    const score = Math.round(items.reduce((a,x)=>a+x.got, 0)*10)/10;
+    const lost = items.filter(x=>!x.free && x.words>0).length;
+    s.res = {items, score, lost, per}; s.stage = 'tdone';
     const all = state.topicStats.mnemo2 = state.topicStats.mnemo2 || {};
     const r = all[m.id] || {n:0};
     const chOk = s.opts[s.chosen]===m.mnemonic;
@@ -2400,7 +2409,7 @@
         <div class="quiz-chapter-tag">第 2 關：看關鍵字打出條文（共 ${m.pairs.length} 項）</div>
         <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
         <div class="mn-phrase">${esc(m.mnemonic)}</div>
-        <div class="section-desc" style="margin:6px 0 8px;">100 分起算：重要詞每錯一詞扣 2 分（約 2 個字算一詞，漏打、打錯、多打都算），連接詞（及、或、和、與、並、之、的、暨、且、等）打錯、漏打都不扣分，標點符號和空白也不扣分。</div>
+        <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。每項錯 1 個詞（2～3 個字算一詞，漏打、打錯、多打都算）扣該項一半，錯 2 個詞以上該項 0 分。連接詞（及、或、和、與、並、之、的、暨、且、等）、標點符號和空白不算錯。</div>
         ${m.pairs.map((p,i)=>`<div class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</div>
           <textarea class="mn-tin" data-mntype="${i}" rows="2" placeholder="打出這一項的條文內容">${esc(s.typed[i]||"")}</textarea>`).join("")}
         <button class="primary-btn" id="mnTypeSubmit">交卷評分</button>
@@ -2411,13 +2420,13 @@
       return `<div class="quiz-progress">🔗 口訣・${esc(m.law)} · 完成</div><div class="quiz-card">
         <div class="quiz-chapter-tag">完成</div>
         <div class="quiz-question">${esc(m.title)}</div>
-        <div class="result-card" style="margin-top:0;">${st.icon} 這組條文成績 ${r.score} 分（共扣 ${r.pen} 分）・第 1 關選口訣 ${chOk?'✅ 答對':'❌ 答錯'}</div>
+        <div class="result-card" style="margin-top:0;">${st.icon} 這組條文成績 ${r.score} 分${r.lost?`（${r.lost} 項有錯）`:""}・第 1 關選口訣 ${chOk?'✅ 答對':'❌ 答錯'}</div>
         <div class="mn-phrase" style="margin-top:10px;">${esc(m.mnemonic)}</div>
         <div class="section-desc" style="margin:6px 0 0;"><span class="mn-miss">紅底</span>＝漏打或打錯的字（正確內容），<span class="mn-extra">刪除線</span>＝你多打或打錯的字。</div>
         ${r.items.map(x=>{ const p = m.pairs[x.i];
-          return `<div class="mn-titem"><span class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</span>　${x.pen>0?`<span style="color:#B9554A;">−${x.pen}</span>`:x.ops.some(o=>o.t!=='eq')?'<span style="color:#3F7D5C;">✅ 不扣分（只有連接詞不同）</span>':'<span style="color:#3F7D5C;">✅ 全對</span>'}
+          return `<div class="mn-titem"><span class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</span>　${x.free?'<span style="color:#8a8275;">（不計分）</span>':x.pen!=null?(x.pen>0?`<span style="color:#B9554A;">−${x.pen}</span>`:'<span style="color:#3F7D5C;">✅ 全對</span>'):x.words>0?`<span style="color:#B9554A;">錯 ${x.words} 詞・得 ${Math.round(x.got*10)/10} / ${Math.round(x.per*10)/10} 分</span>`:x.ops.some(o=>o.t!=='eq')?'<span style="color:#3F7D5C;">✅ 不扣分（只有連接詞不同）</span>':'<span style="color:#3F7D5C;">✅ 全對</span>'}
             <div style="margin-top:3px;">${x.ops.some(o=>o.t!=='eq') ? mnemoDiffHtml(x.ops) : esc(mnemoItem(p[1]))}</div>
-            ${x.pen>0?`<div style="color:#6b655a;margin-top:2px;">正確：${esc(mnemoItem(p[1]))}</div>`:""}</div>`; }).join("")}
+            ${(x.words||x.pen)>0?`<div style="color:#6b655a;margin-top:2px;">正確：${esc(mnemoItem(p[1]))}</div>`:""}</div>`; }).join("")}
         ${m.note?`<div class="section-desc">${esc(m.note)}</div>`:""}
         <button class="primary-btn" data-mnstart="${m.id}" style="margin-top:10px;">🔁 再練這組</button>
         <button class="primary-btn" data-mnstart="${nextMnemoId(m.id)}" style="margin-top:8px;">下一組 →</button>
@@ -2480,7 +2489,7 @@
     return `
       <div class="ov-card">
         <div class="section-title" style="margin-top:0;">🔗 口訣配對<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${MNEMONICS.length} 組</span></div>
-        <div class="section-desc" style="margin-top:2px;">第 1 關：從全部口訣中選出這個條文的口訣；第 2 關：看口訣的關鍵字，直接打出每一項條文，依錯字扣分（重要詞每詞扣 2 分，連接詞和標點不扣），100 分起算。每組顯示「前次紀錄」和「最高紀錄」，不算平均；達標看前次紀錄（2026-11-03 起重新計分）。<b>目標：每組都做過、成績 ${ACC_TARGET} 分</b></div>
+        <div class="section-desc" style="margin-top:2px;">第 1 關：從全部口訣中選出這個條文的口訣；第 2 關：看口訣的關鍵字，直接打出每一項條文，100 分平均分給每一項（「其他」那項不計分），每項錯 1 個詞扣一半、錯 2 個詞該項 0 分。每組顯示「前次紀錄」和「最高紀錄」，不算平均；達標看前次紀錄（2026-11-03 起重新計分）。<b>目標：每組都做過、成績 ${ACC_TARGET} 分</b></div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(p.cov, "#5B6B82", `做過 ${p.seen}/${p.total} 組`)}
           ${svgRing(reachPct, accStatus(reachPct).color, `前次達 ${ACC_TARGET} 分 ${reached}/${MNEMONICS.length} 組`)}
