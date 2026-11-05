@@ -15,6 +15,7 @@
 <script src="./calc_variants.js"></script>
 <script src="./practical_questions.js?v=20261105b"></script>
 <script src="./practical_blanks.js?v=20261104a"></script>
+<script src="./practical_law.js?v=20261105a"></script>
 <script src="./mnemonics.js?v=20261105a"></script>
 <script src="./free_questions.js"></script>
 </head>
@@ -1947,7 +1948,12 @@
   // 術科要寫算式，所以不自動判分：先自己在紙上算，看詳解後自評「算對／算錯」。
   // 作答紀錄存 state.topicStats.prac[id]＝{n,c,last,at}（last：最近一次 1＝算對、0＝算錯），跟著雲端同步／匯出匯入；
   // 一輪題目存 state.prac（localStorage ohs_prac），不用 quizPool，跟其他練習互不干擾。
-  const PRACTICAL_QS = window.PRACTICAL_QS || [];
+  // 2026-11-05 術科法規題（practical_law.js，第 80～91 次題解、對照現行條文）另成「📜術科法規題」切換，跟計算題分開出題、分開統計
+  const PRACTICAL_CALC = window.PRACTICAL_QS || [], PRACTICAL_LAW = window.PRACTICAL_LAW || [];
+  const PRACTICAL_QS = PRACTICAL_CALC.concat(PRACTICAL_LAW);
+  const PRAC_BLANK_SETS = window.PRAC_BLANK_SETS || {};
+  function pracIsLaw(){ return state.calcSub==="law"; }
+  function pracPool(){ return pracIsLaw() ? PRACTICAL_LAW : PRACTICAL_CALC; }
   const PRAC_ROUND = 10;
   // 2026-11-04 填空對答案：practical_blanks.js 把每題答案拆成格子，作答後自動判對錯（全部格子對＝算對）；
   // 數字格依答案的小數位數比對（四捨五入後相同就對），單位、逗號、全形數字都不用管；沒有格子的題目沿用自評
@@ -1985,11 +1991,12 @@
   }
   function calcSubToggle(){
     return `<div class="toggle-row" style="margin:0 0 10px;">
-      <button class="toggle-btn ${state.calcSub!=="sk"?"active":""}" data-calcsub="mc">🧮 學科計算題</button>
-      <button class="toggle-btn ${state.calcSub==="sk"?"active":""}" data-calcsub="sk">✍️ 術科實戰練習題</button>
+      <button class="toggle-btn ${state.calcSub!=="sk"&&state.calcSub!=="law"?"active":""}" data-calcsub="mc">🧮 學科計算題</button>
+      <button class="toggle-btn ${state.calcSub==="sk"?"active":""}" data-calcsub="sk">✍️ 術科計算題</button>
+      <button class="toggle-btn ${state.calcSub==="law"?"active":""}" data-calcsub="law">📜 術科法規題</button>
     </div>`;
   }
-  function renderCalcTab(){ return calcSubToggle() + (state.calcSub==="sk" ? renderPractical() : renderTopic("calc")); }
+  function renderCalcTab(){ return calcSubToggle() + (state.calcSub==="sk"||state.calcSub==="law" ? renderPractical() : renderTopic("calc")); }
   function pracProg(list){
     const st = state.topicStats.prac||{};
     let seen=0, accC=0, accT=0;
@@ -1997,36 +2004,40 @@
     const total = list.length;
     return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC, accT, acc: accT>0?Math.round(accC/accT*100):null};
   }
-  function pracWrongList(){ const st = state.topicStats.prac||{}; return PRACTICAL_QS.filter(q=>st[q.id] && st[q.id].last===0); }
+  function pracWrongList(){ const st = state.topicStats.prac||{}; return pracPool().filter(q=>st[q.id] && st[q.id].last===0); }
   function renderPractical(){
     if(state.prac) return renderPracRound();
-    if(!PRACTICAL_QS.length) return `<div class="empty-hint">找不到術科題目資料（practical_questions.js）。</div>`;
-    const p = pracProg(PRACTICAL_QS), allSt = accStatus(p.acc), wrong = pracWrongList();
-    const topics = [...new Set(PRACTICAL_QS.map(q=>q.topic))];
+    const POOL = pracPool(), LAW = pracIsLaw();
+    if(!POOL.length) return `<div class="empty-hint">找不到術科題目資料（${LAW?"practical_law.js":"practical_questions.js"}）。</div>`;
+    const p = pracProg(POOL), allSt = accStatus(p.acc), wrong = pracWrongList();
+    const topics = [...new Set(POOL.map(q=>q.topic))];
     return `
       <div class="ov-card">
-        <div class="section-title" style="margin-top:0;">✍️ 術科實戰練習題<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${PRACTICAL_QS.length} 題</span></div>
-        <div class="section-desc" style="margin-top:2px;">歷屆術科計算題（職安乙級技能檢定計算題彙整）。<b>先在紙上把算式寫完，再把答案填進格子</b>（只填數字，單位不用打），系統自動對答案，每一格都對才算對。算錯的題目會集中到「算錯的題目」重練。</div>
+        <div class="section-title" style="margin-top:0;">${LAW?"📜 術科法規題":"✍️ 術科計算題"}<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${POOL.length} 題</span></div>
+        <div class="section-desc" style="margin-top:2px;">${LAW
+          ? `歷屆術科法規題（第 80～91 次題解，答案已對照現行條文，修法改過的標【修法】）。<b>先在紙上把答案寫出來</b>（條號、項目、數字），再看詳解自評；配合題（選代號）直接點選，系統自動對答案。寫錯的題目會集中到「寫錯的題目」重練。`
+          : `歷屆術科計算題（職安乙級技能檢定計算題彙整）。<b>先在紙上把算式寫完，再把答案填進格子</b>（只填數字，單位不用打），系統自動對答案，每一格都對才算對。算錯的題目會集中到「算錯的題目」重練。`}</div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(p.cov, "#5B6B82", `做過 ${p.seen}/${p.total} 題`)}
-          ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : `${allSt.icon} 算對 ${p.accC}/${p.accT}`)}
+          ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : `${allSt.icon} ${LAW?"寫對":"算對"} ${p.accC}/${p.accT}`)}
         </div>
-        <button class="primary-btn" data-skstart="all" style="margin:10px 0 4px;">🎲 隨機 ${Math.min(PRAC_ROUND,PRACTICAL_QS.length)} 題（沒做過的優先）</button>
-        ${wrong.length ? `<button class="primary-btn" data-skstart="wrong" style="margin:4px 0;background:#B5532F;">🔁 算錯的題目（${wrong.length} 題）</button>` : ""}
+        <button class="primary-btn" data-skstart="all" style="margin:10px 0 4px;">🎲 隨機 ${Math.min(PRAC_ROUND,POOL.length)} 題（沒做過的優先）</button>
+        ${wrong.length ? `<button class="primary-btn" data-skstart="wrong" style="margin:4px 0;background:#B5532F;">🔁 ${LAW?"寫錯":"算錯"}的題目（${wrong.length} 題）</button>` : ""}
         <div class="sub-title">各類題型</div>
         <div class="section-desc" style="margin-top:0;">點任一類開始練（每輪最多 ${PRAC_ROUND} 題，沒做過的優先）。</div>
         ${topics.map(t=>{
-          const list = PRACTICAL_QS.filter(q=>q.topic===t);
+          const list = POOL.filter(q=>q.topic===t);
           return overviewRow(t, `（${list.length} 題）`, pracProg(list), `data-skstart="t:${esc(t)}"`);
         }).join("")}
       </div>`;
   }
   function startPrac(mode){
     const st = state.topicStats.prac||{};
-    let list = mode==="wrong" ? pracWrongList() : mode.startsWith("t:") ? PRACTICAL_QS.filter(q=>q.topic===mode.slice(2)) : PRACTICAL_QS;
+    const POOL = pracPool();
+    let list = mode==="wrong" ? pracWrongList() : mode.startsWith("t:") ? POOL.filter(q=>q.topic===mode.slice(2)) : POOL;
     if(!list.length) return;
     const fresh = shuffleArr(list.filter(q=>!(st[q.id]&&st[q.id].n>0))), done = shuffleArr(list.filter(q=>st[q.id]&&st[q.id].n>0));
-    const label = mode==="wrong" ? "算錯的題目" : mode.startsWith("t:") ? mode.slice(2) : "隨機";
+    const label = mode==="wrong" ? (pracIsLaw()?"寫錯的題目":"算錯的題目") : mode.startsWith("t:") ? mode.slice(2) : "隨機";
     state.prac = {ids: (mode==="wrong" ? shuffleArr(list.slice()) : fresh.concat(done)).slice(0, PRAC_ROUND).map(q=>q.id), idx:0, shown:false, c:0, n:0, label, done:false};
     saveData("prac", state.prac);
     render(); window.scrollTo(0,0);
@@ -2037,7 +2048,7 @@
     if(s.done){
       return `<div class="quiz-card"><div class="quiz-chapter-tag">完成</div>
         <div class="result-card" style="margin-top:0;">✍️ 這輪（${esc(s.label)}）算對 ${s.c} / ${s.n} 題</div>
-        <button class="primary-btn" data-skstart="${s.label==="算錯的題目"?"wrong":s.label==="隨機"?"all":"t:"+esc(s.label)}" style="margin-top:10px;">🔁 同類再來一輪</button>
+        <button class="primary-btn" data-skstart="${s.label==="算錯的題目"||s.label==="寫錯的題目"?"wrong":s.label==="隨機"?"all":"t:"+esc(s.label)}" style="margin-top:10px;">🔁 同類再來一輪</button>
       </div>${exitBtn}`;
     }
     const q = PRACTICAL_QS.find(x=>x.id===s.ids[s.idx]);
@@ -2057,7 +2068,7 @@
           </div>`;
       if(!s.shown){
         return `${top}
-        <div class="section-desc" style="margin:8px 0;">先在紙上算好，再把答案填進下面的格子（注意題目要求的小數位數；單位不用打）。</div>
+        <div class="section-desc" style="margin:8px 0;">${/^sk-law-/.test(q.id)?"每一格點選一個代號，全部選完再提交。":"先在紙上算好，再把答案填進下面的格子（注意題目要求的小數位數；單位不用打）。"}</div>
         ${B.map((b,i)=>`<div style="margin:8px 0;">
           <div style="font-weight:600;margin-bottom:4px;">${esc(b.l)}</div>
           ${b.o ? `<div class="toggle-row" style="margin:0;flex-wrap:wrap;">${b.o.map(o=>`<button class="toggle-btn ${inp[i]===o?'active':''}" data-skpick="${i}" data-v="${esc(o)}" style="padding:6px 8px;font-size:13px;">${esc(o)}</button>`).join("")}</div>`
@@ -2078,15 +2089,15 @@
       </div>${exitBtn}`;
     }
     return `${top}
-        ${!s.shown ? `<div class="section-desc" style="margin:8px 0;">先在紙上寫出公式、代入數字、算出答案（注意題目要求的小數位數），再看詳解。</div>
+        ${!s.shown ? `<div class="section-desc" style="margin:8px 0;">${/^sk-law-/.test(q.id)?"先在紙上寫出答案（法源條號、要列舉的項目、數字），再看詳解。":"先在紙上寫出公式、代入數字、算出答案（注意題目要求的小數位數），再看詳解。"}</div>
           <button class="primary-btn" id="skShowBtn">👀 看答案與詳解</button>` : `
           <div class="quiz-explain">
             <div class="quiz-explain-ans">✅ 答案：${esc(q.ans)}</div>
             <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(q.sol)}</div>
           </div>
           <div class="toggle-row" style="margin-top:10px;">
-            <button class="toggle-btn active" data-skmark="1" style="background:#3F7D5C;border-color:#3F7D5C;">✅ 我算對了</button>
-            <button class="toggle-btn active" data-skmark="0" style="background:#B5532F;border-color:#B5532F;">❌ 算錯／不會</button>
+            <button class="toggle-btn active" data-skmark="1" style="background:#3F7D5C;border-color:#3F7D5C;">✅ ${/^sk-law-/.test(q.id)?"我寫對了":"我算對了"}</button>
+            <button class="toggle-btn active" data-skmark="0" style="background:#B5532F;border-color:#B5532F;">❌ ${/^sk-law-/.test(q.id)?"寫錯／不會":"算錯／不會"}</button>
           </div>`}
       </div>${exitBtn}`;
   }
@@ -2636,6 +2647,12 @@
       const s = state.prac, id = s.ids[s.idx], B = PRAC_BLANKS[id] || [], inp = s.inp || {};
       if(!B.some((_,i)=>String(inp[i]||"").trim())) return;
       s.res = B.map((b,i)=>pracBlankOk(b, inp[i]));
+      // 順序可互換的格子（PRAC_BLANK_SETS）：填的答案集合跟正確答案集合相同就整組算對
+      (PRAC_BLANK_SETS[id]||[]).forEach(g=>{
+        const norm = x=>String(x==null?"":x).normalize("NFKC").trim();
+        const want = g.map(i=>norm(B[i].t)).sort().join("|"), got = g.map(i=>norm(inp[i])).sort().join("|");
+        if(want===got) g.forEach(i=>{ s.res[i] = true; });
+      });
       s.shown = true; pracRecord(id, s.res.every(Boolean)); saveData("prac", s);
       render(); window.scrollTo(0,0);
     });
