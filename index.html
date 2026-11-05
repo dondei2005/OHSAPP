@@ -2618,15 +2618,15 @@
         <div class="section-desc" style="margin-top:0;">點任一組開始練習。</div>
         <div class="toggle-row" style="margin:6px 0 8px;">
           <button class="toggle-btn ${state.mnSort!=="score"?"active":""}" data-mnsort="fresh">🆕 沒練過的優先</button>
-          <button class="toggle-btn ${state.mnSort==="score"?"active":""}" data-mnsort="score">📊 前次分數高→低</button>
+          <button class="toggle-btn ${state.mnSort==="score"?"active":""}" data-mnsort="score">📊 前次分數低→高</button>
         </div>
         ${(()=>{
-          // 2026-11-05 排序：fresh＝沒練過的最前面，其餘依前次分數高→低；score＝前次分數高→低，沒練過的放最後
+          // 2026-11-05 排序：fresh＝沒練過的最前面，其餘依前次分數低→高；score＝前次分數低→高，沒練過的放最後
           const list = MNEMONICS.filter(m=>m.kind!=="formula").map((m,i)=>({m, i, sc: mnemoScore(m)}));
           list.sort((a,b)=>{
             const na = a.sc===null, nb = b.sc===null;
             if(na!==nb) return state.mnSort==="score" ? (na?1:-1) : (na?-1:1);
-            if(!na && a.sc!==b.sc) return b.sc-a.sc;
+            if(!na && a.sc!==b.sc) return a.sc-b.sc;
             return a.i-b.i;
           });
           return list.map(x=>row(x.m)).join("");
