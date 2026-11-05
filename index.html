@@ -16,7 +16,7 @@
 <script src="./practical_questions.js?v=20261105b"></script>
 <script src="./practical_blanks.js?v=20261104a"></script>
 <script src="./practical_law.js?v=20261105a"></script>
-<script src="./mnemonics.js?v=20261106a"></script>
+<script src="./mnemonics.js?v=20261106b"></script>
 <script src="./free_questions.js"></script>
 </head>
 <body>
@@ -2432,8 +2432,9 @@
     const isF = m.kind==="formula";
     // 2026-11-05 選項依字數排序（不含標點），字數相同再依字碼排，每次位置固定比較好找
     const mnLen = t=>[...String(t).replace(/[\s\p{P}]/gu,"")].length;
-    const opts = isF ? [] : [...new Set(MNEMONICS.filter(x=>x.kind!=="formula").map(x=>x.mnemonic))].sort((a,b)=>mnLen(a)-mnLen(b) || a.localeCompare(b,"zh-Hant"));
-    state.mnemo = {id, stage: isF ? 'match' : 'choice', opts, chosen:null, typed: m.pairs.map(()=>""), res:null,
+    const isT = m.kind==="term";  // 名詞解釋組：沒有第 1 關，直接打定義
+    const opts = (isF||isT) ? [] : [...new Set(MNEMONICS.filter(x=>!x.kind).map(x=>x.mnemonic))].sort((a,b)=>mnLen(a)-mnLen(b) || a.localeCompare(b,"zh-Hant"));
+    state.mnemo = {id, stage: isF ? 'match' : isT ? 'type' : 'choice', opts, chosen:null, typed: m.pairs.map(()=>""), res:null,
       right: shuffleArr(m.pairs.map((_,i)=>i)), doneL:{}, doneR:{}, selL:null, selR:null, bad:null, c:0, w:0};
     render(); window.scrollTo(0,0);
   }
@@ -2498,7 +2499,9 @@
     const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
     const nScored = m.pairs.filter(p=>!mnemoFree(p)).length || 1, per = 100/nScored;
     const items = m.pairs.map((p,i)=>{
-      const d = mnemoDiff(mnemoItem(p[1]), s.typed[i]), free = mnemoFree(p);
+      // 名詞解釋組：開頭的「係指／是指／指／為」寫不寫都可以
+      const lead = t=>m.kind==="term" ? String(t||"").replace(/^\s*(係指|是指|指|為)/, "") : t;
+      const d = mnemoDiff(lead(mnemoItem(p[1])), lead(s.typed[i])), free = mnemoFree(p);
       const got = free ? 0 : Math.max(0, per*Math.max(0, 1-0.5*d.words-0.25*(d.moved||0)) - (d.typo||0));
       return {...d, i, free, per, got};
     });
@@ -2507,8 +2510,8 @@
     s.res = {items, score, lost, per}; s.stage = 'tdone';
     const all = state.topicStats.mnemo2 = state.topicStats.mnemo2 || {};
     const r = all[m.id] || {n:0};
-    const chOk = s.opts[s.chosen]===m.mnemonic;
-    all[m.id] = {n:(r.n||0)+1, s:score, best:Math.max(r.best||0, score), chC:(r.chC||0)+(chOk?1:0), chN:(r.chN||0)+1, at:todayStr()};
+    const chOk = s.opts[s.chosen]===m.mnemonic, isT = m.kind==="term";
+    all[m.id] = {n:(r.n||0)+1, s:score, best:Math.max(r.best||0, score), chC:(r.chC||0)+(chOk&&!isT?1:0), chN:(r.chN||0)+(isT?0:1), at:todayStr()};
     persist("topicStats");
   }
   function renderMnemoRound(){
@@ -2529,13 +2532,14 @@
       </div>${exitBtn}`;
     }
     if(s.stage==='type'){
-      return `<div class="quiz-progress">🔗 口訣・${esc(m.law)} · 第 2 關</div><div class="quiz-card">
-        <div class="quiz-chapter-tag">第 2 關：看關鍵字打出條文（共 ${m.pairs.length} 項）</div>
+      const isT = m.kind==="term";
+      return `<div class="quiz-progress">${isT?`📖 名詞解釋・${esc(m.law)}`:`🔗 口訣・${esc(m.law)} · 第 2 關`}</div><div class="quiz-card">
+        <div class="quiz-chapter-tag">${isT?`看名詞打出定義（共 ${m.pairs.length} 個）`:`第 2 關：看關鍵字打出條文（共 ${m.pairs.length} 項）`}</div>
         <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
-        <div class="mn-phrase">${esc(m.mnemonic)}</div>
+        ${isT?"":`<div class="mn-phrase">${esc(m.mnemonic)}</div>`}
         <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。一個詞（2～3 個字）只錯 1 個字扣 1 分；整個詞都錯（漏打、打錯、多打）扣該項一半，錯 2 個詞以上該項 0 分；詞有打到但順序錯，每詞扣該項 1/4。連接詞和虛字（及、或、和、與、並、之、的、暨、且、等、所、者、於、而、則、即、亦、乃、係）、標點符號和空白不算錯；同義詞（${MN_SYN.map(g=>g.join("＝")).join("、")}）也不扣分，會用綠色註記。</div>
         ${m.pairs.map((p,i)=>`<div class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</div>
-          <textarea class="mn-tin" data-mntype="${i}" rows="2" placeholder="打出這一項的條文內容">${esc(s.typed[i]||"")}</textarea>`).join("")}
+          <textarea class="mn-tin" data-mntype="${i}" rows="${isT?3:2}" placeholder="${isT?"打出這個名詞的定義（數字請用阿拉伯數字）":"打出這一項的條文內容"}">${esc(s.typed[i]||"")}</textarea>`).join("")}
         <button class="primary-btn" id="mnTypeSubmit">交卷評分</button>
       </div>${exitBtn}`;
     }
@@ -2544,8 +2548,8 @@
       return `<div class="quiz-progress">🔗 口訣・${esc(m.law)} · 完成</div><div class="quiz-card">
         <div class="quiz-chapter-tag">完成</div>
         <div class="quiz-question">${esc(m.title)}</div>
-        <div class="result-card" style="margin-top:0;">${st.icon} 這組條文成績 ${r.score} 分${r.lost?`（${r.lost} 項有錯）`:""}・第 1 關選口訣 ${chOk?'✅ 答對':'❌ 答錯'}</div>
-        <div class="mn-phrase" style="margin-top:10px;">${esc(m.mnemonic)}</div>
+        <div class="result-card" style="margin-top:0;">${st.icon} 這組${m.kind==="term"?"名詞解釋":"條文"}成績 ${r.score} 分${r.lost?`（${r.lost} 項有錯）`:""}${m.kind==="term"?"":`・第 1 關選口訣 ${chOk?'✅ 答對':'❌ 答錯'}`}</div>
+        ${m.kind==="term"?"":`<div class="mn-phrase" style="margin-top:10px;">${esc(m.mnemonic)}</div>`}
         <div class="section-desc" style="margin:6px 0 0;"><span class="mn-miss">紅底</span>＝漏打或打錯的字（正確內容），<span class="mn-extra">刪除線</span>＝你多打或打錯的字，<span ${MN_YEL}>黃底</span>＝虛字、連接詞不同（不扣分）。</div>
         ${(()=>{ const bad = r.items.filter(x=>!x.free && (x.words||x.moved||x.typo||x.pen)>0 && !mnNoteOn(m, x.i));
           return bad.length ? `<button class="primary-btn" data-mnnoteall="${bad.map(x=>x.i).join(",")}" style="margin:8px 0 0;background:#A8631F;">📒 錯的 ${bad.length} 項全部加入條文筆記</button>` : ""; })()}
@@ -2611,7 +2615,7 @@
     const reached = MNEMONICS.filter(m=>{ const sc = mnemoScore(m); return sc!==null && sc>=ACC_TARGET; }).length;
     const reachPct = MNEMONICS.length ? Math.round(reached/MNEMONICS.length*100) : 0;
     // 2026-11-03 公式／單位配對組（kind:"formula"）另列一區，放在口訣清單前面
-    const formulas = MNEMONICS.filter(m=>m.kind==="formula");
+    const formulas = MNEMONICS.filter(m=>m.kind==="formula"), terms = MNEMONICS.filter(m=>m.kind==="term");
     const row = mnemoRow;
     const chAll = MNEMONICS.reduce((a,m)=>{ const r = mnemoStat(m.id); a.c += r.chC||0; a.n += r.chN||0; return a; }, {c:0,n:0});
     return `
@@ -2628,6 +2632,9 @@
         <div class="sub-title">🧮 公式與單位配對（${formulas.length} 組）</div>
         <div class="section-desc" style="margin-top:0;">把公式配對到名稱、把單位配對到物理量，再做幾題計算填空（每次成績＝那一輪的答對率）。</div>
         ${formulas.map(row).join("")}
+        <div class="sub-title">📖 術科名詞解釋（${terms.length} 組・${terms.reduce((a,m)=>a+m.pairs.length,0)} 個名詞）</div>
+        <div class="section-desc" style="margin-top:0;">整理自周春榮 80～91 次術科題解的名詞解釋題，定義已對照現行條文（有修法的寫在每組說明）。看名詞直接打出定義，評分方式跟口訣第 2 關一樣。</div>
+        ${terms.map(row).join("")}
         <div class="sub-title">各組口訣（達標 ${reached}/${MNEMONICS.length} 組）</div>
         <div class="section-desc" style="margin-top:0;">點任一組開始練習。</div>
         <div class="toggle-row" style="margin:6px 0 8px;">
@@ -2636,7 +2643,7 @@
         </div>
         ${(()=>{
           // 2026-11-05 排序：fresh＝沒練過的最前面，其餘依前次分數低→高；score＝前次分數低→高，沒練過的放最後
-          const list = MNEMONICS.filter(m=>m.kind!=="formula").map((m,i)=>({m, i, sc: mnemoScore(m)}));
+          const list = MNEMONICS.filter(m=>!m.kind).map((m,i)=>({m, i, sc: mnemoScore(m)}));
           list.sort((a,b)=>{
             const na = a.sc===null, nb = b.sc===null;
             if(na!==nb) return state.mnSort==="score" ? (na?1:-1) : (na?-1:1);
