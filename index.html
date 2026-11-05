@@ -2321,7 +2321,7 @@
     // 計分改用「關鍵詞」：答案去掉連接詞後切成 2 字一詞（剩 3 字併成一詞），逐詞到打的內容裡找
     // ・照順序找得到的詞＝對；只在別的位置找得到＝順序錯（取最長遞增子序列當正確順序，其餘算順序錯）
     // ・兩個正確詞之間：漏掉的詞數 vs 多打的字（每 2 字一詞），取較大者＝錯詞數（打錯字＝漏＋多只算一次）
-    const W = mnWords(ans), T = [...mnemoNorm(typed)], used = new Array(T.length).fill(false);
+    const W = mnWords(ans), T = [...mnemoNorm(typed)].filter(c=>!MN_CONN.has(c)), used = new Array(T.length).fill(false);
     const at = (w, from)=>{ const c = [...w];
       for(let x=from; x+c.length<=T.length; x++){ let ok = true; for(let y=0;y<c.length;y++) if(used[x+y] || T[x+y]!==c[y]){ ok = false; break; } if(ok) return x; }
       return -1; };
