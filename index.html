@@ -2552,7 +2552,7 @@
         <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
         ${isT?"":`<div class="mn-phrase">${esc(m.mnemonic)}</div>`}
         ${(isT ? wb.snap.map(x=>x.i) : m.pairs.map((_,i)=>i)).map(row).join("")}
-        <div class="section-desc">把空格填回條文原文。空格是你之前打錯、漏打或順序錯的關鍵詞（虛字、連接詞不考），${isT?"":"灰字是這組沒錯的項目，照口訣順序連著看；"}標點符號不用打。同一個詞連續答對 ${MNW_OK} 次就移出錯詞本。</div>
+        <div class="section-desc" style="margin-top:10px;">把空格填回條文原文。空格是你之前打錯、漏打或順序錯的關鍵詞（虛字、連接詞不考），${isT?"":"灰字是這組沒錯的項目，照口訣順序連著看；"}標點符號不用打。同一個詞連續答對 ${MNW_OK} 次就移出錯詞本。</div>
         ${!wb.checked ? `<button class="primary-btn" id="mnWbCheck">對答案</button>`
           : `<div class="result-card" style="margin-top:6px;">${allOk?'✅ 全對':'❌ 有錯，紅底是正確答案'}</div>
              <button class="primary-btn" id="mnWbAgain" style="background:#A8631F;">🔁 這組再練一次</button>
