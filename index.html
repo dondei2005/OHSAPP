@@ -2529,34 +2529,44 @@
   function renderMnWrong(){
     const list = mnWrongList(), wb = state.mnWb;
     const nW = list.reduce((a,x)=>a+x.ks.length, 0);
-    if(wb && wb.keys.length){
-      const it = mnWrongList().find(x=>x.key===wb.keys[wb.at]) || wb.snap;
-      if(!it) { state.mnWb = null; return renderMnWrong(); }
-      const parts = wb.checked ? wb.parts : mnClozeParts(it.m, it.i, it.ks);
-      if(!wb.checked) wb.parts = parts, wb.snap = it;
-      const box = x=>{ const v = (wb.inp||{})[x.b] || "", n = [...mnemoNorm(x.a)].length;
-        if(!wb.checked) return `<input class="text-input" data-mnwbin="${x.b}" value="${esc(v)}" autocomplete="off" placeholder="${n} 字" style="display:inline-block;width:${Math.max(4, n*1.3+1.5)}em;max-width:100%;margin:2px 3px;padding:4px 6px;font-size:16px;">`;
-        const ok = (wb.res||{})[x.b];
+    if(wb && wb.ids.length){
+      // 2026-11-07 同一組口訣／條文是一個題組，一次出在同一頁，照口訣順序；沒錯的項目顯示灰字，連著背
+      if(!wb.checked) wb.snap = list.filter(x=>x.m.id===wb.ids[wb.at]).map(x=>({...x, parts:mnClozeParts(x.m, x.i, x.ks)}));
+      if(!wb.snap.length){
+        if(wb.at+1<wb.ids.length){ wb.at++; wb.inp = {}; return renderMnWrong(); }
+        state.mnWb = null; return renderMnWrong();
+      }
+      const m = wb.snap[0].m, isT = m.kind==="term", byI = {};
+      wb.snap.forEach(x=>{ byI[x.i] = x; });
+      const box = (it, x)=>{ const k = it.i+":"+x.b, v = (wb.inp||{})[k] || "", n = [...mnemoNorm(x.a)].length;
+        if(!wb.checked) return `<input class="text-input" data-mnwbin="${k}" value="${esc(v)}" autocomplete="off" placeholder="${n} 字" style="display:inline-block;width:${Math.max(4, n*1.3+1.5)}em;max-width:100%;margin:2px 3px;padding:4px 6px;font-size:16px;">`;
+        const ok = (wb.res||{})[k];
         return ok ? `<span style="background:#E6F4EA;color:#2E7D4F;font-weight:700;border-radius:3px;padding:0 3px;">${esc(x.a)} ✅</span>`
           : `<span class="mn-extra">${esc(v||"（空白）")}</span><span class="mn-miss">${esc(x.a)}</span>`; };
-      return `<div class="quiz-progress">✏️ 條文錯詞本・第 ${wb.at+1} / ${wb.keys.length} 條</div><div class="quiz-card">
-        <div class="quiz-chapter-tag">${esc(it.m.law)} ${esc(it.m.title)}</div>
-        <div class="quiz-question"><span class="mn-tk">${esc(mnemoNum(it.m.pairs[it.i][1]))}${esc(it.m.pairs[it.i][0])}</span>：把空格填回條文原文</div>
-        ${mnAsk(it.m, it.m.pairs[it.i][0])}
-        <div style="line-height:2.2;font-size:15px;margin:8px 0;">${parts.map(x=>x.t!=null ? esc(x.t) : box(x)).join("")}</div>
-        <div class="section-desc">空格是你之前打錯、漏打或順序錯的關鍵詞（虛字、連接詞不考）。標點符號不用打；同一個詞連續答對 ${MNW_OK} 次就移出錯詞本。</div>
+      const row = i=>{ const p = m.pairs[i], it = byI[i], tk = `<span class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</span>`;
+        return it ? `<div class="mn-titem">${tk}${mnAsk(m, p[0])}<div style="line-height:2.2;font-size:15px;">${it.parts.map(x=>x.t!=null ? esc(x.t) : box(it, x)).join("")}</div></div>`
+          : `<div class="mn-titem" style="color:#8a8275;">${tk}　${esc(mnemoItem(p[1]))}</div>`; };
+      const allOk = wb.checked && Object.values(wb.res).every(Boolean), last = wb.at+1>=wb.ids.length;
+      return `<div class="quiz-progress">✏️ 條文錯詞本・第 ${wb.at+1} / ${wb.ids.length} 組</div><div class="quiz-card">
+        <div class="quiz-chapter-tag">${esc(m.law)}</div>
+        <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
+        ${isT?"":`<div class="mn-phrase">${esc(m.mnemonic)}</div>`}
+        ${(isT ? wb.snap.map(x=>x.i) : m.pairs.map((_,i)=>i)).map(row).join("")}
+        <div class="section-desc">把空格填回條文原文。空格是你之前打錯、漏打或順序錯的關鍵詞（虛字、連接詞不考），${isT?"":"灰字是這組沒錯的項目，照口訣順序連著看；"}標點符號不用打。同一個詞連續答對 ${MNW_OK} 次就移出錯詞本。</div>
         ${!wb.checked ? `<button class="primary-btn" id="mnWbCheck">對答案</button>`
-          : `<div class="result-card" style="margin-top:6px;">${Object.values(wb.res).every(Boolean)?'✅ 全對':'❌ 有錯，紅底是正確答案'}</div>
-             <button class="primary-btn" id="mnWbNext">${wb.at+1<wb.keys.length?'下一條 →':'完成'}</button>`}
+          : `<div class="result-card" style="margin-top:6px;">${allOk?'✅ 全對':'❌ 有錯，紅底是正確答案'}</div>
+             <button class="primary-btn" id="mnWbAgain" style="background:#A8631F;">🔁 這組再練一次</button>
+             <button class="primary-btn" id="mnWbNext" style="margin-top:8px;">${last?'完成':'下一組 →'}</button>`}
       </div><button class="primary-btn" id="mnWbExit" style="background:#8a8275;margin-top:8px;">← 回錯詞本</button>`;
     }
     const groups = [];
     list.forEach(r=>{ let g = groups.find(x=>x.m===r.m); if(!g){ g = {m:r.m, items:[]}; groups.push(g); } g.items.push(r); });
     return `<div class="ov-card">
       <div class="section-title" style="margin-top:0;">✏️ 條文錯詞本<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${list.length} 條・${nW} 處</span></div>
-      <div class="section-desc" style="margin-top:2px;">口訣組和名詞解釋交卷時，打錯、漏打、順序錯的關鍵詞會自動記到這裡（虛字、連接詞不算）。練習時條文會把這些詞挖空，填回原文；同一個詞連續答對 ${MNW_OK} 次就移出，再打錯會重新加回來。</div>
-      ${list.length ? `<button class="primary-btn" id="mnWbStart" style="margin:10px 0 4px;">✏️ 開始填空（${list.length} 條，連續答對次數少的先出）</button>` : `<div class="empty-hint">目前沒有錯詞。去口訣分頁練一組條文或名詞解釋，交卷後打錯的詞會自動加進來。</div>`}
+      <div class="section-desc" style="margin-top:2px;">口訣組和名詞解釋交卷時，打錯、漏打、順序錯的關鍵詞會自動記到這裡（虛字、連接詞不算）。練習時條文會把這些詞挖空，填回原文；同一個詞連續答對 ${MNW_OK} 次就移出，再打錯會重新加回來。同一組口訣或條文會一起出，照口訣順序。</div>
+      ${list.length ? `<button class="primary-btn" id="mnWbStart" style="margin:10px 0 4px;">✏️ 開始填空（${groups.length} 組，較不熟的組先出）</button>` : `<div class="empty-hint">目前沒有錯詞。去口訣分頁練一組條文或名詞解釋，交卷後打錯的詞會自動加進來。</div>`}
       ${groups.map(g=>`<div class="sub-title">${esc(g.m.law)} ${esc(g.m.title)}</div>
+        <button class="toggle-btn" data-mnwbgroup="${esc(g.m.id)}" style="padding:6px 12px;margin:2px 0 4px;">✏️ 練這組（${g.items.length} 條）</button>
         ${g.items.map(x=>`<div class="mn-titem"><span class="mn-tk">${esc(mnemoNum(x.m.pairs[x.i][1]))}${esc(x.m.pairs[x.i][0])}</span>　${x.ks.map(o=>
             `<span style="display:inline-block;background:#F8E7E4;color:#B9554A;border-radius:3px;padding:0 4px;margin:2px 2px;">${esc(o.w)} <small style="color:#8a8275;">${x.r.w[o.id].s||0}/${MNW_OK}</small></span>`).join("")}</div>`).join("")}`).join("")}
       <button class="primary-btn" data-mnview="list" style="margin-top:12px;background:#8a8275;">← 回口訣清單</button>
@@ -2564,17 +2574,19 @@
   }
   // 對答案：一格裡的字段同進退；答對 s+1、答錯 s 歸零 c+1；s 到 MNW_OK 就從 w 刪掉
   function mnWbCheck(){
-    const wb = state.mnWb, it = wb.snap, all = state.topicStats.mnWrong, r = all[it.key];
-    const w = {...(r.w||{})};
+    const wb = state.mnWb, all = state.topicStats.mnWrong;
     wb.res = {};
-    wb.parts.filter(x=>x.b!=null).forEach(x=>{
-      const ok = mnemoNorm((wb.inp||{})[x.b]) === mnemoNorm(x.a);
-      wb.res[x.b] = ok;
-      x.ks.forEach(id=>{ const o = w[id]; if(!o) return;
-        if(ok){ const s2 = (o.s||0)+1; if(s2>=MNW_OK) delete w[id]; else w[id] = {...o, s:s2}; }
-        else w[id] = {s:0, c:(o.c||0)+1}; });
+    wb.snap.forEach(it=>{
+      const r = all[it.key], w = {...(r.w||{})};
+      it.parts.filter(x=>x.b!=null).forEach(x=>{
+        const k = it.i+":"+x.b, ok = mnemoNorm((wb.inp||{})[k]) === mnemoNorm(x.a);
+        wb.res[k] = ok;
+        x.ks.forEach(id=>{ const o = w[id]; if(!o) return;
+          if(ok){ const s2 = (o.s||0)+1; if(s2>=MNW_OK) delete w[id]; else w[id] = {...o, s:s2}; }
+          else w[id] = {s:0, c:(o.c||0)+1}; });
+      });
+      all[it.key] = {...r, n:(r.n||0)+1, at:todayStr(), w};
     });
-    all[it.key] = {...r, n:(r.n||0)+1, at:todayStr(), w};
     wb.checked = true; persist("topicStats");
   }
   function mnNoteBtn(m, i){
@@ -3065,17 +3077,28 @@
     // 條文錯詞本：填空練習
     const mnWbStart = document.getElementById("mnWbStart");
     if(mnWbStart) mnWbStart.addEventListener("click",()=>{
-      const keys = shuffleArr(mnWrongList()).sort((a,b)=>a.minS-b.minS).map(x=>x.key);
-      state.mnWb = {keys, at:0, inp:{}, checked:false}; render(); window.scrollTo(0,0);
+      // 題組順序：連續答對次數最少的組先出，內部照口訣順序（不打亂）
+      const low = {}, ids = [];
+      mnWrongList().forEach(x=>{ if(!(x.m.id in low)){ low[x.m.id] = x.minS; ids.push(x.m.id); } else low[x.m.id] = Math.min(low[x.m.id], x.minS); });
+      ids.sort((a,b)=>low[a]-low[b]);
+      state.mnWb = {ids, at:0, inp:{}, checked:false}; render(); window.scrollTo(0,0);
     });
+    root.querySelectorAll("[data-mnwbgroup]").forEach(el=>el.addEventListener("click",()=>{
+      state.mnWb = {ids:[el.dataset.mnwbgroup], at:0, inp:{}, checked:false}; render(); window.scrollTo(0,0);
+    }));
     root.querySelectorAll("[data-mnwbin]").forEach(el=>el.addEventListener("input",()=>{ state.mnWb.inp[el.dataset.mnwbin] = el.value; }));
     const mnWbCheckBtn = document.getElementById("mnWbCheck");
     if(mnWbCheckBtn) mnWbCheckBtn.addEventListener("click",()=>{ mnWbCheck(); render(); });
     const mnWbNext = document.getElementById("mnWbNext");
     if(mnWbNext) mnWbNext.addEventListener("click",()=>{
       const wb = state.mnWb;
-      if(wb.at+1<wb.keys.length){ wb.at++; wb.inp = {}; wb.checked = false; wb.res = null; wb.parts = null; wb.snap = null; }
+      if(wb.at+1<wb.ids.length){ wb.at++; wb.inp = {}; wb.checked = false; wb.res = null; wb.snap = null; }
       else state.mnWb = null;
+      render(); window.scrollTo(0,0);
+    });
+    const mnWbAgain = document.getElementById("mnWbAgain");
+    if(mnWbAgain) mnWbAgain.addEventListener("click",()=>{
+      const wb = state.mnWb; wb.inp = {}; wb.checked = false; wb.res = null; wb.snap = null;
       render(); window.scrollTo(0,0);
     });
     const mnWbExit = document.getElementById("mnWbExit");
