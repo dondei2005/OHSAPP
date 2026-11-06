@@ -2495,6 +2495,12 @@
   // 「其他經中央主管機關…」「其他資料」這類項目不計分
   function mnemoFree(p){ return /^其他/.test(mnemoItem(p[1])); }
   // 口訣組第 2 關交卷：100 分平均分給計分的項目；每項錯 1 個詞扣該項一半，錯 2 個詞以上該項 0 分
+  // 2026-11-06 長條文改按比例扣：每錯 1 詞扣該項 f＝min(1/2, 2/關鍵詞數)，順序錯 f/2、錯字 f/4
+  // （2～4 個詞的短項目跟原本一樣錯 1 詞扣一半；名詞解釋這種 30 個詞的長句，錯 1 詞只扣約 7%）
+  function mnemoItemGot(per, d, nWords){
+    const f = Math.min(0.5, 2/Math.max(1, nWords));
+    return Math.max(0, per*(1 - f*((d.words||0) + 0.5*(d.moved||0) + 0.25*(d.typo||0))));
+  }
   function mnemoTypeFinish(){
     const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
     const nScored = m.pairs.filter(p=>!mnemoFree(p)).length || 1, per = 100/nScored;
@@ -2502,7 +2508,7 @@
       // 名詞解釋組：開頭的「係指／是指／指／為」寫不寫都可以
       const lead = t=>m.kind==="term" ? String(t||"").replace(/^\s*(係指|是指|指|為)/, "") : t;
       const d = mnemoDiff(lead(mnemoItem(p[1])), lead(s.typed[i])), free = mnemoFree(p);
-      const got = free ? 0 : Math.max(0, per*Math.max(0, 1-0.5*d.words-0.25*(d.moved||0)) - (d.typo||0));
+      const got = free ? 0 : mnemoItemGot(per, d, mnWords(lead(mnemoItem(p[1]))).length);
       return {...d, i, free, per, got};
     });
     const score = Math.round(items.reduce((a,x)=>a+x.got, 0)*10)/10;
@@ -2537,7 +2543,7 @@
         <div class="quiz-chapter-tag">${isT?`看名詞打出定義（共 ${m.pairs.length} 個）`:`第 2 關：看關鍵字打出條文（共 ${m.pairs.length} 項）`}</div>
         <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
         ${isT?"":`<div class="mn-phrase">${esc(m.mnemonic)}</div>`}
-        <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。一個詞（2～3 個字）只錯 1 個字扣 1 分；整個詞都錯（漏打、打錯、多打）扣該項一半，錯 2 個詞以上該項 0 分；詞有打到但順序錯，每詞扣該項 1/4。連接詞和虛字（及、或、和、與、並、之、的、暨、且、等、所、者、於、而、則、即、亦、乃、係）、標點符號和空白不算錯；同義詞（${MN_SYN.map(g=>g.join("＝")).join("、")}）也不扣分，會用綠色註記。</div>
+        <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。條文切成 2～3 字的關鍵詞，按比例扣分：短項目（4 個詞以內）錯 1 個詞扣該項一半；長條文每錯 1 個詞扣「2 ÷ 關鍵詞數」（例：30 個詞的定義，錯 1 詞扣約 7%）。順序錯扣錯詞的一半，詞裡只錯 1 個字扣錯詞的 1/4。連接詞和虛字（及、或、和、與、並、之、的、暨、且、等、所、者、於、而、則、即、亦、乃、係）、標點符號和空白不算錯；同義詞（${MN_SYN.map(g=>g.join("＝")).join("、")}）也不扣分，會用綠色註記。</div>
         ${m.pairs.map((p,i)=>`<div class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</div>
           <textarea class="mn-tin" data-mntype="${i}" rows="${isT?3:2}" placeholder="${isT?"打出這個名詞的定義（數字請用阿拉伯數字）":"打出這一項的條文內容"}">${esc(s.typed[i]||"")}</textarea>`).join("")}
         <button class="primary-btn" id="mnTypeSubmit">交卷評分</button>
@@ -2554,7 +2560,7 @@
         ${(()=>{ const bad = r.items.filter(x=>!x.free && (x.words||x.moved||x.typo||x.pen)>0 && !mnNoteOn(m, x.i));
           return bad.length ? `<button class="primary-btn" data-mnnoteall="${bad.map(x=>x.i).join(",")}" style="margin:8px 0 0;background:#A8631F;">📒 錯的 ${bad.length} 項全部加入條文筆記</button>` : ""; })()}
         ${r.items.map(x=>{ const p = m.pairs[x.i];
-          return `<div class="mn-titem">${mnNoteBtn(m, x.i)}<span class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</span>　${x.free?'<span style="color:#8a8275;">（不計分）</span>':x.pen!=null?(x.pen>0?`<span style="color:#B9554A;">−${x.pen}</span>`:'<span style="color:#3F7D5C;">✅ 全對</span>'):(x.words>0||x.moved>0||x.typo>0)?`<span style="color:#B9554A;">${[x.words>0?`錯 ${x.words} 詞`:"", x.typo>0?`錯字 ${x.typo} 處（−${x.typo} 分）`:"", x.moved>0?`順序錯 ${x.moved} 詞`:""].filter(Boolean).join("、")}・得 ${Math.round(x.got*10)/10} / ${Math.round(x.per*10)/10} 分</span>`:x.ops.some(o=>o.t!=='eq')?'<span style="color:#3F7D5C;">✅ 不扣分（只有連接詞、虛字不同）</span>':x.syn&&x.syn.length?'<span style="color:#3F7D5C;">✅ 不扣分（同義詞）</span>':'<span style="color:#3F7D5C;">✅ 全對</span>'}
+          return `<div class="mn-titem">${mnNoteBtn(m, x.i)}<span class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</span>　${x.free?'<span style="color:#8a8275;">（不計分）</span>':x.pen!=null?(x.pen>0?`<span style="color:#B9554A;">−${x.pen}</span>`:'<span style="color:#3F7D5C;">✅ 全對</span>'):(x.words>0||x.moved>0||x.typo>0)?`<span style="color:#B9554A;">${[x.words>0?`錯 ${x.words} 詞`:"", x.typo>0?`錯字 ${x.typo} 處`:"", x.moved>0?`順序錯 ${x.moved} 詞`:""].filter(Boolean).join("、")}・得 ${Math.round(x.got*10)/10} / ${Math.round(x.per*10)/10} 分</span>`:x.ops.some(o=>o.t!=='eq')?'<span style="color:#3F7D5C;">✅ 不扣分（只有連接詞、虛字不同）</span>':x.syn&&x.syn.length?'<span style="color:#3F7D5C;">✅ 不扣分（同義詞）</span>':'<span style="color:#3F7D5C;">✅ 全對</span>'}
             ${x.syn&&x.syn.length?`<div style="color:#2E7D4F;background:#E6F4EA;border-radius:6px;padding:2px 6px;margin-top:3px;font-size:13px;">🟢 同義詞不扣分：${x.syn.map(h=>`你寫「${esc(h[0])}」＝條文「${esc(h[1])}」`).join("、")}</div>`:""}
             <div style="margin-top:3px;">${x.ops.some(o=>o.t!=='eq') ? mnemoDiffHtml(x.ops) : esc(mnemoItem(p[1]))}</div>
             ${(x.words||x.moved||x.typo||x.pen)>0?`<div style="color:#6b655a;margin-top:2px;">正確：${esc(mnemoItem(p[1]))}</div>`:""}</div>`; }).join("")}
@@ -2621,7 +2627,7 @@
     return `
       <div class="ov-card">
         <div class="section-title" style="margin-top:0;">🔗 口訣配對<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${MNEMONICS.length} 組</span></div>
-        <div class="section-desc" style="margin-top:2px;">第 1 關：從全部口訣中選出這個條文的口訣；第 2 關：看口訣的關鍵字，直接打出每一項條文，100 分平均分給每一項（「其他」那項不計分），詞裡錯 1 個字扣 1 分、整個詞錯扣該項一半、錯 2 個詞該項 0 分，順序錯的詞每詞扣 1/4。每組顯示「前次紀錄」和「最高紀錄」，不算平均；達標看前次紀錄（2026-11-03 起重新計分）。<b>目標：每組都做過、成績 ${ACC_TARGET} 分</b></div>
+        <div class="section-desc" style="margin-top:2px;">第 1 關：從全部口訣中選出這個條文的口訣；第 2 關：看口訣的關鍵字，直接打出每一項條文，100 分平均分給每一項（「其他」那項不計分），按比例扣分：短項目錯 1 個詞扣該項一半，長條文每錯 1 詞扣「2 ÷ 關鍵詞數」，順序錯扣一半、錯 1 個字扣 1/4（2026-11-06 起）。每組顯示「前次紀錄」和「最高紀錄」，不算平均；達標看前次紀錄（2026-11-03 起重新計分）。<b>目標：每組都做過、成績 ${ACC_TARGET} 分</b></div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(p.cov, "#5B6B82", `做過 ${p.seen}/${p.total} 組`)}
           ${svgRing(reachPct, accStatus(reachPct).color, `前次達 ${ACC_TARGET} 分 ${reached}/${MNEMONICS.length} 組`)}
