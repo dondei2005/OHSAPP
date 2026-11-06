@@ -15,8 +15,8 @@
 <script src="./calc_variants.js"></script>
 <script src="./practical_questions.js?v=20261105b"></script>
 <script src="./practical_blanks.js?v=20261104a"></script>
-<script src="./practical_law.js?v=20261105a"></script>
-<script src="./practical_past.js?v=20261106a"></script>
+<script src="./practical_law.js?v=20261106g"></script>
+<script src="./practical_past.js?v=20261106g"></script>
 <script src="./mnemonics.js?v=20261106d"></script>
 <script src="./free_questions.js"></script>
 </head>
@@ -1973,6 +1973,12 @@
   function pracIsLaw(){ return state.calcSub==="law" || state.calcSub==="past"; }
   function pracPool(){ return state.calcSub==="past" ? PAST_POOL : state.calcSub==="law" ? PRACTICAL_LAW : PRACTICAL_CALC; }
   function pracIsTxt(id){ return /^sk-(law|cc)-/.test(id); }
+  // 2026-11-06 考古題看答案後：周春榮舊題解跟現行法不同的地方（q.upd）＋第 77～91 次附「證來了」逐題解答連結（依現行法、附法條原文）
+  function pracPastExtra(q){
+    const n = parseInt(q.code, 10), url = (window.PRACTICAL_PAST_LINKS||{})[n];
+    return (q.upd ? `<div class="quiz-explain" style="background:#EEF3FA;margin-top:8px;"><div class="quiz-explain-title">⚖️ 現行法對照（原題解跟現行規定不同的地方）</div><div class="quiz-explain-body" style="white-space:pre-wrap;">${esc(q.upd)}</div></div>` : "")
+      + (url ? `<div class="section-desc" style="margin-top:6px;">🔗 另一份逐題解答（依現行法、附法條）：<a href="${esc(url)}" target="_blank" rel="noopener">證來了・第 ${n} 次</a></div>` : "");
+  }
   const PRAC_ROUND = 10;
   // 2026-11-04 填空對答案：practical_blanks.js 把每題答案拆成格子，作答後自動判對錯（全部格子對＝算對）；
   // 數字格依答案的小數位數比對（四捨五入後相同就對），單位、逗號、全形數字都不用管；沒有格子的題目沿用自評
@@ -2089,7 +2095,7 @@
       const explain = `<div class="quiz-explain">
             <div class="quiz-explain-ans">✅ 答案：${esc(q.ans)}</div>
             <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(q.sol)}</div>${airTipHtml(q.q+" "+q.sol)}
-          </div>`;
+          </div>${pracPastExtra(q)}`;
       if(!s.shown){
         return `${top}
         <div class="section-desc" style="margin:8px 0;">${pracIsTxt(q.id)?"每一格點選一個代號，全部選完再提交。":"先在紙上算好，再把答案填進下面的格子（注意題目要求的小數位數；單位不用打）。"}</div>
@@ -2125,7 +2131,7 @@
           <div class="quiz-explain">
             ${q.ans ? `<div class="quiz-explain-ans">✅ 答案：${esc(q.ans)}</div>` : ""}
             <div class="quiz-explain-title">📖 ${/^sk-cc-/.test(q.id)?"原題解":"詳解"}</div><div class="quiz-explain-body" style="white-space:pre-wrap;">${esc(q.sol)}</div>${q.note?`<div class="section-desc" style="margin-top:6px;">📝 ${esc(q.note)}</div>`:""}${airTipHtml(q.q+" "+q.sol)}
-          </div>
+          </div>${pracPastExtra(q)}
           <div class="toggle-row" style="margin-top:10px;">
             <button class="toggle-btn active" data-skmark="1" style="background:#3F7D5C;border-color:#3F7D5C;">✅ ${isLaw?"我寫對了":"我算對了"}</button>
             <button class="toggle-btn active" data-skmark="0" style="background:#B5532F;border-color:#B5532F;">❌ ${isLaw?"寫錯／不會":"算錯／不會"}</button>
