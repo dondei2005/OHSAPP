@@ -18,7 +18,7 @@
 <script src="./figure_fill.js?v=20261107"></script>
 <script src="./practical_law.js?v=20261106g"></script>
 <script src="./practical_past.js?v=20261106g"></script>
-<script src="./mnemonics.js?v=20261106d"></script>
+<script src="./mnemonics.js?v=20261107"></script>
 <script src="./free_questions.js"></script>
 </head>
 <body>
@@ -2450,6 +2450,7 @@
     const extra = c=>MN_CONN.has(c) ? `<span ${MN_YEL}><s>${esc(c)}</s></span>` : `<span class="mn-extra">${esc(c)}</span>`;
     return ops.map(o=>o.t==='eq' ? esc(o.a) : o.t==='del' ? miss(o.a) : o.t==='ins' ? extra(o.b) : miss(o.a)+extra(o.b)).join("");
   }
+  function mnAsk(m, k){ const t = (m.hints||{})[k]; return t ? `<div class="section-desc" style="margin:2px 0 4px;">👉 ${esc(t)}</div>` : ""; }
   function mnemoNum(t){ const x = String(t).match(/^\((\d+)\)/); return x ? `(${x[1]}) ` : ""; }
   // 2026-11-05 條文筆記：口訣組的任一項可以手動加入筆記，在口訣分頁「📒 條文筆記」重複看。
   // 存 state.topicStats.mnNote[組id#項目編號]＝{n,on,at,g,t,x}（n＝切換次數，雲端合併取 n 大的＝最後一次操作；
@@ -2541,6 +2542,7 @@
       return `<div class="quiz-progress">✏️ 條文錯詞本・第 ${wb.at+1} / ${wb.keys.length} 條</div><div class="quiz-card">
         <div class="quiz-chapter-tag">${esc(it.m.law)} ${esc(it.m.title)}</div>
         <div class="quiz-question"><span class="mn-tk">${esc(mnemoNum(it.m.pairs[it.i][1]))}${esc(it.m.pairs[it.i][0])}</span>：把空格填回條文原文</div>
+        ${mnAsk(it.m, it.m.pairs[it.i][0])}
         <div style="line-height:2.2;font-size:15px;margin:8px 0;">${parts.map(x=>x.t!=null ? esc(x.t) : box(x)).join("")}</div>
         <div class="section-desc">空格是你之前打錯、漏打或順序錯的關鍵詞（虛字、連接詞不考）。標點符號不用打；同一個詞連續答對 ${MNW_OK} 次就移出錯詞本。</div>
         ${!wb.checked ? `<button class="primary-btn" id="mnWbCheck">對答案</button>`
@@ -2719,9 +2721,10 @@
         <div class="quiz-chapter-tag">${isT?`看名詞打出定義（共 ${m.pairs.length} 個）`:`第 2 關：看關鍵字打出條文（共 ${m.pairs.length} 項）`}</div>
         <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
         ${isT?"":`<div class="mn-phrase">${esc(m.mnemonic)}</div>`}
+        ${m.ask?`<div class="section-desc" style="margin:6px 0 0;font-weight:700;color:#A8631F;">${esc(m.ask)}</div>`:""}
         <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。條文依法規用語切成關鍵詞（勞動場所、中央主管機關、控制措施…各算一詞），按比例扣分：短項目（4 個詞以內）錯 1 個詞扣該項一半；長條文每錯 1 個詞扣「2 ÷ 關鍵詞數」（例：30 個詞的定義，錯 1 詞扣約 7%）。順序錯扣錯詞的一半，詞裡只錯 1 個字扣錯詞的 1/4。連接詞和虛字（及、或、和、與、並、之、的、暨、且、等、所、者、於、而、則、即、亦、乃、係）、標點符號和空白不算錯；同義詞（${MN_SYN.map(g=>g.join("＝")).join("、")}）也不扣分，會用綠色註記。</div>
-        ${m.pairs.map((p,i)=>`<div class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</div>
-          <textarea class="mn-tin" data-mntype="${i}" rows="${isT?3:2}" placeholder="${isT?"打出這個名詞的定義（數字請用阿拉伯數字）":"打出這一項的條文內容"}">${esc(s.typed[i]||"")}</textarea>`).join("")}
+        ${m.pairs.map((p,i)=>`<div class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</div>${mnAsk(m, p[0])}
+          <textarea class="mn-tin" data-mntype="${i}" rows="${isT?3:2}" placeholder="${isT?"打出這個名詞的定義（數字請用阿拉伯數字）":(m.hints||{})[p[0]]?"在這裡打出答案":"打出這一項的條文內容"}">${esc(s.typed[i]||"")}</textarea>`).join("")}
         <button class="primary-btn" id="mnTypeSubmit">交卷評分</button>
       </div>${exitBtn}`;
     }
