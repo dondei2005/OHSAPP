@@ -2300,26 +2300,50 @@
     return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC: acc===null?0:acc, accT: 100, acc};
   }
   // 打條文評分：去掉空白與標點後逐字比對（編輯距離對齊），連續的錯誤算一段；
-  // 一段裡的連接詞不算，其餘 2～3 個字算錯 1 個詞（1 字也算 1 詞，4～5 字算 2 詞…）
+  // 一段裡的連接詞不算，其餘 2～3 個字算錯 1 個詞（1 字也算 1 詞，4～5 字算 2 詞…）（2026-11-06 起關鍵詞改依法規用語斷詞，見 mnWordsPos）
   // 2026-11-05 計分改成：100 分平均分給各項（「其他…」那項不計分），每項錯 1 個詞扣該項一半，錯 2 個詞以上該項 0 分
   // 2026-11-05（後）順序錯：漏打的詞若在別處打出來（2 字以上相同），算「順序錯」，每詞只扣該項 1/4（錯詞的一半）
   // 虛字（連接詞、助詞）打錯、漏打都不扣分；2026-11-05 加入 所、者、於、而、則、即、亦、乃、係
   const MN_CONN_STR = "及或和與並之的暨且等所者於而則即亦乃係";
   const MN_CONN = new Set(MN_CONN_STR.split(""));
-  // 把答案切成關鍵詞：去掉連接詞分段，每段 2 字一詞，最後剩 3 字就併成一詞（1～3 字的段直接當一詞）
-  // 2026-11-06 同時記下每個詞在「去掉空白標點後」字串裡的位置 [s, e)，條文錯詞本挖空用
+  // 2026-11-06（後）把答案切成「法規用語」關鍵詞：
+  // ① 先用 MN_LEX 法規常用詞（勞動場所、中央主管機關、控制措施…＋名詞解釋組的名詞）由左到右取最長的詞；條號「第十六條」、數字＋單位「22800伏特」也整個當一詞
+  // ② 剩下的字交給瀏覽器內建中文斷詞（Intl.Segmenter），連續的單字（被/夾、出/具）兩兩併成一詞；不支援的瀏覽器退回 2 字一詞
+  // 回傳 [{w:原字, s, e:去掉空白標點後的位置, k:去掉虛字後拿來比對的字, z:可以挖空（錯詞本）}]；純虛字的詞不算
+  const MN_LEX = new Set(`場所 處所 目的 有酬 所屬 等級 工作者 勞工 雇主 事業單位 事業經營者 自營作業者 代理雇主 工作場所負責人 負責人 從業人員 作業人員 操作人員 承攬人 再承攬人 原事業單位 共同作業 中高齡 少年工作者 女性勞工 妊娠中 分娩後 未滿一年 勞動場所 工作場所 作業場所 室內作業場所 坑內 局限空間 高架作業 臨時性作業 特殊作業 特定作業 有害作業 危險作業 作業環境 作業活動 作業用途 作業方法 作業程序 作業標準 作業主管 作業管制 中央主管機關 主管機關 地方主管機關 目的事業主管機關 勞動檢查機構 檢查機構 直屬機關 國防部 國防軍事 中央 指定 公告 核准 認可 核定 備查 許可 登記 報備 通報 陳報 職業災害 職業病 職業上原因 罹災 罹災人數 重傷 失能 死亡 傷害 疾病 危害 危險 有害 之虞 虞 災害 事故 重大職業災害 立即危險 急迫危險 虛驚事故 安全衛生 職業安全衛生 安全衛生管理 安全衛生教育訓練 教育訓練 自動檢查 定期檢查 重點檢查 作業檢點 健康檢查 健康管理 健康服務 健康保護 母性健康保護 特別危害健康作業 一般健康檢查 特殊健康檢查 體格檢查 勞工健康服務人員 管理單位 管理人員 管理計畫 管理辦法 管理事項 管理措施 職業安全衛生管理單位 職業安全衛生委員會 職業安全衛生人員 職業安全衛生管理計畫 職業安全衛生管理系統 安全衛生工作守則 安全衛生人員 風險評估 風險控制 風險等級 殘餘風險 可接受風險 危害辨識 危害評估 危害控制 危害性化學品 危害物質 危害因子 控制措施 防護措施 預防措施 改善措施 緊急應變 緊急應變措施 應變措施 安全措施 必要措施 必要之安全衛生設備及措施 防護設施 防護具 個人防護具 防護設備 安全設備 安全裝置 安全標示 安全標準 安全距離 安全網 安全帶 安全帽 護欄 護蓋 工程控制 行政管理 源頭管理 合理可行範圍 實務規範 一般社會通念 明知 可得而知 指引 技術指引 型式驗證 驗證 檢驗 檢查 認可 驗證合格 合格標章 安全資訊申報 登錄 標示 張貼 免驗證 專用機型 限量製造 科技研發 測試用途 商業樣品 展覽品 實際使用 出具證明 特殊情形 危險性機械 危險性設備 機械設備器具 機械器具 設備器具 車輛機械 車輛系營建機械 堆高機 起重機 固定式起重機 移動式起重機 人字臂起重桿 營建用升降機 吊籠 鍋爐 壓力容器 高壓氣體 特定化學物質 有機溶劑 粉塵 游離輻射 噪音 振動 異常氣壓 高溫 低溫 缺氧 中毒 感電 墜落 倒塌 崩塌 飛落 物體飛落 爆炸 火災 被夾 被捲 過負荷防止裝置 防爆電氣設備 密閉設備 局部排氣裝置 整體換氣裝置 通風 換氣 採光 照明 保溫 防濕 容許濃度 容許暴露標準 時量平均容許濃度 短時間時量平均容許濃度 最高容許濃度 作業環境監測 環境監測 採樣策略 暴露評估 暴露劑量 安全資料表 化學品 化學物質 致癌物質 生殖毒性 危害性 勞動契約 提供勞務 履行契約 指揮 監督 支配 管理 從事勞動 從事工作 僱傭關係 職業訓練 學習技能 必要行為 附隨行為 因果關係 不利之處分 解僱 調職 罰鍰 有期徒刑 拘役 罰金 停工 局部停工 全部停工 復工 擬訂 規劃 推動 督導 指導 協調 執行 查核 實施 辦理 研擬 審議 考核 建議 確認 採取 辨識 評估 改善 紀錄 記錄 保存 留存 公開 揭示 告知 通知 申請 提出 送請 備置 置備`.split(" "));
+  MNEMONICS.forEach(m=>{ if(m.kind==="term") m.pairs.forEach(p=>{ const w = mnemoNorm(p[0]); if([...w].length>=2 && [...w].length<=10) MN_LEX.add(w); }); });
+  let MN_LEX_MAX = 0; MN_LEX.forEach(w=>{ MN_LEX_MAX = Math.max(MN_LEX_MAX, [...w].length); });
+  // 不挖空的詞（虛字組成、沒有法規意義）
+  const MN_STOP = new Set("並有 僅供 所能 及其 或其 其他 可能 所有 一切 以及 或是 並經 並於 而且 於其 以其 有關 相關 應 該".split(" "));
+  // 這些單字是介詞、副詞（其、使、有、達、至…），不跟旁邊的單字併成詞
+  const MN_SOLO = new Set("其使有達至在經依受對以為須需應得未不無供凡各每".split(""));
+  const MN_NUM = /^(?:第[0-9一二三四五六七八九十百]+[條項款種類級次]?|[0-9]+(?:\.[0-9]+)?(?:伏特|公尺|公分|公噸|公斤|小時|分鐘|個月|年|日|時|人|次|倍|分貝)?)/;
+  const MN_SEG = (typeof Intl!=="undefined" && Intl.Segmenter) ? new Intl.Segmenter("zh-Hant", {granularity:"word"}) : null;
+  const mnWpCache = {};
   function mnWordsPos(ans){
-    const N = [...mnemoNorm(ans)], out = [];
-    let i = 0;
+    const ck = String(ans||""); if(mnWpCache[ck]) return mnWpCache[ck];
+    const N = [...mnemoNorm(ans)], raw = [];
+    const segGap = (a, b)=>{
+      if(b<=a) return;
+      const toks = [];
+      if(MN_SEG){ let x = a; for(const g of MN_SEG.segment(N.slice(a,b).join(""))){ const L = [...g.segment].length; toks.push({s:x, e:x+L}); x += L; } }
+      else for(let x=a;x<b;x+=2) toks.push({s:x, e:Math.min(b, x+2)});
+      let run = [];
+      const out = ()=>{ for(let k=0;k<run.length;k+=2){ if(run.length-k===3){ raw.push({s:run[k].s, e:run[k+2].e}); break; } raw.push({s:run[k].s, e:(run[k+1]||run[k]).e}); } run = []; };
+      toks.forEach(t=>{ if(t.e-t.s===1 && !MN_CONN.has(N[t.s]) && !MN_SOLO.has(N[t.s])) run.push(t); else { out(); raw.push(t); } });
+      out();
+    };
+    let i = 0, gap = 0;
     while(i<N.length){
-      if(MN_CONN.has(N[i])){ i++; continue; }
-      let j = i; while(j<N.length && !MN_CONN.has(N[j])) j++;
-      const len = j-i;
-      if(len<=3) out.push({w:N.slice(i,j).join(""), s:i, e:j});
-      else for(let x=i;x<j;x+=2){ if(j-x===3){ out.push({w:N.slice(x,j).join(""), s:x, e:j}); break; } out.push({w:N.slice(x,x+2).join(""), s:x, e:x+2}); }
-      i = j;
+      const nm = MN_NUM.exec(N.slice(i, i+12).join(""));
+      let L = nm && nm[0] && (nm[0][0]!=="第" || nm[0].length>1) ? [...nm[0]].length : 0, lex = !!L;
+      if(!L) for(let k=Math.min(MN_LEX_MAX, N.length-i); k>=2; k--) if(MN_LEX.has(N.slice(i, i+k).join(""))){ L = k; lex = true; break; }
+      if(L){ segGap(gap, i); raw.push({s:i, e:i+L, lex}); i += L; gap = i; } else i++;
     }
-    return out;
+    segGap(gap, N.length);
+    const res = raw.map(t=>{ const w = N.slice(t.s, t.e).join(""), k = [...w].filter(c=>!MN_CONN.has(c)).join("");
+      return k ? {w, s:t.s, e:t.e, k, z: !MN_STOP.has(w) && (t.lex || [...k].length>=2)} : null; }).filter(Boolean);
+    return mnWpCache[ck] = res;
   }
   function mnWords(ans){ return mnWordsPos(ans).map(x=>x.w); }
   function mnemoNorm(t){ return String(t||"").normalize("NFKC").replace(/[\s\p{P}]/gu, ""); }
@@ -2357,7 +2381,7 @@
     // 計分改用「關鍵詞」：答案去掉連接詞後切成 2 字一詞（剩 3 字併成一詞），逐詞到打的內容裡找
     // ・照順序找得到的詞＝對；只在別的位置找得到＝順序錯（取最長遞增子序列當正確順序，其餘算順序錯）
     // ・兩個正確詞之間：漏掉的詞數 vs 多打的字（每 2 字一詞），取較大者＝錯詞數（打錯字＝漏＋多只算一次）
-    const W = mnWords(ans), T = [...mnemoNorm(typed)].filter(c=>!MN_CONN.has(c)), used = new Array(T.length).fill(false);
+    const WP = mnWordsPos(ans), W = WP.map(x=>x.k), T = [...mnemoNorm(typed)].filter(c=>!MN_CONN.has(c)), used = new Array(T.length).fill(false);
     const at = (w, from)=>{ const c = [...w];
       for(let x=from; x+c.length<=T.length; x++){ let ok = true; for(let y=0;y<c.length;y++) if(used[x+y] || T[x+y]!==c[y]){ ok = false; break; } if(ok) return x; }
       return -1; };
@@ -2395,13 +2419,11 @@
       const extra = Math.max(0, free.length - subNeed);
       words += Math.max(miss, extra>0 ? Math.max(1, Math.floor(extra/2)) : 0);
     }
-    // 條文錯詞本要練的字：對齊後漏打／打錯的字（虛字、連接詞除外）＋順序錯的詞，連續的併成一段 {s,e,w}
+    // 條文錯詞本要練的詞：對齊後有漏打／打錯字（虛字除外）的關鍵詞＋順序錯的詞，整個詞當一格 {s,e,w}
     const wrong = new Set(); let ai = 0;
     ops.forEach(o=>{ if(o.t==='ins') return; if(o.t!=='eq' && !MN_CONN.has(o.a)) wrong.add(ai); ai++; });
-    const WP = mnWordsPos(ans);
-    ks.filter(k=>!inOrder.has(k)).forEach(k=>{ for(let x=WP[k].s;x<WP[k].e;x++) wrong.add(x); });
-    const bad = [], A = [...mnemoNorm(ans)];
-    [...wrong].sort((x,y)=>x-y).forEach(x=>{ const L = bad[bad.length-1]; if(L && L.e===x){ L.e++; L.w += A[x]; } else bad.push({s:x, e:x+1, w:A[x]}); });
+    const movedK = new Set(ks.filter(k=>!inOrder.has(k)));
+    const bad = WP.filter((t,k)=>t.z && (movedK.has(k) || [...wrong].some(x=>x>=t.s && x<t.e))).map(t=>({s:t.s, e:t.e, w:t.w}));
     return {ops, words, moved, typo, syn: syn.hits, bad};
   }
   // 虛字（不扣分）的差異用黃色標，其餘照舊：紅底＝漏打或打錯、刪除線＝多打
@@ -2445,28 +2467,38 @@
     bad.forEach(b=>{ let c = 0;
       Object.keys(w).forEach(id=>{ const o = mnwParse(id); if(o.s<b.e && b.s<o.e){ c = Math.max(c, w[id].c||0); delete w[id]; } });
       w[mnwId(b)] = {s:0, c:c+1}; });
-    all[key] = {n:(r.n||0)+1, g:m.id, t:m.pairs[i][0], x:m.pairs[i][1], at:todayStr(), w};
+    all[key] = {n:(r.n||0)+1, g:m.id, t:m.pairs[i][0], x:m.pairs[i][1], at:todayStr(), w, v:2};
   }
   // 錯詞本清單：條文改過（詞對不上）的詞自動略過
   function mnWrongList(){
     const all = state.topicStats.mnWrong || {}, order = {}, out = [];
     MNEMONICS.forEach((m,i)=>{ order[m.id] = i; });
+    let mig = false;
     Object.keys(all).forEach(key=>{
-      const r = all[key], m = MNEMONICS.find(x=>x.id===r.g); if(!m) return;
+      let r = all[key]; const m = MNEMONICS.find(x=>x.id===r.g); if(!m) return;
       const i = m.pairs.findIndex((_,j)=>mnNoteKey(m, j)===key); if(i<0) return;
-      const A = [...mnemoNorm(mnLead(m, mnemoItem(m.pairs[i][1])))];
+      const body = mnLead(m, mnemoItem(m.pairs[i][1])), A = [...mnemoNorm(body)];
+      // 2026-11-06（後）v2：舊紀錄是逐字的錯字段（例「確認現有」「有」），換成重疊到的法規關鍵詞，次數保留
+      if(r.v!==2){
+        const P = mnWordsPos(body), w2 = {};
+        Object.keys(r.w||{}).map(mnwParse).filter(o=>A.slice(o.s, o.e).join("")===o.w).forEach(o=>{ const v = r.w[o.id];
+          P.filter(t=>t.z && t.s<o.e && o.s<t.e).forEach(t=>{ const id = mnwId(t), q = w2[id];
+            w2[id] = q ? {s:Math.min(q.s||0, v.s||0), c:Math.max(q.c||0, v.c||0)} : {s:v.s||0, c:v.c||0}; }); });
+        r = all[key] = {...r, w:w2, v:2, n:(r.n||0)+1}; mig = true;
+      }
       const ks = Object.keys(r.w||{}).map(mnwParse).filter(o=>A.slice(o.s, o.e).join("")===o.w).sort((a,b)=>a.s-b.s);
       if(ks.length) out.push({key, m, i, ks, r, minS: Math.min(...ks.map(o=>r.w[o.id].s||0))});
     });
+    if(mig) persist("topicStats");
     return out.sort((a,b)=>(order[a.m.id]-order[b.m.id]) || a.i-b.i);
   }
-  // 把錯的詞換成空格：相鄰的錯詞併成一格；回傳 [{t:文字} 或 {b:格子編號, a:答案, ks:[詞序]}]
+  // 把錯的詞換成空格：每個關鍵詞一格（相鄰的也分開）；回傳 [{t:文字} 或 {b:格子編號, a:答案, ks:[詞序]}]
   function mnClozeParts(m, i, ks){
     const full = mnemoItem(m.pairs[i][1]), body = mnLead(m, full), pre = full.slice(0, full.length-body.length);
     const map = [], ch = [...body];
     ch.forEach((c,x)=>{ [...mnemoNorm(c)].forEach(()=>map.push(x)); });
     const runs = [];
-    ks.forEach(o=>{ const L = runs[runs.length-1]; if(L && L.e===o.s){ L.ks.push(o.id); L.e = o.e; } else runs.push({ks:[o.id], s:o.s, e:o.e}); });
+    ks.forEach(o=>{ if(!runs.some(r=>r.s<o.e && o.s<r.e)) runs.push({ks:[o.id], s:o.s, e:o.e}); });
     const parts = pre ? [{t:pre}] : []; let cur = 0;
     runs.forEach((r,b)=>{
       const os = map[r.s], oe = map[r.e-1]+1;
@@ -2670,7 +2702,7 @@
         <div class="quiz-chapter-tag">${isT?`看名詞打出定義（共 ${m.pairs.length} 個）`:`第 2 關：看關鍵字打出條文（共 ${m.pairs.length} 項）`}</div>
         <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
         ${isT?"":`<div class="mn-phrase">${esc(m.mnemonic)}</div>`}
-        <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。條文切成 2～3 字的關鍵詞，按比例扣分：短項目（4 個詞以內）錯 1 個詞扣該項一半；長條文每錯 1 個詞扣「2 ÷ 關鍵詞數」（例：30 個詞的定義，錯 1 詞扣約 7%）。順序錯扣錯詞的一半，詞裡只錯 1 個字扣錯詞的 1/4。連接詞和虛字（及、或、和、與、並、之、的、暨、且、等、所、者、於、而、則、即、亦、乃、係）、標點符號和空白不算錯；同義詞（${MN_SYN.map(g=>g.join("＝")).join("、")}）也不扣分，會用綠色註記。</div>
+        <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。條文依法規用語切成關鍵詞（勞動場所、中央主管機關、控制措施…各算一詞），按比例扣分：短項目（4 個詞以內）錯 1 個詞扣該項一半；長條文每錯 1 個詞扣「2 ÷ 關鍵詞數」（例：30 個詞的定義，錯 1 詞扣約 7%）。順序錯扣錯詞的一半，詞裡只錯 1 個字扣錯詞的 1/4。連接詞和虛字（及、或、和、與、並、之、的、暨、且、等、所、者、於、而、則、即、亦、乃、係）、標點符號和空白不算錯；同義詞（${MN_SYN.map(g=>g.join("＝")).join("、")}）也不扣分，會用綠色註記。</div>
         ${m.pairs.map((p,i)=>`<div class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</div>
           <textarea class="mn-tin" data-mntype="${i}" rows="${isT?3:2}" placeholder="${isT?"打出這個名詞的定義（數字請用阿拉伯數字）":"打出這一項的條文內容"}">${esc(s.typed[i]||"")}</textarea>`).join("")}
         <button class="primary-btn" id="mnTypeSubmit">交卷評分</button>
