@@ -18,6 +18,7 @@
 <script src="./figure_fill.js?v=20261107"></script>
 <script src="./practical_law.js?v=20261106g"></script>
 <script src="./practical_past.js?v=20261106g"></script>
+<script src="./formula_match.js?v=20261107"></script>
 <script src="./mnemonics.js?v=20261107"></script>
 <script src="./free_questions.js"></script>
 </head>
@@ -1958,8 +1959,8 @@
   // 2026-11-06 歷屆考古題（practical_past.js，第 43～91 次全收，打字作答＋看原題解自評）另成「📚歷屆考古題」切換，一次一組 10 題；
   // 第 80～91 次已有的法規／計算題不重收，依 code 併進同一次（沿用原 id，作答紀錄共用）
   const PRACTICAL_PAST = window.PRACTICAL_PAST || [];
-  const PRACTICAL_FIG = window.PRACTICAL_FIG || [];
-  const PRACTICAL_QS = PRACTICAL_CALC.concat(PRACTICAL_LAW, PRACTICAL_PAST, PRACTICAL_FIG);
+  const PRACTICAL_FIG = window.PRACTICAL_FIG || [], PRACTICAL_FX = window.PRACTICAL_FX || [];
+  const PRACTICAL_QS = PRACTICAL_CALC.concat(PRACTICAL_LAW, PRACTICAL_PAST, PRACTICAL_FIG, PRACTICAL_FX);
   const PAST_POOL = (()=>{
     const dt = window.PRACTICAL_PAST_DATES || {}, tp = k=>`第 ${k} 次（${dt[k]||""}）`;
     const ex = PRACTICAL_CALC.concat(PRACTICAL_LAW).map(q=>{ const m = /^(\d+)-(\d+)$/.exec(q.code||""), k = m && +m[1]; return k>=80 && k<=91 && dt[k] ? {...q, n:k, topic:tp(k)} : null; }).filter(Boolean);
@@ -1972,13 +1973,34 @@
     const t = window.STUDY_TIPS && window.STUDY_TIPS.topics && window.STUDY_TIPS.topics.air4m150;
     return t && airTipHit(txt) ? `<div class="quiz-explain-title">💡 ${esc(t.title)}</div><div class="quiz-explain-body">${esc(t.body)}</div>` : "";
   }
-  function pracIsLaw(){ return state.calcSub==="law" || state.calcSub==="past" || state.calcSub==="fig"; }
-  function pracPool(){ return state.calcSub==="fig" ? PRACTICAL_FIG : state.calcSub==="past" ? PAST_POOL : state.calcSub==="law" ? PRACTICAL_LAW : PRACTICAL_CALC; }
-  function pracIsTxt(id){ return /^sk-(law|cc|fig)-/.test(id); }
+  function pracIsLaw(){ return state.calcSub==="law" || state.calcSub==="past" || state.calcSub==="fig" || state.calcSub==="fx"; }
+  function pracPool(){ return state.calcSub==="fx" ? PRACTICAL_FX : state.calcSub==="fig" ? PRACTICAL_FIG : state.calcSub==="past" ? PAST_POOL : state.calcSub==="law" ? PRACTICAL_LAW : PRACTICAL_CALC; }
+  function pracIsTxt(id){ return /^sk-(law|cc|fig|fx)-/.test(id); }
   // 2026-11-07 看圖填空（figure_fill.js）：把 svg 裡的 {n} 換成編號／已選的答案，提交後換成正確答案
   function pracFigSvg(q, B, s){
     const nums = "①②③④⑤⑥⑦⑧⑨", inp = s.inp || {};
     return q.svg.replace(/\{(\d+)\}/g, (_,n)=>esc(s.shown ? B[n-1].t : (inp[n-1] || nums[n-1])));
+  }
+  // 2026-11-07 公式配對（formula_match.js）：點格子選位置、點卡片填入；已填的格子再點一次退回卡片。公式裡 {n} 是第 n 格
+  function pracFxHtml(q, B, s){
+    const inp = s.inp || {}, base = "display:inline-block;min-width:40px;min-height:34px;margin:2px;padding:3px 8px;border-radius:6px;font:inherit;font-weight:700;line-height:1.5;vertical-align:middle;";
+    const f = esc(q.fx).replace(/\{(\d+)\}/g, (_,n)=>{
+      const i = n-1, v = inp[i];
+      if(s.shown){ const ok = s.res && s.res[i];
+        return `<span style="${base}background:${ok?"#E6F2EA":"#F9E7E0"};border:2px solid ${ok?"#3F7D5C":"#B5532F"};color:${ok?"#2F6B4F":"#A13F1F"};">${esc(ok && v ? v : B[i].t)}</span>`; }
+      const on = s.act===i;
+      return `<button type="button" data-fxslot="${i}" style="${base}cursor:pointer;background:${v?"#FFF8EA":on?"#FFEFD2":"#fff"};border:2px ${v||on?"solid":"dashed"} #A8631F;color:#8A3F16;${on?"box-shadow:0 0 0 2px #E5B574;":""}">${esc(v || B[i].l)}</button>`;
+    });
+    return `<div style="margin:8px 0;padding:10px;background:#FBF7EF;border-radius:8px;font-size:16px;line-height:2.1;white-space:pre-wrap;">${f}</div>`;
+  }
+  function pracFxBank(q, B, s){
+    if(!s.bank) s.bank = shuffleArr(B.map(b=>b.t).concat(q.d||[]));
+    const left = {};
+    Object.values(s.inp||{}).forEach(v=>{ if(v) left[v] = (left[v]||0)+1; });
+    return `<div class="toggle-row" style="margin:6px 0;flex-wrap:wrap;gap:6px;">${s.bank.map(t=>{
+      const used = left[t]>0; if(used) left[t]--;
+      return `<button type="button" class="toggle-btn" ${used?"disabled":""} data-fxchip="${esc(t)}" style="flex:0 1 auto;padding:7px 10px;font-size:14px;${used?"opacity:.3;":""}">${esc(t)}</button>`;
+    }).join("")}</div>`;
   }
   // 2026-11-06 考古題看答案後：周春榮舊題解跟現行法不同的地方（q.upd）＋第 77～91 次附「證來了」逐題解答連結（依現行法、附法條原文）
   function pracPastExtra(q){
@@ -2012,7 +2034,7 @@
   }
   function pracNext(){
     const s = state.prac;
-    s.idx++; s.shown = false; s.inp = {}; s.res = null; s.fixed = false;
+    s.idx++; s.shown = false; s.inp = {}; s.res = null; s.fixed = false; s.act = null; s.bank = null;
     if(s.idx>=s.ids.length) s.done = true;
     saveData("prac", s);
   }
@@ -2023,14 +2045,15 @@
   }
   function calcSubToggle(){
     return `<div class="toggle-row" style="margin:0 0 10px;flex-wrap:wrap;">
-      <button class="toggle-btn ${!["sk","law","past","fig"].includes(state.calcSub)?"active":""}" style="flex:1 1 30%;" data-calcsub="mc">🧮 學科計算題</button>
+      <button class="toggle-btn ${!["sk","law","past","fig","fx"].includes(state.calcSub)?"active":""}" style="flex:1 1 30%;" data-calcsub="mc">🧮 學科計算題</button>
       <button class="toggle-btn ${state.calcSub==="sk"?"active":""}" style="flex:1 1 30%;" data-calcsub="sk">✍️ 術科計算題</button>
       <button class="toggle-btn ${state.calcSub==="law"?"active":""}" style="flex:1 1 30%;" data-calcsub="law">📜 術科法規題</button>
       <button class="toggle-btn ${state.calcSub==="past"?"active":""}" style="flex:1 1 30%;" data-calcsub="past">📚 歷屆考古題</button>
       <button class="toggle-btn ${state.calcSub==="fig"?"active":""}" style="flex:1 1 30%;" data-calcsub="fig">🖼️ 看圖填空</button>
+      <button class="toggle-btn ${state.calcSub==="fx"?"active":""}" style="flex:1 1 30%;" data-calcsub="fx">🧩 公式配對</button>
     </div>`;
   }
-  function renderCalcTab(){ return calcSubToggle() + (["sk","law","past","fig"].includes(state.calcSub) ? renderPractical() : renderTopic("calc")); }
+  function renderCalcTab(){ return calcSubToggle() + (["sk","law","past","fig","fx"].includes(state.calcSub) ? renderPractical() : renderTopic("calc")); }
   function pracProg(list){
     const st = state.topicStats.prac||{};
     let seen=0, accC=0, accT=0;
@@ -2041,14 +2064,16 @@
   function pracWrongList(){ const st = state.topicStats.prac||{}; return pracPool().filter(q=>st[q.id] && st[q.id].last===0); }
   function renderPractical(){
     if(state.prac) return renderPracRound();
-    const POOL = pracPool(), LAW = pracIsLaw(), PAST = state.calcSub==="past", FIG = state.calcSub==="fig";
-    if(!POOL.length) return `<div class="empty-hint">找不到術科題目資料（${FIG?"figure_fill.js":PAST?"practical_past.js":LAW?"practical_law.js":"practical_questions.js"}）。</div>`;
+    const POOL = pracPool(), LAW = pracIsLaw(), PAST = state.calcSub==="past", FIG = state.calcSub==="fig", FX = state.calcSub==="fx";
+    if(!POOL.length) return `<div class="empty-hint">找不到術科題目資料（${FX?"formula_match.js":FIG?"figure_fill.js":PAST?"practical_past.js":LAW?"practical_law.js":"practical_questions.js"}）。</div>`;
     const p = pracProg(POOL), allSt = accStatus(p.acc), wrong = pracWrongList();
     const topics = [...new Set(POOL.map(q=>q.topic))];
     return `
       <div class="ov-card">
-        <div class="section-title" style="margin-top:0;">${FIG?"🖼️ 看圖填空":PAST?"📚 歷屆考古題":LAW?"📜 術科法規題":"✍️ 術科計算題"}<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${POOL.length} 題</span></div>
-        <div class="section-desc" style="margin-top:2px;">${FIG
+        <div class="section-title" style="margin-top:0;">${FX?"🧩 公式配對":FIG?"🖼️ 看圖填空":PAST?"📚 歷屆考古題":LAW?"📜 術科法規題":"✍️ 術科計算題"}<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${POOL.length} 題</span></div>
+        <div class="section-desc" style="margin-top:2px;">${FX
+          ? `上面是題目、中間是挖空的公式，點下面的卡片把參數和代數填進空格（卡片裡有幾張是混淆用的）。答錯的題目會集中到「寫錯的題目」重練。`
+          : FIG
           ? `看圖點選答案，選好的答案會直接填進圖上的空格，提交後自動對答案。答錯的題目會集中到「寫錯的題目」重練。`
           : PAST
           ? `周春榮題解第 43～91 次（93.11～109.11）全部題目，一次一組 10 題＝一份考卷。<b>把答案打出來</b>，再看原題解自評。⚠️ 題解是當年原文，沒有對照現行法規：標【舊法】的是 103.7.3 前「勞工安全衛生法」時期的寫法，法規名稱、條號以現行法為準（第 80～91 次的法規題已另外對照現行條文）。`
@@ -2100,13 +2125,23 @@
         ${q.old ? `<div class="section-desc" style="margin:2px 0 6px;color:#A8631F;">【舊法】題解依 103.7.3 前的勞工安全衛生法，法規名稱、條號請以現行職業安全衛生法為準</div>` : ""}
         <div class="quiz-question" style="white-space:pre-wrap;">${esc(q.q)}</div>
         ${q.fig ? `<div class="quiz-explain" style="background:#F4F1EA;margin-top:6px;"><div class="quiz-explain-title">📊 附圖／表格</div><div class="quiz-explain-body" style="white-space:pre-wrap;">${esc(q.fig)}</div></div>` : ""}
-        ${q.svg ? `<div style="margin:8px 0;">${pracFigSvg(q, B, s)}</div>` : ""}`;
+        ${q.svg ? `<div style="margin:8px 0;">${pracFigSvg(q, B, s)}</div>` : ""}
+        ${q.fx ? pracFxHtml(q, B, s) : ""}`;
     if(B && B.length){
       const inp = s.inp || {};
       const explain = `<div class="quiz-explain">
             <div class="quiz-explain-ans">✅ 答案：${esc(q.ans)}</div>
             <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body" style="white-space:pre-wrap;">${esc(q.sol)}</div>${airTipHtml(q.q+" "+q.sol)}
           </div>${pracPastExtra(q)}`;
+      if(!s.shown && q.fx){
+        const empty = B.filter((_,i)=>!inp[i]).length;
+        return `${top}
+        <div class="section-desc" style="margin:8px 0;">點卡片填入空格；填錯的話，點一下那格就會退回。</div>
+        ${pracFxBank(q, B, s)}
+        <button class="primary-btn" id="skSubmitBtn" ${empty?"disabled":""} style="margin-top:6px;${empty?"opacity:.5;":""}">${empty?`還有 ${empty} 格沒填`:"✅ 提交答案"}</button>
+        <button class="primary-btn" id="skGiveUpBtn" style="margin-top:8px;background:#8a8275;">🤔 不會，直接看答案（記為寫錯）</button>
+      </div>${exitBtn}`;
+      }
       if(!s.shown){
         return `${top}
         <div class="section-desc" style="margin:8px 0;">${q.svg?"每一格點選一個答案，全部選完再提交。":pracIsTxt(q.id)?"每一格點選一個代號，全部選完再提交。":"先在紙上算好，再把答案填進下面的格子（注意題目要求的小數位數；單位不用打）。"}</div>
@@ -3002,6 +3037,19 @@
     root.querySelectorAll("[data-skpick]").forEach(el=>el.addEventListener("click",()=>{
       const s = state.prac; s.inp = s.inp || {}; s.inp[+el.dataset.skpick] = el.dataset.v; render();
     }));
+    root.querySelectorAll("[data-fxslot]").forEach(el=>el.addEventListener("click",()=>{
+      const s = state.prac, i = +el.dataset.fxslot; s.inp = s.inp || {};
+      delete s.inp[i]; s.act = i; render();
+    }));
+    root.querySelectorAll("[data-fxchip]").forEach(el=>el.addEventListener("click",()=>{
+      const s = state.prac, n = (PRAC_BLANKS[s.ids[s.idx]]||[]).length; s.inp = s.inp || {};
+      const order = [...Array(n).keys()], free = i=>!s.inp[i];
+      const at = free(s.act) && s.act!=null ? s.act : order.find(free);
+      if(at==null) return;
+      s.inp[at] = el.dataset.fxchip;
+      s.act = order.slice(at+1).concat(order.slice(0,at)).find(free); if(s.act==null) s.act = null;
+      render();
+    }));
     const skSubmitBtn = document.getElementById("skSubmitBtn");
     if(skSubmitBtn) skSubmitBtn.addEventListener("click",()=>{
       const s = state.prac, id = s.ids[s.idx], B = PRAC_BLANKS[id] || [], inp = s.inp || {};
@@ -3010,8 +3058,10 @@
       // 順序可互換的格子（PRAC_BLANK_SETS）：填的答案集合跟正確答案集合相同就整組算對
       (PRAC_BLANK_SETS[id]||[]).forEach(g=>{
         const norm = x=>String(x==null?"":x).normalize("NFKC").trim();
-        const want = g.map(i=>norm(B[i].t)).sort().join("|"), got = g.map(i=>norm(inp[i])).sort().join("|");
-        if(want===got) g.forEach(i=>{ s.res[i] = true; });
+        // 格子可再包成陣列，表示整組一起換（例：WBGT 的「係數 × 溫度」）
+        const key = (x, f)=>[].concat(x).map(f).join("×");
+        const want = g.map(x=>key(x, i=>norm(B[i].t))).sort().join("|"), got = g.map(x=>key(x, i=>norm(inp[i]))).sort().join("|");
+        if(want===got) g.flat().forEach(i=>{ s.res[i] = true; });
       });
       s.shown = true; pracRecord(id, s.res.every(Boolean)); saveData("prac", s);
       render(); window.scrollTo(0,0);
