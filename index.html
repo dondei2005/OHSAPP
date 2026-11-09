@@ -2405,11 +2405,17 @@
       const nm = MN_NUM.exec(N.slice(i, i+12).join(""));
       let L = nm && nm[0] && (nm[0][0]!=="第" || nm[0].length>1) ? [...nm[0]].length : 0, lex = !!L;
       if(!L) for(let k=Math.min(MN_LEX_MAX, N.length-i); k>=2; k--) if(MN_LEX.has(N.slice(i, i+k).join(""))){ L = k; lex = true; break; }
-      if(L){ segGap(gap, i); raw.push({s:i, e:i+L, lex}); i += L; gap = i; } else i++;
+      const num = !!(nm && nm[0] && L===[...nm[0]].length && /^[0-9]/.test(nm[0]) && !(i>0 && /[A-Za-z]/.test(N[i-1])));
+      if(L){ segGap(gap, i); raw.push({s:i, e:i+L, lex, num}); i += L; gap = i; } else i++;
     }
     segGap(gap, N.length);
-    const res = raw.map(t=>{ const w = N.slice(t.s, t.e).join(""), k = [...w].filter(c=>!MN_CONN.has(c)).join("");
-      return k ? {w, s:t.s, e:t.e, k, z: !MN_STOP.has(w) && (t.lex || [...k].length>=2)} : null; }).filter(Boolean);
+    // 2026-11-09 門檻型短答案（20 字內、有阿拉伯數字、不是公式，例「吊升荷重 0.5～未滿 3 公噸」）錯詞本只挖數字
+    const numOnly = N.length<=20 && raw.some(t=>t.num) && !/[＝=×÷√^Σ]/.test(String(ans||""));
+    // 只挖數字本身：「1公噸」拆成「1」（挖空）＋「公噸」（留著）
+    const raw2 = numOnly ? raw.flatMap(t=>{ if(!t.num) return [t]; let d = t.s; while(d<t.e && /[0-9]/.test(N[d])) d++;
+      return d<t.e ? [{s:t.s, e:d, num:true}, {s:d, e:t.e}] : [t]; }) : raw;
+    const res = raw2.map(t=>{ const w = N.slice(t.s, t.e).join(""), k = [...w].filter(c=>!MN_CONN.has(c)).join("");
+      return k ? {w, s:t.s, e:t.e, k, z: numOnly ? !!t.num : (!MN_STOP.has(w) && (t.lex || [...k].length>=2))} : null; }).filter(Boolean);
     return mnWpCache[ck] = res;
   }
   function mnWords(ans){ return mnWordsPos(ans).map(x=>x.w); }
@@ -2554,6 +2560,14 @@
             w2[id] = q ? {s:Math.min(q.s||0, v.s||0), c:Math.max(q.c||0, v.c||0)} : {s:v.s||0, c:v.c||0}; }); });
         r = all[key] = {...r, w:w2, v:2, n:(r.n||0)+1}; mig = true;
       }
+      // 2026-11-09 挖空規則改過（門檻題只挖數字）：舊紀錄裡現在不能挖的詞，換成重疊的可挖詞；都沒重疊就換成這項全部可挖的詞（數字）
+      { const P = mnWordsPos(body), Z = P.filter(t=>t.z), zId = new Set(Z.map(mnwId));
+        const old = Object.keys(r.w||{}).map(mnwParse).filter(o=>A.slice(o.s, o.e).join("")===o.w && !zId.has(o.id));
+        if(old.length && Z.length){ const w2 = {...r.w};
+          old.forEach(o=>{ const v = w2[o.id]; delete w2[o.id]; const ov = Z.filter(t=>t.s<o.e && o.s<t.e);
+            (ov.length ? ov : Z).forEach(t=>{ const id = mnwId(t), q = w2[id];
+              w2[id] = q ? {...q, s:Math.min(q.s||0, v.s||0), c:Math.max(q.c||0, v.c||0)} : {...v}; }); });
+          r = all[key] = {...r, w:w2, n:(r.n||0)+1}; mig = true; } }
       const ks = Object.keys(r.w||{}).map(mnwParse).filter(o=>A.slice(o.s, o.e).join("")===o.w).sort((a,b)=>a.s-b.s);
       if(ks.length) out.push({key, m, i, ks, r, minS: Math.min(...ks.map(o=>r.w[o.id].s||0))});
     });
