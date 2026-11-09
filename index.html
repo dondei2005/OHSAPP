@@ -18,8 +18,8 @@
 <script src="./figure_fill.js?v=20261107"></script>
 <script src="./practical_law.js?v=20261106g"></script>
 <script src="./practical_past.js?v=20261106g"></script>
-<script src="./formula_match.js?v=20261107"></script>
-<script src="./mnemonics.js?v=20261109b"></script>
+<script src="./formula_match.js?v=20261109"></script>
+<script src="./mnemonics.js?v=20261109c"></script>
 <script src="./free_questions.js"></script>
 </head>
 <body>
@@ -2830,7 +2830,7 @@
             ${x.syn&&x.syn.length?`<div style="color:#2E7D4F;background:#E6F4EA;border-radius:6px;padding:2px 6px;margin-top:3px;font-size:13px;">🟢 同義詞不扣分：${x.syn.map(h=>`你寫「${esc(h[0])}」＝條文「${esc(h[1])}」`).join("、")}</div>`:""}
             <div style="margin-top:3px;">${x.ops.some(o=>o.t!=='eq') ? mnemoDiffHtml(x.ops) : esc(mnemoItem(p[1]))}</div>
             ${(x.words||x.moved||x.typo||x.pen)>0?`<div style="color:#6b655a;margin-top:2px;">正確：${esc(mnemoItem(p[1]))}</div>`:""}</div>`; }).join("")}
-        ${m.note?`<div class="section-desc">${esc(m.note)}</div>`:""}
+        ${m.note?`<div class="section-desc" style="white-space:pre-line;">${esc(m.note)}</div>`:""}
         <button class="primary-btn" data-mnstart="${m.id}" style="margin-top:10px;">🔁 再練這組</button>
         <button class="primary-btn" data-mnstart="${nextMnemoId(m.id)}" style="margin-top:8px;">下一組 →</button>
       </div>${exitBtn}`;
@@ -2841,7 +2841,7 @@
         <div class="quiz-chapter-tag">${m.choice?'第 2 步：':''}配對（先點左邊，再點右邊）</div>
         <div class="quiz-question" style="margin-bottom:6px;">${esc(m.title)}</div>
         <div class="mn-phrase">${esc(m.mnemonic)}</div>
-        ${m.note?`<div class="section-desc" style="margin:4px 0 8px;">${esc(m.note)}</div>`:""}
+        ${m.note?`<div class="section-desc" style="margin:4px 0 8px;white-space:pre-line;">${esc(m.note)}</div>`:""}
         <div class="mn-grid ${wide?'wide':''}">
           <div class="mn-col">${m.pairs.map((p,i)=>{
             const cls = s.doneL[i] ? "mn-ok" : (s.bad&&s.bad.l===i ? "mn-bad" : (s.selL===i ? "mn-sel" : ""));
@@ -2875,7 +2875,7 @@
       <div class="result-card" style="margin-top:0;">${st.icon} 這組正確率 ${acc}%（答對 ${s.c}、答錯 ${s.w}）</div>
       <div class="mn-phrase" style="margin-top:10px;">${esc(m.mnemonic)}</div>
       <table class="mn-table">${m.pairs.map((p,i)=>`<tr><td>${esc(p[0])}</td><td>${esc(p[1])}</td><td style="width:1%;white-space:nowrap;">${mnNoteBtn(m, i)}</td></tr>`).join("")}</table>
-      ${m.note?`<div class="section-desc">${esc(m.note)}</div>`:""}
+      ${m.note?`<div class="section-desc" style="white-space:pre-line;">${esc(m.note)}</div>`:""}
       <button class="primary-btn" data-mnstart="${m.id}" style="margin-top:10px;">🔁 再練這組</button>
       <button class="primary-btn" data-mnstart="${nextMnemoId(m.id)}" style="margin-top:8px;">下一組 →</button>
     </div>${exitBtn}`;
