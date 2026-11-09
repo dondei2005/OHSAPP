@@ -9,7 +9,7 @@
 <script src="./examA_questions_2.js"></script>
 <script src="./examB_questions.js"></script>
 <script src="./explanations.js?v=20261109"></script>
-<script src="./study_tips.js?v=20261106b"></script>
+<script src="./study_tips.js?v=20261109"></script>
 <script src="./dedup.js"></script>
 <script src="./topic_sets.js"></script>
 <script src="./calc_variants.js"></script>
@@ -19,7 +19,7 @@
 <script src="./practical_law.js?v=20261106g"></script>
 <script src="./practical_past.js?v=20261106g"></script>
 <script src="./formula_match.js?v=20261107"></script>
-<script src="./mnemonics.js?v=20261109"></script>
+<script src="./mnemonics.js?v=20261109b"></script>
 <script src="./free_questions.js"></script>
 </head>
 <body>
@@ -2697,8 +2697,10 @@
   function mnemoTry(){
     const s = state.mnemo, m = MNEMONICS.find(x=>x.id===s.id);
     if(s.selL===null || s.selR===null) return;
-    const li = s.selL, rj = s.selR;
-    if(m.pairs[li][1] === m.pairs[s.right[rj]][1]){
+    let li = s.selL; const rj = s.selR, want = m.pairs[s.right[rj]][1];
+    // 2026-11-09 左邊字相同（例：變變房的兩個「變」）可互換：換成同字、還沒配過、條文對得上的那一格
+    if(m.pairs[li][1] !== want){ const k = m.pairs.findIndex((p,x)=>!s.doneL[x] && p[0]===m.pairs[li][0] && p[1]===want); if(k>=0) li = k; }
+    if(m.pairs[li][1] === want){
       s.doneL[li] = true; s.doneR[rj] = {l:li}; s.c++; s.bad = null;
     } else { s.w++; s.bad = {l:li, r:rj}; }
     s.selL = null; s.selR = null;
