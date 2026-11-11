@@ -619,6 +619,9 @@
     state.quizPool = loadData("quizPool", []);
     state.calcSub = loadData("calcSub", "mc");
     state.mnSort = loadData("mnSort", "fresh");
+    // 2026-11-11 公式組／名詞解釋組各自的排序（預設前次分數低→高）
+    state.mnSortF = loadData("mnSortF", "score");
+    state.mnSortT = loadData("mnSortT", "score");
     state.prac = loadData("prac", null);
     state.quizIdx = loadData("quizIdx", 0);
     state.quizSelected = loadData("quizSelected", null);
@@ -2892,6 +2895,21 @@
     // 2026-11-03 公式／單位配對組（kind:"formula"）另列一區，放在口訣清單前面
     const formulas = MNEMONICS.filter(m=>m.kind==="formula"), terms = MNEMONICS.filter(m=>m.kind==="term");
     const row = mnemoRow;
+    // 排序：fresh＝沒練過的最前面，其餘依前次分數低→高；score＝前次分數低→高，沒練過的放最後
+    const sortRows = (arr, mode)=>{
+      const list = arr.map((m,i)=>({m, i, sc: mnemoScore(m)}));
+      list.sort((a,b)=>{
+        const na = a.sc===null, nb = b.sc===null;
+        if(na!==nb) return mode==="score" ? (na?1:-1) : (na?-1:1);
+        if(!na && a.sc!==b.sc) return a.sc-b.sc;
+        return a.i-b.i;
+      });
+      return list.map(x=>row(x.m)).join("");
+    };
+    const sortBar = (key, cur)=>`<div class="toggle-row" style="margin:6px 0 8px;">
+          <button class="toggle-btn ${cur!=="score"?"active":""}" data-mnsort="fresh" data-mnsortkey="${key}">🆕 沒練過的優先</button>
+          <button class="toggle-btn ${cur==="score"?"active":""}" data-mnsort="score" data-mnsortkey="${key}">📊 前次分數低→高</button>
+        </div>`;
     const chAll = MNEMONICS.reduce((a,m)=>{ const r = mnemoStat(m.id); a.c += r.chC||0; a.n += r.chN||0; return a; }, {c:0,n:0});
     return `
       <div class="ov-card">
@@ -2907,27 +2925,16 @@
         <button class="primary-btn" data-mnview="wrong" style="margin:4px 0;background:#B9554A;">✏️ 條文錯詞本（${mnWrongList().length} 條，打錯的關鍵詞填空練習）</button>
         <div class="sub-title">🧮 公式與單位配對（${formulas.length} 組）</div>
         <div class="section-desc" style="margin-top:0;">把公式配對到名稱、把單位配對到物理量，再做幾題計算填空（每次成績＝那一輪的答對率）。</div>
-        ${formulas.map(row).join("")}
+        ${sortBar("mnSortF", state.mnSortF)}
+        ${sortRows(formulas, state.mnSortF)}
         <div class="sub-title">📖 術科名詞解釋（${terms.length} 組・${terms.reduce((a,m)=>a+m.pairs.length,0)} 個名詞）</div>
         <div class="section-desc" style="margin-top:0;">整理自周春榮 80～91 次術科題解的名詞解釋題，定義已對照現行條文（有修法的寫在每組說明）。看名詞直接打出定義，評分方式跟口訣第 2 關一樣。</div>
-        ${terms.map(row).join("")}
+        ${sortBar("mnSortT", state.mnSortT)}
+        ${sortRows(terms, state.mnSortT)}
         <div class="sub-title">各組口訣（達標 ${reached}/${MNEMONICS.length} 組）</div>
         <div class="section-desc" style="margin-top:0;">點任一組開始練習。</div>
-        <div class="toggle-row" style="margin:6px 0 8px;">
-          <button class="toggle-btn ${state.mnSort!=="score"?"active":""}" data-mnsort="fresh">🆕 沒練過的優先</button>
-          <button class="toggle-btn ${state.mnSort==="score"?"active":""}" data-mnsort="score">📊 前次分數低→高</button>
-        </div>
-        ${(()=>{
-          // 2026-11-05 排序：fresh＝沒練過的最前面，其餘依前次分數低→高；score＝前次分數低→高，沒練過的放最後
-          const list = MNEMONICS.filter(m=>!m.kind).map((m,i)=>({m, i, sc: mnemoScore(m)}));
-          list.sort((a,b)=>{
-            const na = a.sc===null, nb = b.sc===null;
-            if(na!==nb) return state.mnSort==="score" ? (na?1:-1) : (na?-1:1);
-            if(!na && a.sc!==b.sc) return a.sc-b.sc;
-            return a.i-b.i;
-          });
-          return list.map(x=>row(x.m)).join("");
-        })()}
+        ${sortBar("mnSort", state.mnSort)}
+        ${sortRows(MNEMONICS.filter(m=>!m.kind), state.mnSort)}
       </div>
     `;
   }
@@ -3154,7 +3161,7 @@
       state.topicSort = el.dataset.topicsort; render();
     }));
     root.querySelectorAll("[data-mnstart]").forEach(el=>el.addEventListener("click",()=>startMnemo(el.dataset.mnstart)));
-    root.querySelectorAll("[data-mnsort]").forEach(el=>el.addEventListener("click",()=>{ state.mnSort = el.dataset.mnsort; saveData("mnSort", state.mnSort); render(); }));
+    root.querySelectorAll("[data-mnsort]").forEach(el=>el.addEventListener("click",()=>{ const k = el.dataset.mnsortkey || "mnSort"; state[k] = el.dataset.mnsort; saveData(k, state[k]); render(); }));
     // 條文筆記：加入／移除不跳回頁首
     root.querySelectorAll("[data-mnnote]").forEach(el=>el.addEventListener("click",e=>{
       e.stopPropagation();
