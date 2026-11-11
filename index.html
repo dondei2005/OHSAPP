@@ -15,7 +15,7 @@
 <script src="./calc_variants.js"></script>
 <script src="./practical_questions.js?v=20261105b"></script>
 <script src="./practical_blanks.js?v=20261104a"></script>
-<script src="./figure_fill.js?v=20261107"></script>
+<!-- 2026-11-11 拿掉看圖填空分頁：figure_fill.js 不再載入（檔案與 topicStats.prac 紀錄保留） -->
 <script src="./practical_law.js?v=20261106g"></script>
 <script src="./practical_past.js?v=20261106g"></script>
 <script src="./formula_match.js?v=20261109"></script>
@@ -2060,15 +2060,14 @@
   }
   function calcSubToggle(){
     return `<div class="toggle-row" style="margin:0 0 10px;flex-wrap:wrap;">
-      <button class="toggle-btn ${!["sk","law","past","fig","fx"].includes(state.calcSub)?"active":""}" style="flex:1 1 30%;" data-calcsub="mc">🧮 學科計算題</button>
+      <button class="toggle-btn ${!["sk","law","past","fx"].includes(state.calcSub)?"active":""}" style="flex:1 1 30%;" data-calcsub="mc">🧮 學科計算題</button>
       <button class="toggle-btn ${state.calcSub==="sk"?"active":""}" style="flex:1 1 30%;" data-calcsub="sk">✍️ 術科計算題</button>
       <button class="toggle-btn ${state.calcSub==="law"?"active":""}" style="flex:1 1 30%;" data-calcsub="law">📜 術科法規題</button>
       <button class="toggle-btn ${state.calcSub==="past"?"active":""}" style="flex:1 1 30%;" data-calcsub="past">📚 歷屆考古題</button>
-      <button class="toggle-btn ${state.calcSub==="fig"?"active":""}" style="flex:1 1 30%;" data-calcsub="fig">🖼️ 看圖填空</button>
       <button class="toggle-btn ${state.calcSub==="fx"?"active":""}" style="flex:1 1 30%;" data-calcsub="fx">🧩 公式配對</button>
     </div>`;
   }
-  function renderCalcTab(){ return calcSubToggle() + (["sk","law","past","fig","fx"].includes(state.calcSub) ? renderPractical() : renderTopic("calc")); }
+  function renderCalcTab(){ return calcSubToggle() + (["sk","law","past","fx"].includes(state.calcSub) ? renderPractical() : renderTopic("calc")); }
   function pracProg(list){
     const st = state.topicStats.prac||{};
     let seen=0, accC=0, accT=0;
