@@ -1252,7 +1252,7 @@
     return {chapters, chAll, recent, mix:wrongProg(all,'xN','xC'), pendingAll:all.filter(q=>!q.meta.mastered)};
   }
   function shuffleArr(a){ for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-  // 2026-11-05 乙級錯題本出題順序：連續答對次數多→少（差一點就移到已學會的先出，加快消化），次數相同的隨機
+  // 2026-11-05 乙級錯題本出題順序：連續答對次數多→少（2026-11-12 起錯題本改完全隨機，這個函式目前沒用到）
   function byStreakDesc(list){ return shuffleArr(list.slice()).sort((a,b)=>(b.meta.correctStreak||0)-(a.meta.correctStreak||0)); }
   function wrongReviewTitle(current){
     if(state.wrongBook==='learned' && !current._rv) return '已學會錯題抽考';
@@ -1393,7 +1393,7 @@
         <div class="toggle-row" style="margin:6px 0 8px;">
           ${sortBtn('chapter','依章節')}${sortBtn('cov','刷題率低→高')}${sortBtn('cnt','錯過題數多→少')}
         </div>
-        <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；錯過＝這章錯過的題數（待複習＋已學會）；刷題 100% 就打 ✅。每輪最多 20 題，連續答對次數多的先出（同次數隨機），快移到已學會的題目先消化。點任一列可展開題目。</div>
+        <div class="section-desc" style="margin-top:0;">刷題＝這章待複習錯題在「練這章」做過的比例；錯過＝這章錯過的題數（待複習＋已學會）；刷題 100% 就打 ✅。每輪最多 20 題，完全隨機出題。點任一列可展開題目。</div>
         ${chs.length===0?`<div class="empty-hint">太好了，目前沒有需要複習的錯題。</div>`:""}
         ${sorted.map(chBlock).join("")}
       </div>
@@ -3032,7 +3032,7 @@
       persist("quizChapterFilter");
       state.tab = "quiz"; render(); window.scrollTo(0,0);
     }));
-    // 錯題本章節分類：展開／收起該章題目清單、開始該章錯題加強（最多 20 題，這章還沒練過的錯題優先）
+    // 錯題本章節分類：展開／收起該章題目清單、開始該章錯題加強（最多 20 題，2026-11-12 起完全隨機）
     root.querySelectorAll("[data-wrongsort]").forEach(el=>el.addEventListener("click",()=>{
       state.wrongSort = el.dataset.wrongsort; render();
     }));
@@ -3052,7 +3052,7 @@
       const key = el.dataset.wrongch;
       const c = computeWrongChapters().chapters.find(x=>x.key===key);
       if(!c || c.pending.length===0) return;
-      startWrongRound(byStreakDesc(c.pending), 'ch', key);
+      startWrongRound(shuffleArr(c.pending.slice()), 'ch', key);
     }));
     // 計算／年份條號分頁：練單一章節或全章節隨機，每輪最多 20 題
     function startTopicRound(kind, list, ch){
@@ -3261,7 +3261,7 @@
     const startWrongMixBtn = document.getElementById("startWrongMixBtn");
     if(startWrongMixBtn) startWrongMixBtn.addEventListener("click",()=>{
       // 跨全部章節抽 20 題：連續答對次數多→少，次數相同的隨機
-      startWrongRound(byStreakDesc(computeWrongChapters().pendingAll), 'mix', null);
+      startWrongRound(shuffleArr(computeWrongChapters().pendingAll.slice()), 'mix', null);
     });
     root.querySelectorAll("[data-wrongbook]").forEach(el=>el.addEventListener("click",()=>{
       state.wrongBook = el.dataset.wrongbook;
