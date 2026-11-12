@@ -622,6 +622,9 @@
     // 2026-11-12 錯題本作答時先把選項摺起來（先在腦中想答案，再展開選）；optShownKey＝目前已展開的那一題
     state.wrongHideOpts = loadData("wrongHideOpts", true);
     state.optShownKey = null;
+    // 乙級考古題（模擬考）也一樣先摺選項，開關分開記
+    state.examBHideOpts = loadData("examBHideOpts", true);
+    state.examBOptShownKey = null;
     // 2026-11-11 公式組／名詞解釋組各自的排序（預設前次分數低→高）
     state.mnSortF = loadData("mnSortF", "score");
     state.mnSortT = loadData("mnSortT", "score");
@@ -1718,7 +1721,11 @@
       <div class="quiz-progress">第 ${state.examBIdx+1} / ${state.examBPool.length} 題 · 答對 ${state.examBStats.correct}${isMulti?' · 複選題':''}</div>
       <div class="quiz-card">
         <div class="quiz-question">${esc(current.text)}</div>
-        ${current.options.map((opt,i)=>{
+        ${!state.examBRevealed ? `<div style="text-align:right;margin:-4px 0 6px;"><button class="toggle-btn ${state.examBHideOpts?'active':''}" id="examBHideOptsBtn" style="padding:3px 10px;font-size:12px;">🙈 先摺選項：${state.examBHideOpts?'開':'關'}</button></div>` : ""}
+        ${state.examBHideOpts && !state.examBRevealed && state.examBOptShownKey!==(state.examBIdx+":"+current.id)
+          ? `<div class="result-card" style="margin:0 0 10px;text-align:center;">🧠 先別看選項，在腦中想出答案${isMulti?'（複選題，答案不只一個）':''}
+              <button class="primary-btn" id="examBShowOptsBtn" data-optkey="${esc(state.examBIdx+":"+current.id)}" style="margin-top:10px;">👀 想好了，顯示選項</button></div>`
+          : current.options.map((opt,i)=>{
           let cls="quiz-option";
           if(state.examBRevealed){
             const isAns = isMulti ? current.answer.includes(i) : i===current.answer;
@@ -1731,7 +1738,7 @@
             <span class="quiz-option-label">${label}</span>${esc(opt)}
           </button>`;
         }).join("")}
-        ${isMulti && !state.examBRevealed ? `<button class="primary-btn" id="examBMultiSubmitBtn" style="margin-bottom:10px;">提交答案</button>` : ""}
+        ${isMulti && !state.examBRevealed && !(state.examBHideOpts && state.examBOptShownKey!==(state.examBIdx+":"+current.id)) ? `<button class="primary-btn" id="examBMultiSubmitBtn" style="margin-bottom:10px;">提交答案</button>` : ""}
         ${state.examBRevealed ? renderExplain(current) : ""}
         ${state.examBRevealed ? `<button class="primary-btn" id="nextExamBBtn">${state.examBIdx+1<state.examBPool.length?'下一題':'完成本輪'}</button>` : ""}
       </div>
@@ -3513,6 +3520,10 @@
       saveExamBRound();
       render();
     }
+    const examBShowOptsBtn = document.getElementById("examBShowOptsBtn");
+    if(examBShowOptsBtn) examBShowOptsBtn.addEventListener("click",()=>{ state.examBOptShownKey = examBShowOptsBtn.dataset.optkey; render(); });
+    const examBHideOptsBtn = document.getElementById("examBHideOptsBtn");
+    if(examBHideOptsBtn) examBHideOptsBtn.addEventListener("click",()=>{ state.examBHideOpts = !state.examBHideOpts; saveData("examBHideOpts", state.examBHideOpts); render(); });
     const nextExamBBtn = document.getElementById("nextExamBBtn");
     if(nextExamBBtn) nextExamBBtn.addEventListener("click",()=>{
       if(state.examBIdx+1<state.examBPool.length){
