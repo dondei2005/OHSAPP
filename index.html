@@ -619,6 +619,9 @@
     state.quizPool = loadData("quizPool", []);
     state.calcSub = loadData("calcSub", "mc");
     state.mnSort = loadData("mnSort", "fresh");
+    // 2026-11-12 錯題本作答時先把選項摺起來（先在腦中想答案，再展開選）；optShownKey＝目前已展開的那一題
+    state.wrongHideOpts = loadData("wrongHideOpts", true);
+    state.optShownKey = null;
     // 2026-11-11 公式組／名詞解釋組各自的排序（預設前次分數低→高）
     state.mnSortF = loadData("mnSortF", "score");
     state.mnSortT = loadData("mnSortT", "score");
@@ -1269,8 +1272,16 @@
         <div class="quiz-card">
           <div class="quiz-chapter-tag">${esc(bucketLabel(bucketKey(current)))}${qtype==='multi'?' · 複選題':qtype==='fill'?' · 填空題':qtype==='truefalse'?' · 是非題':''}</div>
           <div class="quiz-question">${esc(current.text)}</div>
-          ${qtype==='single' ? renderSingleOptions(current) : ""}
-          ${qtype==='multi' ? renderMultiOptions(current) : ""}
+          ${(()=>{
+            // 單選／複選：選項先摺起來，想好答案再按「顯示選項」（是非、填空本來就沒有選項內容，不摺）
+            const key = state.quizIdx+":"+current.id;
+            const fold = state.wrongHideOpts && (qtype==='single'||qtype==='multi') && !state.quizRevealed && state.optShownKey!==key;
+            const sw = (qtype==='single'||qtype==='multi') && !state.quizRevealed
+              ? `<div style="text-align:right;margin:-4px 0 6px;"><button class="toggle-btn ${state.wrongHideOpts?'active':''}" id="wrongHideOptsBtn" style="padding:3px 10px;font-size:12px;">🙈 先摺選項：${state.wrongHideOpts?'開':'關'}</button></div>` : "";
+            if(fold) return sw + `<div class="result-card" style="margin:0 0 10px;text-align:center;">🧠 先別看選項，在腦中想出答案${qtype==='multi'?'（複選題，答案不只一個）':''}
+              <button class="primary-btn" id="showOptsBtn" data-optkey="${esc(key)}" style="margin-top:10px;">👀 想好了，顯示選項</button></div>`;
+            return sw + (qtype==='single' ? renderSingleOptions(current) : qtype==='multi' ? renderMultiOptions(current) : "");
+          })()}
           ${qtype==='fill' ? renderFillInput(current) : ""}
           ${qtype==='truefalse' ? renderTrueFalseOptions(current) : ""}
           ${state.quizRevealed ? renderExplain(current) : ""}
@@ -3379,6 +3390,10 @@
       persistQuizState();
       render();
     });
+    const showOptsBtn = document.getElementById("showOptsBtn");
+    if(showOptsBtn) showOptsBtn.addEventListener("click",()=>{ state.optShownKey = showOptsBtn.dataset.optkey; render(); });
+    const wrongHideOptsBtn = document.getElementById("wrongHideOptsBtn");
+    if(wrongHideOptsBtn) wrongHideOptsBtn.addEventListener("click",()=>{ state.wrongHideOpts = !state.wrongHideOpts; saveData("wrongHideOpts", state.wrongHideOpts); render(); });
     const nextQuizBtn = document.getElementById("nextQuizBtn");
     if(nextQuizBtn) nextQuizBtn.addEventListener("click",()=>{
       if(state.quizIdx+1<state.quizPool.length){
