@@ -208,6 +208,10 @@ window.STUDY_TIPS = {
 "stelvf": {
 "title": "公式：STEL 變量係數（容許暴露標準§3）",
 "body": "「門檻 1、10、100、1000，係數 3、2、1.5、1.25、1」\n未滿1→3；1～未滿10→2；10～未滿100→1.5；100～未滿1000→1.25；1000以上→1\nPEL-STEL ＝ PEL-TWA × 變量係數（任何連續15分鐘）；「以上」含本數，剛好10用1.5、剛好100用1.25\n註「高」字＝最高容許濃度，不乘係數"
+},
+"chemgrade3": {
+"title": "危害性化學品分級管理：3 級措施＋評估頻率（評估及分級管理辦法§8、§10）",
+"body": "第 1 級：暴露濃度＜PEL 的 1/2 → 維持原有控制或管理措施，製程或作業變更時採行變更管理；至少每 3 年評估 1 次\n第 2 級：1/2 PEL ≦ 濃度＜PEL → 就製程設備、作業程序或作業方法實施檢點，採取必要改善措施；至少每年評估 1 次\n第 3 級：濃度≧PEL → 應即採取有效控制措施，完成改善後重新評估，確保低於 PEL；至少每 3 個月評估 1 次\n記法：「半下三年、未滿一年、超標三月」——級數越高越常評估（3 年 → 1 年 → 3 個月）\n・適用§8：有 PEL 的化學品，且特別危害健康作業勞工 100 人以上或總勞工 500 人以上\n・化學品種類、操作程序或製程條件變更，有增加暴露風險之虞 → 變更前或變更後 3 個月內重新評估\n・評估方法及分級管理措施紀錄至少保存 3 年\n・別混：母性健康保護的第一級是「低於 PEL 的 1/10」；特殊健康檢查健康管理分 4 級"
 }
 },
 "map": {
@@ -747,7 +751,8 @@ window.STUDY_TIPS = {
 "keep"
 ],
 "chN13-009": [
-"cycle"
+"cycle",
+"chemgrade3"
 ],
 "chN13-010": [
 "cycle"
@@ -757,7 +762,8 @@ window.STUDY_TIPS = {
 ],
 "chN13-035": [
 "keep",
-"cycle"
+"cycle",
+"chemgrade3"
 ],
 "chN13-053": [
 "cycle"
@@ -857,7 +863,8 @@ window.STUDY_TIPS = {
 "keep"
 ],
 "examA-076": [
-"cycle"
+"cycle",
+"chemgrade3"
 ],
 "examA-080": [
 "cycle"
@@ -1090,13 +1097,16 @@ window.STUDY_TIPS = {
 "keep"
 ],
 "examB-260": [
-"cycle"
+"cycle",
+"chemgrade3"
 ],
 "examB-261": [
-"cycle"
+"cycle",
+"chemgrade3"
 ],
 "examB-262": [
-"cycle"
+"cycle",
+"chemgrade3"
 ],
 "examB-267": [
 "keep"
@@ -2113,6 +2123,24 @@ window.STUDY_TIPS = {
 ],
 "sk-ven-05": [
 "mechvent"
+],
+"examB-263": [
+"chemgrade3"
+],
+"chN13-032": [
+"chemgrade3"
+],
+"chN13-033": [
+"chemgrade3"
+],
+"chN13-034": [
+"chemgrade3"
+],
+"examB-S10803-19": [
+"chemgrade3"
+],
+"examB-S10803-20": [
+"chemgrade3"
 ]
 }
 };
