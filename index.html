@@ -2071,7 +2071,7 @@
   }
   function pracNext(){
     const s = state.prac;
-    s.idx++; s.shown = false; s.inp = {}; s.res = null; s.fixed = false; s.guess = false; s.act = null; s.bank = null;
+    s.idx++; s.shown = false; s.open = false; s.inp = {}; s.res = null; s.fixed = false; s.guess = false; s.act = null; s.bank = null;
     if(s.idx>=s.ids.length) s.done = true;
     saveData("prac", s);
   }
@@ -2111,7 +2111,7 @@
       <div class="ov-card">
         <div class="section-title" style="margin-top:0;">${FX?"🧩 公式配對":FIG?"🖼️ 看圖填空":PAST?"📚 歷屆考古題":LAW?"📜 術科法規題":"✍️ 術科計算題"}<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${POOL.length} 題</span></div>
         <div class="section-desc" style="margin-top:2px;">${FX
-          ? `上面是題目、中間是挖空的公式，點下面的卡片把參數和代數填進空格（卡片裡有幾張是混淆用的）。答錯的題目會集中到「寫錯的題目」重練。`
+          ? `每題先只給題目、<b>公式摺起來</b>：自己先把公式想出來（寫在紙上），再按「打開填空」，點卡片把參數和代數填進挖空的公式（卡片裡有幾張是混淆用的）。答錯的題目會集中到「寫錯的題目」重練。`
           : FIG
           ? `看圖點選答案，選好的答案會直接填進圖上的空格，提交後自動對答案。答錯的題目會集中到「寫錯的題目」重練。`
           : PAST
@@ -2165,13 +2165,20 @@
         <div class="quiz-question" style="white-space:pre-wrap;">${esc(q.q)}</div>
         ${q.fig ? `<div class="quiz-explain" style="background:#F4F1EA;margin-top:6px;"><div class="quiz-explain-title">📊 附圖／表格</div><div class="quiz-explain-body" style="white-space:pre-wrap;">${esc(q.fig)}</div></div>` : ""}
         ${q.svg ? `<div style="margin:8px 0;">${pracFigSvg(q, B, s)}</div>` : ""}
-        ${q.fx ? pracFxHtml(q, B, s) : ""}`;
+        ${q.fx ? (s.shown || s.open ? pracFxHtml(q, B, s) : `<div style="margin:8px 0;padding:14px 10px;background:#FBF7EF;border:2px dashed #E5B574;border-radius:8px;text-align:center;color:#8A3F16;font-weight:600;">🙈 公式先摺起來了<br><span style="font-size:13px;font-weight:400;color:#6b6458;">看上面的題目，先在紙上（或腦中）把公式寫出來，想好再打開填空</span></div>`) : ""}`;
     if(B && B.length){
       const inp = s.inp || {};
       const explain = `<div class="quiz-explain">
             <div class="quiz-explain-ans">✅ 答案：${esc(q.ans)}</div>
             <div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body" style="white-space:pre-wrap;">${esc(q.sol)}</div>${airTipHtml(q.q+" "+q.sol)}
           </div>${pracPastExtra(q)}`;
+      // 2026-11-15 公式配對：一開始先摺起挖空公式和卡片，自己想出公式後再按「打開」填空
+      if(!s.shown && q.fx && !s.open){
+        return `${top}
+        <button class="primary-btn" id="skOpenBtn" style="margin-top:6px;">🧩 我想好公式了，打開填空</button>
+        <button class="primary-btn" id="skGiveUpBtn" style="margin-top:8px;background:#8a8275;">🤔 想不出來，直接看答案（記為寫錯）</button>
+      </div>${exitBtn}`;
+      }
       if(!s.shown && q.fx){
         const empty = B.filter((_,i)=>!inp[i]).length;
         return `${top}
@@ -3201,6 +3208,8 @@
       s.act = order.slice(at+1).concat(order.slice(0,at)).find(free); if(s.act==null) s.act = null;
       render();
     }));
+    const skOpenBtn = document.getElementById("skOpenBtn");
+    if(skOpenBtn) skOpenBtn.addEventListener("click",()=>{ const s = state.prac; s.open = true; saveData("prac", s); render(); });
     const skSubmitBtn = document.getElementById("skSubmitBtn");
     if(skSubmitBtn) skSubmitBtn.addEventListener("click",()=>{
       const s = state.prac, id = s.ids[s.idx], B = PRAC_BLANKS[id] || [], inp = s.inp || {};
