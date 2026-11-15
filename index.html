@@ -2071,7 +2071,7 @@
   }
   function pracNext(){
     const s = state.prac;
-    s.idx++; s.shown = false; s.inp = {}; s.res = null; s.fixed = false; s.act = null; s.bank = null;
+    s.idx++; s.shown = false; s.inp = {}; s.res = null; s.fixed = false; s.guess = false; s.act = null; s.bank = null;
     if(s.idx>=s.ids.length) s.done = true;
     saveData("prac", s);
   }
@@ -2090,12 +2090,15 @@
     </div>`;
   }
   function renderCalcTab(){ return calcSubToggle() + (["sk","law","past","fx"].includes(state.calcSub) ? renderPractical() : renderTopic("calc")); }
+  // 2026-11-15 術科計算題（calcSub "sk"）改成「掌握度」：每題看最近一次，最近一次自己算對就算會了；
+  // 正確率＝已算對題數 ÷ 全部題數（不是作答次數），猜對的可按「還要再練」改回不算
   function pracProg(list){
-    const st = state.topicStats.prac||{};
+    const st = state.topicStats.prac||{}, M = state.calcSub==="sk";
     let seen=0, accC=0, accT=0;
-    list.forEach(q=>{ const r = st[q.id]; if(r && r.n>0){ seen++; accT+=r.n; accC+=r.c||0; } });
+    list.forEach(q=>{ const r = st[q.id]; if(r && r.n>0){ seen++; if(M){ if(r.last===1) accC++; } else { accT+=r.n; accC+=r.c||0; } } });
     const total = list.length;
-    return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC, accT, acc: accT>0?Math.round(accC/accT*100):null};
+    if(M) accT = total;
+    return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC, accT, acc: seen>0 && accT>0?Math.round(accC/accT*100):null};
   }
   function pracWrongList(){ const st = state.topicStats.prac||{}; return pracPool().filter(q=>st[q.id] && st[q.id].last===0); }
   function renderPractical(){
@@ -2115,10 +2118,10 @@
           ? `周春榮題解第 43～91 次（93.11～109.11）全部題目，一次一組 10 題＝一份考卷。<b>把答案打出來</b>，再看原題解自評。⚠️ 題解是當年原文，沒有對照現行法規：標【舊法】的是 103.7.3 前「勞工安全衛生法」時期的寫法，法規名稱、條號以現行法為準（第 80～91 次的法規題已另外對照現行條文）。`
           : LAW
           ? `歷屆術科法規題（第 80～91 次題解，答案已對照現行條文，修法改過的標【修法】）。<b>先在紙上把答案寫出來</b>（條號、項目、數字），再看詳解自評；配合題（選代號）直接點選，系統自動對答案。寫錯的題目會集中到「寫錯的題目」重練。`
-          : `歷屆術科計算題（職安乙級技能檢定計算題彙整）。<b>先在紙上把算式寫完，再把答案填進格子</b>（只填數字，單位不用打），系統自動對答案，每一格都對才算對。算錯的題目會集中到「算錯的題目」重練。`}</div>
+          : `歷屆術科計算題（職安乙級技能檢定計算題彙整）。<b>先在紙上把算式寫完，再把答案填進格子</b>（只填數字，單位不用打），系統自動對答案，每一格都對才算對。算錯的題目會集中到「算錯的題目」重練。<br>📊 正確率＝<b>已算對的題數 ÷ 全部題數</b>（每題看最近一次，自己算對就算會了，不看刷幾次）。猜對的可以按「🎲 猜對的，還要再練」，那題就不算正解、會進「算錯的題目」。`}</div>
         <div style="display:flex;justify-content:space-around;margin-top:10px;">
           ${svgRing(p.cov, "#5B6B82", `做過 ${p.seen}/${p.total} 題`)}
-          ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : `${allSt.icon} ${LAW?"寫對":"算對"} ${p.accC}/${p.accT}`)}
+          ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : state.calcSub==="sk" ? `${allSt.icon} 已算對 ${p.accC}/${p.accT} 題` : `${allSt.icon} ${LAW?"寫對":"算對"} ${p.accC}/${p.accT}`)}
         </div>
         <button class="primary-btn" data-skstart="all" style="margin:10px 0 4px;">🎲 隨機 ${Math.min(PRAC_ROUND,POOL.length)} 題（沒做過的優先）</button>
         ${wrong.length ? `<button class="primary-btn" data-skstart="wrong" style="margin:4px 0;background:#B5532F;">🔁 ${LAW?"寫錯":"算錯"}的題目（${wrong.length} 題）</button>` : ""}
@@ -2192,11 +2195,12 @@
       }
       const allOk = s.res && s.res.every(Boolean);
       return `${top}
-        <div class="result-card" style="margin-top:8px;">${s.fixed?'✅ 已改成算對':allOk?'✅ 全部答對，記為算對':`❌ 有 ${s.res?s.res.filter(x=>!x).length:B.length} 格不對，記為算錯`}</div>
+        <div class="result-card" style="margin-top:8px;">${s.guess?'🎲 猜對的，記為還要再練（不算正解，已放進「算錯的題目」）':s.fixed?'✅ 已改成算對':allOk?'✅ 全部答對，記為算對':`❌ 有 ${s.res?s.res.filter(x=>!x).length:B.length} 格不對，記為算錯`}</div>
         ${B.map((b,i)=>{ const ok = s.res && s.res[i];
           return `<div class="section-desc" style="margin:4px 0;">${ok?'✅':'❌'} <b>${esc(b.l)}</b>：你填 ${esc(inp[i]||'（空白）')}${ok?'':`　→ 正確 <b>${esc(b.n!=null?b.n:b.t)}</b> ${esc(b.u||'')}`}</div>`; }).join("")}
         ${explain}
         <button class="primary-btn" id="skNextBtn" style="margin-top:10px;">${s.idx+1>=s.ids.length?'看結果 →':'下一題 →'}</button>
+        ${(allOk || s.fixed) && !s.guess && state.calcSub==="sk" ? `<button class="primary-btn" id="skGuessBtn" style="margin-top:8px;background:#A8631F;font-size:13px;">🎲 猜對的，還要再練（不算正解）</button>` : ""}
         ${!allOk && !s.fixed ? `<button class="primary-btn" id="skFixBtn" style="margin-top:8px;background:#8a8275;font-size:13px;">其實我算對了（只是寫法不同）→ 改成算對</button>` : ""}
       </div>${exitBtn}`;
     }
@@ -3226,6 +3230,12 @@
       const s = state.prac, id = s.ids[s.idx], all = state.topicStats.prac || {}, r = all[id];
       if(r){ all[id] = {...r, c:(r.c||0)+1, last:1}; persist("topicStats"); }
       s.c++; s.fixed = true; saveData("prac", s); render();
+    });
+    const skGuessBtn = document.getElementById("skGuessBtn");
+    if(skGuessBtn) skGuessBtn.addEventListener("click",()=>{
+      const s = state.prac, id = s.ids[s.idx], all = state.topicStats.prac || {}, r = all[id];
+      if(r){ all[id] = {...r, c:Math.max(0,(r.c||0)-1), last:0}; persist("topicStats"); }
+      s.c = Math.max(0, s.c-1); s.guess = true; s.fixed = false; saveData("prac", s); render();
     });
     const skExitBtn = document.getElementById("skExitBtn");
     if(skExitBtn) skExitBtn.addEventListener("click",()=>{ state.prac = null; saveData("prac", null); render(); window.scrollTo(0,0); });
