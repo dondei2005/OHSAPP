@@ -563,7 +563,7 @@
     examASeenIds:{},
     examB:[], examBHistory:[], examBPool:[], examBIdx:0, examBSelected:null, examBRevealed:false, examBStats:{correct:0,total:0},
     examBSeenIds:{},
-    numeric:[], overviewSort:"chapter", wrongSort:"cnt",
+    numeric:[], overviewSort:"chapter", pracSort:"default", wrongSort:"cnt",
     // 計算題／年份・條號分頁各自的作答累計：{calc:{題目id:{n:作答次數,c:答對次數}}, ref:{...}}
     topicStats:{calc:{}, ref:{}, mnemo:{}}, refFilter:"all", topicSort:"chapter", mnemo:null,
     headerEditing:false,
@@ -2100,6 +2100,15 @@
     if(M) accT = total;
     return {seen, total, cov: total>0?Math.round(seen/total*100):0, accC, accT, acc: seen>0 && accT>0?Math.round(accC/accT*100):null};
   }
+  // 2026-11-15 術科各類題型排序（跟刷題總覽的章節排序一樣；沒有正確率記錄的類別不論低→高或高→低都排最後）
+  const PRAC_SORTERS = {
+    default: (a,b)=>a.i-b.i,
+    acc: (a,b)=>((a.acc===null?101:a.acc)-(b.acc===null?101:b.acc)) || a.i-b.i,
+    accDesc: (a,b)=>((b.acc===null?-1:b.acc)-(a.acc===null?-1:a.acc)) || a.i-b.i,
+    cov: (a,b)=>a.cov-b.cov || a.i-b.i,
+    covDesc: (a,b)=>b.cov-a.cov || a.i-b.i,
+  };
+  const pracSortBtn = (key,label)=>`<button class="toggle-btn ${state.pracSort===key?'active':''}" data-pracsort="${key}" style="padding:6px 0;font-size:12px;flex:1 1 30%;">${label}</button>`;
   function pracWrongList(){ const st = state.topicStats.prac||{}; return pracPool().filter(q=>st[q.id] && st[q.id].last===0); }
   function renderPractical(){
     if(state.prac) return renderPracRound();
@@ -2126,11 +2135,15 @@
         <button class="primary-btn" data-skstart="all" style="margin:10px 0 4px;">🎲 隨機 ${Math.min(PRAC_ROUND,POOL.length)} 題（沒做過的優先）</button>
         ${wrong.length ? `<button class="primary-btn" data-skstart="wrong" style="margin:4px 0;background:#B5532F;">🔁 ${LAW?"寫錯":"算錯"}的題目（${wrong.length} 題）</button>` : ""}
         <div class="sub-title">${PAST?"各次考題（新到舊）":"各類題型"}</div>
+        <div class="toggle-row" style="margin:6px 0 8px;flex-wrap:wrap;">
+          ${pracSortBtn('default',PAST?'依考試次數':'依原順序')}${pracSortBtn('acc','正確率低→高')}${pracSortBtn('accDesc','正確率高→低')}
+          ${pracSortBtn('cov','刷題率低→高')}${pracSortBtn('covDesc','刷題率高→低')}
+        </div>
         <div class="section-desc" style="margin-top:0;">點任一${PAST?"次":"類"}開始練（每輪最多 ${PRAC_ROUND} 題，沒做過的優先）。</div>
-        ${topics.map(t=>{
+        ${topics.map((t,i)=>{
           const list = POOL.filter(q=>q.topic===t);
-          return overviewRow(t, `（${list.length} 題）`, pracProg(list), `data-skstart="t:${esc(t)}"`);
-        }).join("")}
+          return {t, i, n:list.length, ...pracProg(list)};
+        }).sort(PRAC_SORTERS[state.pracSort]||PRAC_SORTERS.default).map(r=>overviewRow(r.t, `（${r.n} 題）`, r, `data-skstart="t:${esc(r.t)}"`)).join("")}
       </div>`;
   }
   function startPrac(mode){
@@ -3133,6 +3146,7 @@
       persistQuizState();
       render();
     });
+    root.querySelectorAll("[data-pracsort]").forEach(el=>el.addEventListener("click",()=>{ state.pracSort = el.dataset.pracsort; render(); }));
     root.querySelectorAll("[data-ovsort]").forEach(el=>el.addEventListener("click",()=>{
       state.overviewSort = el.dataset.ovsort; render();
     }));
