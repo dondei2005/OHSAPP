@@ -510,13 +510,23 @@
   // 2026-11-16 錯題本反向題（同日起也套用到練習分頁的章節練習／隨機 20 題、甲業錯題本；模擬考不套用）：複選題每次有 50% 機率反過來問「選出不符合題意的選項」，答案＝原本沒選的那些，
   // 防止背答案。只對已打亂選項（有 _ord）、非送分題、反過來至少剩 1 個答案的複選題；作答紀錄仍記在原題 id。
   const WRONG_INV_RATE = 0.5;
-  const invBanner = q => q && q._inv ? `<div class="result-card" style="margin:0 0 10px;background:#FBEFE2;border-left:4px solid #A8631F;color:#7a4410;font-weight:600;">🔄 反向題：請選出<u>不符合</u>上面題意的選項（原題「不該選」的那些）</div>` : "";
+  // 2026-11-17 改：只反轉題幹明確問「何者／哪些（敘述）正確／錯誤／有誤」的複選題，直接把題幹的正確↔錯誤互換，
+  // 不再顯示反向提示（要自己看題幹判斷）。舊版沒改題幹的反向題（無 _origText）才顯示提示。
+  const INV_RE = /(何者|哪些)((?:敘述|說法|規定|措施|事項|步驟|是|為)*)(不正確|正確|錯誤|有誤)/g;
+  const INV_MAP = {"正確":"錯誤","不正確":"正確","錯誤":"正確","有誤":"正確"};
+  function invStem(t){
+    const m = String(t||"").match(INV_RE);
+    if(!m || m.length!==1) return null;
+    return String(t).replace(INV_RE, (all, a, b, c)=>a+b+INV_MAP[c]);
+  }
+  const invBanner = q => q && q._inv && !q._origText ? `<div class="result-card" style="margin:0 0 10px;background:#FBEFE2;border-left:4px solid #A8631F;color:#7a4410;font-weight:600;">🔄 反向題：請選出<u>不符合</u>上面題意的選項（原題「不該選」的那些）</div>` : "";
   function wrongPresent(q, full){
     const p = presentQuestion(q, full);
     if((p.type||'single')!=='multi' || !Array.isArray(p._ord) || isFreeQ(p) || p.options.length<3) return p;
     const inv = p.options.map((_,i)=>i).filter(i=>!p.answer.includes(i));
-    if(!inv.length || Math.random()>=WRONG_INV_RATE) return p;
-    return {...p, answer:inv, _inv:1};
+    const nt = invStem(p.text);
+    if(!nt || !inv.length || Math.random()>=WRONG_INV_RATE) return p;
+    return {...p, text:nt, _origText:p.text, answer:inv, _inv:1};
   }
   // 正確率依目標 ACC_TARGET% 分級：達標／加強中／待加強，配合圖示＋文字，不單靠顏色辨識（2026-10-27 目標由85%改80%）
   const ACC_TARGET = 80;
@@ -993,7 +1003,7 @@
     return `<div class="quiz-explain">
       ${fq ? `<div class="quiz-explain-ans" style="color:#A8631F;">🎁 送分題（115.7.1 修法，新舊答案不同，選哪個都算對）</div><div class="quiz-explain-body">新法答案：${esc(fq.now)}<br>修法前答案：${esc(fq.old)}</div>` : ""}
       <div class="quiz-explain-ans">✅ ${fq?"新法答案":"正確答案"}${q._inv?"（反向題）":""}：${esc(ans)}</div>
-      ${q._inv ? `<div class="quiz-explain-body" style="color:#7a4410;">🔄 原題的正解是：${esc(q.options.map((o,i)=>i).filter(i=>!q.answer.includes(i)).map(i=>`(${String.fromCharCode(65+i)}) ${q.options[i]}`).join("、"))}；這次反過來問，所以答案是其餘選項。下面的詳解是照原題寫的。</div>` : ""}
+      ${q._inv ? `<div class="quiz-explain-body" style="color:#7a4410;">🔄 本題題幹已反轉${q._origText?`（原題：${esc(q._origText)}）`:""}，原題的正解是：${esc(q.options.map((o,i)=>i).filter(i=>!q.answer.includes(i)).map(i=>`(${String.fromCharCode(65+i)}) ${q.options[i]}`).join("、"))}；這次反過來問，所以答案是其餘選項。下面的詳解是照原題寫的。</div>` : ""}
       ${ex ? `<div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(ex)}</div>` : ""}
       ${note ? `<div class="quiz-explain-title">${ex?"📝 備註":"📖 詳解"}</div><div class="quiz-explain-body">${esc(note)}</div>` : ""}
       ${tips.map(t=>`<div class="quiz-explain-title">💡 ${esc(t.title)}</div><div class="quiz-explain-body">${esc(t.body)}</div>`).join("")}
