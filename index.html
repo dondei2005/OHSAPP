@@ -521,12 +521,14 @@
   }
   const invBanner = q => q && q._inv && !q._origText ? `<div class="result-card" style="margin:0 0 10px;background:#FBEFE2;border-left:4px solid #A8631F;color:#7a4410;font-weight:600;">🔄 反向題：請選出<u>不符合</u>上面題意的選項（原題「不該選」的那些）</div>` : "";
   function wrongPresent(q, full){
-    const p = presentQuestion(q, full);
-    if((p.type||'single')!=='multi' || !Array.isArray(p._ord) || isFreeQ(p) || p.options.length<3) return p;
-    const inv = p.options.map((_,i)=>i).filter(i=>!p.answer.includes(i));
+    // 2026-11-17 單選題也反轉：原題「何者正確」只有 1 個對，反過來「何者錯誤」就有好幾個 → 改成複選題作答
+    const p = presentQuestion(q, full), t = p.type||'single';
+    if((t!=='multi' && t!=='single') || !Array.isArray(p._ord) || isFreeQ(p) || p.options.length<3) return p;
+    const ans = t==='multi' ? p.answer : [p.answer];
+    const inv = p.options.map((_,i)=>i).filter(i=>!ans.includes(i));
     const nt = invStem(p.text);
     if(!nt || !inv.length || Math.random()>=WRONG_INV_RATE) return p;
-    return {...p, text:nt, _origText:p.text, answer:inv, _inv:1};
+    return {...p, type:'multi', text:nt, _origText:p.text, _origType:t, answer:inv, _inv:1};
   }
   // 正確率依目標 ACC_TARGET% 分級：達標／加強中／待加強，配合圖示＋文字，不單靠顏色辨識（2026-10-27 目標由85%改80%）
   const ACC_TARGET = 80;
