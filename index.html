@@ -805,7 +805,7 @@
     const examAWrongCount = computeWrongQuestions('examA').length;
     const items = [
       // 2026-10-30：拿掉「題庫」「法規」分頁，改成「計算」（首要）與「年份/條號」（次要）
-      ["dashboard","◆","總覽"],["chapters","▤","章節"],["calc","🧮","計算"],
+      ["dashboard","◆","總覽"],["calc","🧮","計算"],  // 2026-11-20 拿掉「章節」分頁（沒在用）
       ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["numeric","🔢","數字"],["examA","🅰","甲種",examAWrongCount],["examB","🅱","乙級"],["ref","📅","年/條"],["mnemo","🔗","口訣"],["sync","⇅","備份"],
     ];
     return `<nav class="nav">${items.map(it=>{
@@ -866,7 +866,6 @@
         <button class="primary-btn" id="markTodayBtn" style="margin-top:12px;" ${studiedToday?'disabled':''}>${studiedToday?'今天已打卡 ✓':'今天讀完了，打卡'}</button>
       </div>
       <div class="quick-row">
-        <button class="quick-btn" data-goto="chapters"><div class="quick-icon">▤</div><div>章節清單</div></button>
         <button class="quick-btn" data-goto="calc"><div class="quick-icon">🧮</div><div>計算題</div></button>
         <button class="quick-btn" data-goto="quiz"><div class="quick-icon">▶</div><div>開始練習</div></button>
       </div>
