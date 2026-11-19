@@ -18,6 +18,7 @@
 <!-- 2026-11-11 拿掉看圖填空分頁：figure_fill.js 不再載入（檔案與 topicStats.prac 紀錄保留） -->
 <script src="./practical_law.js?v=20261106g"></script>
 <script src="./practical_past.js?v=20261106g"></script>
+<script src="./practical_post.js?v=20261120"></script>
 <script src="./formula_match.js?v=20261118b"></script>
 <script src="./mnemonics.js?v=20261116"></script>
 <script src="./formula_hard.js?v=20261112b"></script>
@@ -2023,7 +2024,9 @@
   // 第 80～91 次已有的法規／計算題不重收，依 code 併進同一次（沿用原 id，作答紀錄共用）
   const PRACTICAL_PAST = window.PRACTICAL_PAST || [];
   const PRACTICAL_FIG = window.PRACTICAL_FIG || [], PRACTICAL_FX = window.PRACTICAL_FX || [];
-  const PRACTICAL_QS = PRACTICAL_CALC.concat(PRACTICAL_LAW, PRACTICAL_PAST, PRACTICAL_FIG, PRACTICAL_FX);
+  // 2026-11-20 115/11 考後題（practical_post.js）另成「📝115/11 考後題」切換，打字作答＋自評，是非題自動對答案
+  const PRACTICAL_POST = window.PRACTICAL_POST || [];
+  const PRACTICAL_QS = PRACTICAL_CALC.concat(PRACTICAL_LAW, PRACTICAL_PAST, PRACTICAL_FIG, PRACTICAL_FX, PRACTICAL_POST);
   const PAST_POOL = (()=>{
     const dt = window.PRACTICAL_PAST_DATES || {}, tp = k=>`第 ${k} 次（${dt[k]||""}）`;
     const ex = PRACTICAL_CALC.concat(PRACTICAL_LAW).map(q=>{ const m = /^(\d+)-(\d+)$/.exec(q.code||""), k = m && +m[1]; return k>=80 && k<=91 && dt[k] ? {...q, n:k, topic:tp(k)} : null; }).filter(Boolean);
@@ -2036,9 +2039,9 @@
     const t = window.STUDY_TIPS && window.STUDY_TIPS.topics && window.STUDY_TIPS.topics.air4m150;
     return t && airTipHit(txt) ? `<div class="quiz-explain-title">💡 ${esc(t.title)}</div><div class="quiz-explain-body">${esc(t.body)}</div>` : "";
   }
-  function pracIsLaw(){ return state.calcSub==="law" || state.calcSub==="past" || state.calcSub==="fig" || state.calcSub==="fx"; }
-  function pracPool(){ return state.calcSub==="fx" ? PRACTICAL_FX : state.calcSub==="fig" ? PRACTICAL_FIG : state.calcSub==="past" ? PAST_POOL : state.calcSub==="law" ? PRACTICAL_LAW : PRACTICAL_CALC; }
-  function pracIsTxt(id){ return /^sk-(law|cc|fig|fx)-/.test(id); }
+  function pracIsLaw(){ return state.calcSub==="law" || state.calcSub==="post" || state.calcSub==="past" || state.calcSub==="fig" || state.calcSub==="fx"; }
+  function pracPool(){ return state.calcSub==="post" ? PRACTICAL_POST : state.calcSub==="fx" ? PRACTICAL_FX : state.calcSub==="fig" ? PRACTICAL_FIG : state.calcSub==="past" ? PAST_POOL : state.calcSub==="law" ? PRACTICAL_LAW : PRACTICAL_CALC; }
+  function pracIsTxt(id){ return /^sk-(law|cc|fig|fx|post)-/.test(id); }
   // 2026-11-07 看圖填空（figure_fill.js）：把 svg 裡的 {n} 換成編號／已選的答案，提交後換成正確答案
   function pracFigSvg(q, B, s){
     const nums = "①②③④⑤⑥⑦⑧⑨", inp = s.inp || {};
@@ -2108,14 +2111,15 @@
   }
   function calcSubToggle(){
     return `<div class="toggle-row" style="margin:0 0 10px;flex-wrap:wrap;">
-      <button class="toggle-btn ${!["sk","law","past","fx"].includes(state.calcSub)?"active":""}" style="flex:1 1 30%;" data-calcsub="mc">🧮 學科計算題</button>
+      <button class="toggle-btn ${!["sk","law","past","fx","post"].includes(state.calcSub)?"active":""}" style="flex:1 1 30%;" data-calcsub="mc">🧮 學科計算題</button>
       <button class="toggle-btn ${state.calcSub==="sk"?"active":""}" style="flex:1 1 30%;" data-calcsub="sk">✍️ 術科計算題</button>
       <button class="toggle-btn ${state.calcSub==="law"?"active":""}" style="flex:1 1 30%;" data-calcsub="law">📜 術科法規題</button>
       <button class="toggle-btn ${state.calcSub==="past"?"active":""}" style="flex:1 1 30%;" data-calcsub="past">📚 歷屆考古題</button>
       <button class="toggle-btn ${state.calcSub==="fx"?"active":""}" style="flex:1 1 30%;" data-calcsub="fx">🧩 公式配對</button>
+      <button class="toggle-btn ${state.calcSub==="post"?"active":""}" style="flex:1 1 30%;" data-calcsub="post">📝 115/11 考後題</button>
     </div>`;
   }
-  function renderCalcTab(){ return calcSubToggle() + (["sk","law","past","fx"].includes(state.calcSub) ? renderPractical() : renderTopic("calc")); }
+  function renderCalcTab(){ return calcSubToggle() + (["sk","law","past","fx","post"].includes(state.calcSub) ? renderPractical() : renderTopic("calc")); }
   // 2026-11-15 術科計算題（calcSub "sk"）改成「掌握度」：每題看最近一次，最近一次自己算對就算會了；
   // 正確率＝已算對題數 ÷ 全部題數（不是作答次數），猜對的可按「還要再練」改回不算
   function pracProg(list){
@@ -2138,14 +2142,16 @@
   function pracWrongList(){ const st = state.topicStats.prac||{}; return pracPool().filter(q=>st[q.id] && st[q.id].last===0); }
   function renderPractical(){
     if(state.prac) return renderPracRound();
-    const POOL = pracPool(), LAW = pracIsLaw(), PAST = state.calcSub==="past", FIG = state.calcSub==="fig", FX = state.calcSub==="fx";
-    if(!POOL.length) return `<div class="empty-hint">找不到術科題目資料（${FX?"formula_match.js":FIG?"figure_fill.js":PAST?"practical_past.js":LAW?"practical_law.js":"practical_questions.js"}）。</div>`;
+    const POOL = pracPool(), LAW = pracIsLaw(), POST = state.calcSub==="post", PAST = state.calcSub==="past", FIG = state.calcSub==="fig", FX = state.calcSub==="fx";
+    if(!POOL.length) return `<div class="empty-hint">找不到術科題目資料（${POST?"practical_post.js":FX?"formula_match.js":FIG?"figure_fill.js":PAST?"practical_past.js":LAW?"practical_law.js":"practical_questions.js"}）。</div>`;
     const p = pracProg(POOL), allSt = accStatus(p.acc), wrong = pracWrongList();
     const topics = [...new Set(POOL.map(q=>q.topic))];
     return `
       <div class="ov-card">
-        <div class="section-title" style="margin-top:0;">${FX?"🧩 公式配對":FIG?"🖼️ 看圖填空":PAST?"📚 歷屆考古題":LAW?"📜 術科法規題":"✍️ 術科計算題"}<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${POOL.length} 題</span></div>
-        <div class="section-desc" style="margin-top:2px;">${FX
+        <div class="section-title" style="margin-top:0;">${POST?"📝 115/11 考後題":FX?"🧩 公式配對":FIG?"🖼️ 看圖填空":PAST?"📚 歷屆考古題":LAW?"📜 術科法規題":"✍️ 術科計算題"}<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${POOL.length} 題</span></div>
+        <div class="section-desc" style="margin-top:2px;">${POST
+          ? `115/11 考後回憶與教材照片整理的題目，答案已對照原圖和現行法規。<b>把答案打出來</b>，再看詳解自評；是非題直接點 ○／✕ 自動對答案。每題下方標來源類型（原始回憶題／依考點改寫題／自行新增練習題）和核對狀態，標「部分核對」的是原題條件不完整、答案依教材或原理判斷。`
+          : FX
           ? `每題先只給題目、<b>公式摺起來</b>：自己先把公式想出來（寫在紙上），再按「打開填空」，點卡片把參數和代數填進挖空的公式（卡片裡有幾張是混淆用的）。答錯的題目會集中到「寫錯的題目」重練。`
           : FIG
           ? `看圖點選答案，選好的答案會直接填進圖上的空格，提交後自動對答案。答錯的題目會集中到「寫錯的題目」重練。`
