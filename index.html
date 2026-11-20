@@ -19,6 +19,7 @@
 <script src="./practical_law.js?v=20261106g"></script>
 <script src="./practical_past.js?v=20261106g"></script>
 <script src="./practical_post.js?v=20261120b"></script>
+<script src="./practical_acr.js?v=20261120"></script>
 <script src="./formula_match.js?v=20261118b"></script>
 <script src="./mnemonics.js?v=20261120"></script>
 <script src="./formula_hard.js?v=20261112b"></script>
@@ -2115,7 +2116,7 @@
       <button class="toggle-btn ${state.calcSub==="law"?"active":""}" style="flex:1 1 30%;" data-calcsub="law">📜 術科法規題</button>
       <button class="toggle-btn ${state.calcSub==="past"?"active":""}" style="flex:1 1 30%;" data-calcsub="past">📚 歷屆考古題</button>
       <button class="toggle-btn ${state.calcSub==="fx"?"active":""}" style="flex:1 1 30%;" data-calcsub="fx">🧩 公式配對</button>
-      <button class="toggle-btn ${state.calcSub==="post"?"active":""}" style="flex:1 1 30%;" data-calcsub="post">📝 115/11 考後題</button>
+      <button class="toggle-btn ${state.calcSub==="post"?"active":""}" style="flex:1 1 30%;" data-calcsub="post">📝 考後題＋教材</button>
     </div>`;
   }
   function renderCalcTab(){ return calcSubToggle() + (["sk","law","past","fx","post"].includes(state.calcSub) ? renderPractical() : renderTopic("calc")); }
@@ -2142,14 +2143,14 @@
   function renderPractical(){
     if(state.prac) return renderPracRound();
     const POOL = pracPool(), LAW = pracIsLaw(), POST = state.calcSub==="post", PAST = state.calcSub==="past", FIG = state.calcSub==="fig", FX = state.calcSub==="fx";
-    if(!POOL.length) return `<div class="empty-hint">找不到術科題目資料（${POST?"practical_post.js":FX?"formula_match.js":FIG?"figure_fill.js":PAST?"practical_past.js":LAW?"practical_law.js":"practical_questions.js"}）。</div>`;
+    if(!POOL.length) return `<div class="empty-hint">找不到術科題目資料（${POST?"practical_post.js／practical_acr.js":FX?"formula_match.js":FIG?"figure_fill.js":PAST?"practical_past.js":LAW?"practical_law.js":"practical_questions.js"}）。</div>`;
     const p = pracProg(POOL), allSt = accStatus(p.acc), wrong = pracWrongList();
     const topics = [...new Set(POOL.map(q=>q.topic))];
     return `
       <div class="ov-card">
-        <div class="section-title" style="margin-top:0;">${POST?"📝 115/11 考後題":FX?"🧩 公式配對":FIG?"🖼️ 看圖填空":PAST?"📚 歷屆考古題":LAW?"📜 術科法規題":"✍️ 術科計算題"}<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${POOL.length} 題</span></div>
+        <div class="section-title" style="margin-top:0;">${POST?"📝 115/11 考後題＋ACR 教材題":FX?"🧩 公式配對":FIG?"🖼️ 看圖填空":PAST?"📚 歷屆考古題":LAW?"📜 術科法規題":"✍️ 術科計算題"}<span style="font-size:12px;font-weight:600;color:#A8631F;margin-left:6px;">${POOL.length} 題</span></div>
         <div class="section-desc" style="margin-top:2px;">${POST
-          ? `115/11 考後回憶與教材照片整理的題目，答案已對照原圖和現行法規。<b>把答案打出來</b>，再看詳解自評；是非題直接點 ○／✕ 自動對答案。每題下方標來源類型（原始回憶題／依考點改寫題／自行新增練習題）和核對狀態，標「部分核對」的是原題條件不完整、答案依教材或原理判斷。`
+          ? `115/11 考後回憶、教材照片整理的題目，加上 ACR012600 教材題（題目分類標「教材・」），答案已對照原圖和現行法規。<b>把答案打出來</b>，再看詳解自評；是非題直接點 ○／✕ 自動對答案。每題下方標來源類型（原始回憶題／依考點改寫題／自行新增練習題）和核對狀態，標「部分核對」的是原題條件不完整、答案依教材或原理判斷。`
           : FX
           ? `每題先只給題目、<b>公式摺起來</b>：自己先把公式想出來（寫在紙上），再按「打開填空」，點卡片把參數和代數填進挖空的公式（卡片裡有幾張是混淆用的）。答錯的題目會集中到「寫錯的題目」重練。`
           : FIG
