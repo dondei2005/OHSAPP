@@ -22,7 +22,7 @@
 <script src="./practical_acr.js?v=20261120"></script>
 <script src="./formula_match.js?v=20261122b"></script>
 <script src="./mnemonics.js?v=20261120"></script>
-<script src="./formula_hard.js?v=20261112b"></script>
+<script src="./formula_hard.js?v=20261123"></script>
 <script src="./free_questions.js"></script>
 </head>
 <body>
@@ -3010,7 +3010,7 @@
       return `<div class="quiz-progress">${cat} · 完成</div><div class="quiz-card">
         <div class="quiz-chapter-tag">完成</div>
         <div class="result-card" style="margin-top:0;">${st.icon} 這輪答對 ${s.c} / ${s.ids.length}（${pct}%）</div>
-        ${wrongs.length?`<div class="section-desc" style="margin-top:8px;font-weight:700;">答錯的題目（下一輪會優先再出）：</div>`+wrongs.map(q=>`<div class="mn-titem"><div>${esc(q.q)}</div><div style="color:#2F6B4F;margin-top:3px;">正確：${esc(q.opts?q.opts[0]:q.a[0])}</div>${q.tip?`<div class="section-desc" style="margin:3px 0 0;">${esc(q.tip)}</div>`:""}</div>`).join(""):""}
+        ${wrongs.length?`<div class="section-desc" style="margin-top:8px;font-weight:700;">答錯的題目（下一輪會優先再出）：</div>`+wrongs.map(q=>`<div class="mn-titem"><div>${esc(q.q)}</div><div style="color:#2F6B4F;margin-top:3px;">正確：${esc(q.opts?q.opts[0]:q.a[0])}</div>${q.tip?`<div class="section-desc" style="margin:3px 0 0;white-space:pre-wrap;">${esc(q.tip)}</div>`:""}</div>`).join(""):""}
         <button class="primary-btn" data-fxhstart="${s.cat}" style="margin-top:10px;">🔁 再一輪${cat}</button>
       </div>${exitBtn}`;
     }
@@ -3031,7 +3031,7 @@
       <div class="quiz-question">${esc(q.q)}</div>
       ${body}
       ${s.done?`<div class="result-card">${s.ok?'✅ 答對了':'❌ 正確答案：'+esc(q.opts?q.opts[0]:q.a[0])}${!q.opts&&!s.ok?`（你填：${esc(s.inp)}）`:""}</div>
-        ${q.tip?`<div class="section-desc" style="margin-top:6px;">💡 ${esc(q.tip)}</div>`:""}
+        ${q.tip?`<div class="section-desc" style="margin-top:6px;white-space:pre-wrap;">💡 ${esc(q.tip)}</div>`:""}
         <button class="primary-btn" id="fxhNext" style="margin-top:10px;">${last?'看結果 →':'下一題 →'}</button>`:""}
     </div>${exitBtn}`;
   }
