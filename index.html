@@ -35,6 +35,9 @@
   ::placeholder{color:#b9b2a3;}
   .header{ background:#2B2620; color:#FAF7F0; padding:20px 18px 14px; position:sticky; top:0; z-index:10; }
   .top-next-btn{ display:block; width:100%; margin-top:10px; background:#C9A876; color:#2B2620; border:none; border-radius:10px; padding:10px 14px; font-size:15px; font-weight:700; }
+  .quiz-progress.has-next{ position:sticky; z-index:9; background:#FAF7F0; display:flex; align-items:center; gap:8px; padding:6px 0; }
+  .quiz-progress.has-next > .qp-text{ flex:1 1 50%; min-width:0; }
+  .quiz-progress.has-next > .top-next-btn{ flex:0 0 50%; width:50%; margin:0; padding:8px 10px; font-size:14px; }
   .header-top{ display:flex; justify-content:space-between; align-items:flex-start; }
   .kicker{ font-size:11px; letter-spacing:1px; color:#C9A876; margin-bottom:4px; }
   .h1{ font-size:19px; font-weight:700; }
@@ -795,7 +798,19 @@
     btn.className = "top-next-btn";
     btn.textContent = target.textContent.trim();
     btn.addEventListener("click",()=>{ target.click(); window.scrollTo(0,0); });
-    header.appendChild(btn);
+    const prog = main.querySelector(".quiz-progress");
+    if(prog){
+      // 題號列：左題號、右按鈕，整列黏在標題列下方
+      const txt = document.createElement("div");
+      txt.className = "qp-text";
+      while(prog.firstChild) txt.appendChild(prog.firstChild);
+      prog.appendChild(txt);
+      prog.appendChild(btn);
+      prog.classList.add("has-next");
+      prog.style.top = header.offsetHeight + "px";
+    } else {
+      header.appendChild(btn);
+    }
   }
 
   function renderHeader(progressPct){
