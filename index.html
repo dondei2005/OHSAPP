@@ -34,6 +34,7 @@
   input,select,textarea{font-family:inherit;}
   ::placeholder{color:#b9b2a3;}
   .header{ background:#2B2620; color:#FAF7F0; padding:20px 18px 14px; position:sticky; top:0; z-index:10; }
+  .top-next-btn{ display:block; width:100%; margin-top:10px; background:#C9A876; color:#2B2620; border:none; border-radius:10px; padding:10px 14px; font-size:15px; font-weight:700; }
   .header-top{ display:flex; justify-content:space-between; align-items:flex-start; }
   .kicker{ font-size:11px; letter-spacing:1px; color:#C9A876; margin-bottom:4px; }
   .h1{ font-size:19px; font-weight:700; }
@@ -776,6 +777,25 @@
       ${renderNav()}
     `;
     bindEvents();
+    addTopNextBtn();
+  }
+
+  // 把頁面上的「下一題／下一組／看結果／完成本輪」按鈕複製一顆到頂部固定標題列
+  function addTopNextBtn(){
+    const main = root.querySelector("main"), header = root.querySelector(".header");
+    if(!main || !header) return;
+    const ids = ["nextQuizBtn","nextExamABtn","nextExamBBtn","skNextBtn","mnFillNext","fxhNext","mnWbNext"];
+    let target = null;
+    for(const id of ids){ const b = document.getElementById(id); if(b){ target = b; break; } }
+    if(!target){
+      target = Array.from(main.querySelectorAll("button[data-mnstart]")).find(b=>/下一組/.test(b.textContent) && !/沒做過的優先/.test(b.textContent)) || null;
+    }
+    if(!target) return;
+    const btn = document.createElement("button");
+    btn.className = "top-next-btn";
+    btn.textContent = target.textContent.trim();
+    btn.addEventListener("click",()=>{ target.click(); window.scrollTo(0,0); });
+    header.appendChild(btn);
   }
 
   function renderHeader(progressPct){
