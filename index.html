@@ -2091,6 +2091,85 @@
     const norm = x=>String(x).normalize("NFKC").replace(/[\s()（）]/g,"");
     return [b.t, ...(b.x||[])].some(a=>norm(a)===norm(v));
   }
+  // 2026-11-24 考後題＋ACR 教材題：法規題不用整段打字，改成填空／點選
+  //  ［填空］題目裡的＿＿直接變成格子（答案用「；」分格）；［排序］點卡片依序放入；選擇題點選項（複選可點多個）；是非題每小題點 ○／✕
+  //  C078、C079 是參考答案（同義寫法很多），一樣填格子，但看答案後自己判對錯
+  const PRAC_CZ = {};
+  (function(){
+    const CIR = "①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮";
+    const one = a=>{
+      a = String(a).trim();
+      const base = a.replace(/（[^）]*）/g, "").trim() || a;
+      const alts = [...a.matchAll(/（([^）]*)）/g)].map(m=>m[1].replace(/^＝/, "").trim()).filter(Boolean);
+      const m = base.match(/^(\d[\d,]*(?:\.\d+)?)\s*([^\d]*)$/);
+      if(m) return {l:"", t:base, n:m[1].replace(/,/g, ""), u:m[2]};
+      return {l:"", t:base, x:[a, ...alts]};
+    };
+    const SELF = {
+      "sk-post-C078":["墜落","物體倒塌","物體飛落","被撞／被夾","倒塌崩塌","被夾","感電","火災爆炸","灼傷（眩光）","有害物（金屬燻煙）"],
+      "sk-post-C079":["物體飛落（吊物掉落）","吊物飛落","被撞","被夾","倒塌"]
+    };
+    PRACTICAL_POST.forEach(q=>{
+      if(PRAC_BLANKS[q.id]) return;
+      const segs = q.q.split(/＿+/), nb = segs.length-1, ans = String(q.ans||"");
+      if(SELF[q.id] && SELF[q.id].length===nb){
+        PRAC_CZ[q.id] = {kind:"fill", self:true, segs, B:SELF[q.id].map(t=>({l:"", t}))}; return;
+      }
+      if(/^［排序］/.test(q.q)){
+        const steps = ans.split(/\s*(?:→|；)\s*/).map(x=>x.trim()).filter(Boolean);
+        if(nb && nb!==steps.length) return;
+        const B = steps.map((t,i)=>({l:nb ? "第 "+(i+1)+" 格" : CIR[i]||String(i+1), t}));
+        PRAC_CZ[q.id] = {kind:"sort", segs: nb ? segs : null, B}; PRAC_BLANKS[q.id] = B; return;
+      }
+      if(nb){
+        const parts = ans.split("；");
+        if(parts.length!==nb) return;
+        const B = parts.map((a,i)=>({...one(a), l:"第 "+(i+1)+" 格"}));
+        PRAC_CZ[q.id] = {kind:"fill", segs, B}; PRAC_BLANKS[q.id] = B; return;
+      }
+      if(/^［是非］/.test(q.q)){
+        const items = [...q.q.replace(/^［是非］[^：]*：/, "").matchAll(/\((\d+)\)\s*(.+?)(?=\s*\(\d+\)|$)/gs)];
+        const marks = [...ans.matchAll(/\((\d+)\)\s*([○✕])/g)];
+        if(items.length && items.length===marks.length){
+          PRAC_BLANKS[q.id] = items.map((it,i)=>({l:"("+it[1]+") "+it[2].trim(), o:["○","✕"], t:marks[i][2]}));
+          PRAC_CZ[q.id] = {kind:"pick"};
+        }
+        return;
+      }
+      if(/^［選擇］/.test(q.q)){
+        const opts = q.q.split("\n").map(x=>(x.match(/^\s*(\([A-Z0-9]\)|[①-⑩])/)||[])[1]).filter(Boolean);
+        const got = ans.match(/\([A-Z0-9]\)|[①-⑩]/g) || [];
+        const multi = /複選/.test(q.q);
+        if(opts.length>=2 && got.length && (multi || got.length===1)){
+          PRAC_BLANKS[q.id] = [{l:multi ? "選出全部正確的選項（複選，可點多個，再點一次取消）" : "選出答案", o:opts, t:opts.filter(o=>got.includes(o)).join(""), m:multi}];
+          PRAC_CZ[q.id] = {kind:"pick"};
+        }
+      }
+    });
+  })();
+  // 填空／排序題：把題目的＿＿換成格子（排序題沒有＿＿的，在題目下面列出 ①→②→… 的格子）
+  function pracCzHtml(q, cz, s){
+    const inp = s.inp || {}, B = cz.B;
+    const tag = "display:inline-block;margin:2px;padding:1px 8px;border-radius:6px;font-weight:700;line-height:1.6;vertical-align:middle;";
+    const box = i=>{
+      const b = B[i], v = String(inp[i]==null ? "" : inp[i]);
+      if(s.shown){
+        if(cz.self) return `<span style="${tag}background:#FFF8EA;border:2px solid #A8631F;color:#8A3F16;">${esc(v.trim() || "（空白）")}</span><span style="color:#2F6B4F;font-weight:700;">〔${esc(b.t)}〕</span>`;
+        const ok = s.res && s.res[i];
+        return ok ? `<span style="${tag}background:#E6F2EA;border:2px solid #3F7D5C;color:#2F6B4F;">${esc(v)}</span>`
+          : `<span style="${tag}background:#F9E7E0;border:2px solid #B5532F;color:#A13F1F;">${v.trim() ? `<s style="opacity:.7;">${esc(v)}</s> → ` : ""}${esc(b.n!=null ? b.n : b.t)}</span>`;
+      }
+      if(cz.kind==="sort"){
+        const on = s.act===i;
+        return `<button type="button" data-fxslot="${i}" style="${tag}min-width:44px;min-height:32px;cursor:pointer;font:inherit;font-weight:700;background:${v?"#FFF8EA":on?"#FFEFD2":"#fff"};border:2px ${v||on?"solid":"dashed"} #A8631F;color:#8A3F16;${on?"box-shadow:0 0 0 2px #E5B574;":""}">${esc(v || "　　")}</button>`;
+      }
+      const len = b.n!=null ? Math.max(3, [...b.n].length+1) : Math.max(2, [...b.t].length);
+      return `<input data-skin="${i}" autocomplete="off" ${b.n!=null ? 'inputmode="decimal"' : ""} placeholder="${b.n!=null ? "數字" : len+" 字"}" value="${esc(v)}" style="width:${len+1.2}em;max-width:92%;font-size:16px;padding:2px 4px;margin:0 2px;border:none;border-bottom:2px solid #A8631F;border-radius:4px 4px 0 0;background:#FFF8EA;text-align:center;font-family:inherit;">`;
+    };
+    const html = cz.segs ? cz.segs.map((t,i)=>esc(t) + (i<B.length ? box(i) : "")).join("")
+      : esc(q.q) + "\n\n" + B.map((b,i)=>`${esc(b.l)} ${box(i)}`).join("\n　↓\n");
+    return `<div class="quiz-question" style="white-space:pre-wrap;line-height:2.2;">${html}</div>`;
+  }
   function pracRecord(id, ok){
     const all = state.topicStats.prac = state.topicStats.prac || {};
     const r = all[id] || {n:0, c:0};
@@ -2200,14 +2279,14 @@
     }
     const q = PRACTICAL_QS.find(x=>x.id===s.ids[s.idx]);
     if(!q){ state.prac = null; saveData("prac", null); return renderPractical(); }
-    const B = PRAC_BLANKS[q.id];
+    const B = PRAC_BLANKS[q.id], cz = PRAC_CZ[q.id], czIn = cz && cz.segs!==undefined;
     const top = `
       <div class="quiz-progress">✍️ 術科・${esc(s.label)} 第 ${s.idx+1} / ${s.ids.length} 題 · 算對 ${s.c}</div>
       <div class="quiz-card">
         <div class="quiz-chapter-tag">${esc(q.topic)} · 【${esc(q.code)}】</div>
         ${pracHistory(q.id)}
         ${q.old ? `<div class="section-desc" style="margin:2px 0 6px;color:#A8631F;">【舊法】題解依 103.7.3 前的勞工安全衛生法，法規名稱、條號請以現行職業安全衛生法為準</div>` : ""}
-        <div class="quiz-question" style="white-space:pre-wrap;">${esc(q.q)}</div>
+        ${czIn ? pracCzHtml(q, cz, s) : `<div class="quiz-question" style="white-space:pre-wrap;">${esc(q.q)}</div>`}
         ${q.fig ? `<div class="quiz-explain" style="background:#F4F1EA;margin-top:6px;"><div class="quiz-explain-title">📊 附圖／表格</div><div class="quiz-explain-body" style="white-space:pre-wrap;">${esc(q.fig)}</div></div>` : ""}
         ${q.svg ? `<div style="margin:8px 0;">${pracFigSvg(q, B, s)}</div>` : ""}
         ${q.fx ? (s.shown || s.open ? pracFxHtml(q, B, s) : `<div style="margin:8px 0;padding:14px 10px;background:#FBF7EF;border:2px dashed #E5B574;border-radius:8px;text-align:center;color:#8A3F16;font-weight:600;">🙈 公式先摺起來了<br><span style="font-size:13px;font-weight:400;color:#6b6458;">看上面的題目，先在紙上（或腦中）把公式寫出來，想好再打開填空</span></div>`) : ""}`;
@@ -2233,12 +2312,21 @@
         <button class="primary-btn" id="skGiveUpBtn" style="margin-top:8px;background:#8a8275;">🤔 不會，直接看答案（記為寫錯）</button>
       </div>${exitBtn}`;
       }
+      if(!s.shown && czIn){
+        const empty = B.filter((_,i)=>!String(inp[i]||"").trim()).length;
+        return `${top}
+        ${cz.kind==="sort" ? `<div class="section-desc" style="margin:8px 0;">依順序點卡片放進格子；放錯的話，點一下那格就會退回。</div>${pracFxBank(q, B, s)}`
+          : `<div class="section-desc" style="margin:8px 0;">✏️ 填空模式：只要把空格的關鍵詞或數字填回去（單位不用打），填完按提交。</div>`}
+        <button class="primary-btn" id="skSubmitBtn" style="margin-top:6px;">✅ 提交答案${empty && cz.kind==="sort" ? `（還有 ${empty} 格）` : ""}</button>
+        <button class="primary-btn" id="skGiveUpBtn" style="margin-top:8px;background:#8a8275;">🤔 不會，直接看答案（記為寫錯）</button>
+      </div>${exitBtn}`;
+      }
       if(!s.shown){
         return `${top}
         <div class="section-desc" style="margin:8px 0;">${q.svg?"每一格點選一個答案，全部選完再提交。":pracIsTxt(q.id)?"每一格點選一個代號，全部選完再提交。":"先在紙上算好，再把答案填進下面的格子（注意題目要求的小數位數；單位不用打）。"}</div>
         ${B.map((b,i)=>`<div style="margin:8px 0;">
           <div style="font-weight:600;margin-bottom:4px;">${esc(b.l)}</div>
-          ${b.o ? `<div class="toggle-row" style="margin:0;flex-wrap:wrap;">${b.o.map(o=>`<button class="toggle-btn ${inp[i]===o?'active':''}" data-skpick="${i}" data-v="${esc(o)}" style="${q.svg?"flex:1 1 22%;white-space:nowrap;":""}padding:6px 8px;font-size:13px;">${esc(o)}</button>`).join("")}</div>`
+          ${b.o ? `<div class="toggle-row" style="margin:0;flex-wrap:wrap;">${b.o.map(o=>`<button class="toggle-btn ${(b.m ? String(inp[i]||"").includes(o) : inp[i]===o)?'active':''}" data-skpick="${i}" data-v="${esc(o)}" style="${q.svg?"flex:1 1 22%;white-space:nowrap;":""}padding:6px 8px;font-size:13px;">${esc(o)}</button>`).join("")}</div>`
             : `<div style="display:flex;align-items:center;gap:8px;"><input class="text-input" data-skin="${i}" ${b.n!=null?'inputmode="decimal"':''} autocomplete="off" placeholder="${b.n!=null?'填數字':'輸入答案'}" value="${esc(inp[i]||"")}" style="margin:0;font-size:18px;flex:1;">${b.u?`<span style="white-space:nowrap;color:#6b6458;">${esc(b.u)}</span>`:''}</div>`}
         </div>`).join("")}
         <button class="primary-btn" id="skSubmitBtn" style="margin-top:6px;">✅ 提交答案</button>
@@ -2248,7 +2336,7 @@
       const allOk = s.res && s.res.every(Boolean);
       return `${top}
         <div class="result-card" style="margin-top:8px;">${s.guess?'🎲 猜對的，記為還要再練（不算正解，已放進「算錯的題目」）':s.fixed?'✅ 已改成算對':allOk?'✅ 全部答對，記為算對':`❌ 有 ${s.res?s.res.filter(x=>!x).length:B.length} 格不對，記為算錯`}</div>
-        ${B.map((b,i)=>{ const ok = s.res && s.res[i];
+        ${B.map((b,i)=>{ const ok = s.res && s.res[i]; if(czIn) return "";
           return `<div class="section-desc" style="margin:4px 0;">${ok?'✅':'❌'} <b>${esc(b.l)}</b>：你填 ${esc(inp[i]||'（空白）')}${ok?'':`　→ 正確 <b>${esc(b.n!=null?b.n:b.t)}</b> ${esc(b.u||'')}`}</div>`; }).join("")}
         ${explain}
         <button class="primary-btn" id="skNextBtn" style="margin-top:10px;">${s.idx+1>=s.ids.length?'看結果 →':'下一題 →'}</button>
@@ -2259,11 +2347,12 @@
     // 2026-11-05 法規題：用打字作答（存在 s.inp.txt，換題自動清空），看答案後並排顯示自己寫的內容，再自評
     const isLaw = pracIsTxt(q.id), myTxt = (s.inp && s.inp.txt) || "";
     return `${top}
-        ${!s.shown ? (isLaw ? `<div class="section-desc" style="margin:8px 0;">把答案打在下面（法源條號、要列舉的項目、數字），寫完按「看答案」再自己對。</div>
+        ${!s.shown && czIn ? `<div class="section-desc" style="margin:8px 0;">✏️ 填空模式：把空格填好，按「看答案」後自己對（這題是參考答案，意思對就算對）。</div>
+          <button class="primary-btn" id="skShowBtn">👀 看答案</button>` : !s.shown ? (isLaw ? `<div class="section-desc" style="margin:8px 0;">把答案打在下面（法源條號、要列舉的項目、數字），寫完按「看答案」再自己對。</div>
           <textarea class="text-input" id="skLawTxt" rows="8" autocomplete="off" placeholder="在這裡輸入你的答案…" style="margin:0 0 8px;font-size:16px;width:100%;box-sizing:border-box;resize:vertical;line-height:1.6;">${esc(myTxt)}</textarea>
           <button class="primary-btn" id="skShowBtn">👀 看答案</button>` : `<div class="section-desc" style="margin:8px 0;">先在紙上寫出公式、代入數字、算出答案（注意題目要求的小數位數），再看詳解。</div>
           <button class="primary-btn" id="skShowBtn">👀 看答案與詳解</button>`) : `
-          ${isLaw ? `<div class="quiz-explain" style="background:#F4F1EA;">
+          ${isLaw && !czIn ? `<div class="quiz-explain" style="background:#F4F1EA;">
             <div class="quiz-explain-title">✍️ 你的答案</div><div class="quiz-explain-body" style="white-space:pre-wrap;">${myTxt.trim() ? esc(myTxt) : '（沒有輸入）'}</div>
           </div>` : ""}
           <div class="quiz-explain">
@@ -3263,10 +3352,19 @@
     // 術科填空：輸入時只存字、不重畫；選項按鈕重畫；提交後自動判分並記錄
     root.querySelectorAll("[data-skin]").forEach(el=>{
       el.addEventListener("input",()=>{ const s = state.prac; s.inp = s.inp || {}; s.inp[+el.dataset.skin] = el.value; });
-      el.addEventListener("keydown", e=>{ if(e.key==="Enter"){ const b = document.getElementById("skSubmitBtn"); if(b) b.click(); } });
+      el.addEventListener("keydown", e=>{ if(e.key==="Enter"){
+        // 2026-11-24 填空題有好幾格：Enter 先跳下一格，最後一格才提交
+        const all = [...root.querySelectorAll("[data-skin]")], nx = all[all.indexOf(el)+1];
+        if(nx){ e.preventDefault(); nx.focus(); return; }
+        const b = document.getElementById("skSubmitBtn"); if(b) b.click(); } });
     });
     root.querySelectorAll("[data-skpick]").forEach(el=>el.addEventListener("click",()=>{
-      const s = state.prac; s.inp = s.inp || {}; s.inp[+el.dataset.skpick] = el.dataset.v; render();
+      const s = state.prac, i = +el.dataset.skpick, b = (PRAC_BLANKS[s.ids[s.idx]]||[])[i]; s.inp = s.inp || {};
+      // 複選：點一下加入、再點一下取消，依選項順序串起來（例「(B)(C)」）
+      if(b && b.m){ const cur = String(s.inp[i]||""), v = el.dataset.v;
+        s.inp[i] = b.o.filter(o=>o===v ? !cur.includes(o) : cur.includes(o)).join(""); }
+      else s.inp[i] = el.dataset.v;
+      render();
     }));
     root.querySelectorAll("[data-fxslot]").forEach(el=>el.addEventListener("click",()=>{
       const s = state.prac, i = +el.dataset.fxslot; s.inp = s.inp || {};
