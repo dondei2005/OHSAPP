@@ -24,6 +24,7 @@
 <script src="./mnemonics.js?v=20261124"></script>
 <script src="./formula_hard.js?v=20261123"></script>
 <script src="./free_questions.js"></script>
+<script src="./num_facts.js?v=20261127"></script>
 </head>
 <body>
 <div id="app"></div>
@@ -49,6 +50,18 @@
   .progress-inner{ height:100%; background:linear-gradient(90deg,#A8631F,#C9A876); }
   main{ padding:16px 16px 8px; display:flex; flex-direction:column; gap:14px; }
   .section-title{ font-size:16px; font-weight:700; margin-top:4px; }
+  .nf-chips{ display:flex; flex-wrap:wrap; gap:6px; margin:10px 0 8px; }
+  .nf-chip{ border:1px solid #E7E1D4; background:#fff; color:#6b6356; border-radius:16px; padding:5px 11px; font-size:13px; }
+  .nf-chip.on{ background:#2B2620; color:#fff; border-color:#2B2620; }
+  .nf-row{ display:flex; align-items:stretch; gap:10px; background:#fff; border:1px solid #E7E1D4; border-radius:10px; padding:9px 11px; margin-bottom:6px; cursor:pointer; }
+  .nf-row.ng{ border-left:4px solid #C0533A; } .nf-row.ok{ border-left:4px solid #2F6B4F; }
+  .nf-num{ flex:0 0 34%; font-weight:700; font-size:16px; color:#2B2620; word-break:break-all; }
+  .nf-num small{ font-weight:500; font-size:12px; color:#9a9488; margin-left:2px; }
+  .nf-kw{ flex:1; font-size:14px; line-height:1.45; color:#2B2620; }
+  .nf-hide{ color:#b9b2a3; font-size:13px; }
+  .nf-cat{ font-size:11px; color:#A8631F; }
+  .nf-mark{ display:flex; gap:6px; margin-top:6px; }
+  .nf-mark button{ border:1px solid #E7E1D4; background:#FAF7F0; border-radius:8px; padding:3px 10px; font-size:12px; }
   .section-desc{ font-size:13px; color:#6b6356; line-height:1.5; margin-top:-8px;}
   .sub-title{ font-size:14px; font-weight:700; margin-top:8px; color:#4a4538; }
   .card-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
@@ -842,7 +855,7 @@
     const items = [
       // 2026-10-30：拿掉「題庫」「法規」分頁，改成「計算」（首要）與「年份/條號」（次要）
       ["dashboard","◆","總覽"],["calc","🧮","計算"],  // 2026-11-20 拿掉「章節」分頁（沒在用）
-      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["numeric","🔢","數字"],["examA","🅰","甲種",examAWrongCount],["examB","🅱","乙級"],["ref","📅","年/條"],["mnemo","🔗","口訣"],["sync","⇅","備份"],
+      ["quiz","▶","練習"],["wrong","★","錯題本",dueWrongCount],["numeric","🔢","數字"],["examA","🅰","甲種",examAWrongCount],["examB","🅱","乙級"],["ref","📅","年/條"],["numfacts","📏","數值"],["mnemo","🔗","口訣"],["sync","⇅","備份"],
     ];
     return `<nav class="nav">${items.map(it=>{
       const [key,icon,label,badge] = it;
@@ -863,9 +876,62 @@
     if(state.tab==="examA") return renderExamA();
     if(state.tab==="examB") return renderExamB();
     if(state.tab==="ref") return renderTopic("ref");
+    if(state.tab==="numfacts") return renderNumFacts();
     if(state.tab==="mnemo") return renderMnemo();
     if(state.tab==="sync") return renderSync();
     return "";
+  }
+
+
+  /* ---------- 數值速查（num_facts.js，2026-11-27）：看數字回想規定，或看規定回想數字 ---------- */
+  const NF_CATS = ["全部","時間","數值","人數","係數比例","濃度","罰鍰","不熟"];
+  function nfKey(f){ return f.n+"|"+f.u+"|"+f.k; }
+  function nfState(){
+    if(!state.nf) state.nf = Object.assign({cat:"全部", dir:"n2k", order:"num", open:{}, seed:1}, loadData("nf_prefs",{}), {open:{}});
+    if(!state.nfMarks) state.nfMarks = loadData("nf_marks", {});
+    return state.nf;
+  }
+  function nfSavePrefs(){ const s=state.nf; saveData("nf_prefs",{cat:s.cat,dir:s.dir,order:s.order,seed:s.seed}); }
+  function nfList(){
+    const s = nfState(), all = window.NUM_FACTS || [];
+    let list = all.filter(f=> s.cat==="全部" ? true : s.cat==="不熟" ? state.nfMarks[nfKey(f)]==="ng" : f.c===s.cat);
+    if(s.order==="rand"){
+      let x = s.seed;
+      const r = ()=>{ x = (x*9301+49297)%233280; return x/233280; };
+      list = list.map(f=>[r(),f]).sort((a,b)=>a[0]-b[0]).map(p=>p[1]);
+    }
+    return list;
+  }
+  function renderNumFacts(){
+    const s = nfState(), list = nfList(), all = window.NUM_FACTS || [];
+    const ngCount = all.filter(f=>state.nfMarks[nfKey(f)]==="ng").length;
+    const okCount = all.filter(f=>state.nfMarks[nfKey(f)]==="ok").length;
+    const unitTxt = u => (u && u!=="—") ? `<small>${esc(u)}</small>` : "";
+    const rows = list.map(f=>{
+      const key = nfKey(f), open = !!s.open[key], mk = state.nfMarks[key]||"";
+      const hide = `<span class="nf-hide">（點一下想想看）</span>`;
+      const numHtml = `${esc(f.n)}${unitTxt(f.u)}`;
+      const left = s.dir==="n2k" ? numHtml : (open ? numHtml : `<span class="nf-hide">？${unitTxt(f.u)}</span>`);
+      const right = s.dir==="n2k" ? (open ? esc(f.k) : hide) : esc(f.k);
+      const marks = open ? `<div class="nf-mark"><button data-nfmark="ok" data-nfkey="${esc(key)}">✓ 記得</button><button data-nfmark="ng" data-nfkey="${esc(key)}">✗ 不熟</button></div>` : "";
+      return `<div class="nf-row ${mk}" data-nfopen="${esc(key)}">
+        <div class="nf-num">${left}</div>
+        <div class="nf-kw"><div class="nf-cat">${esc(f.c)}</div>${right}${marks}</div>
+      </div>`;
+    }).join("");
+    return `<div style="padding:14px 16px;">
+      <div class="section-title">📏 數值速查</div>
+      <div class="section-desc" style="margin-top:4px;">題庫裡考數字的規定，由小排到大。點一下看答案，再標記「記得／不熟」，「不熟」可單獨複習。共 ${all.length} 筆・記得 ${okCount}・不熟 ${ngCount}</div>
+      <div class="nf-chips">
+        <button class="nf-chip ${s.dir==="n2k"?"on":""}" data-nfdir="n2k">看數字想規定</button>
+        <button class="nf-chip ${s.dir==="k2n"?"on":""}" data-nfdir="k2n">看規定想數字</button>
+        <button class="nf-chip ${s.order==="rand"?"on":""}" data-nforder="1">${s.order==="rand"?"🔀 已打亂（再按回排序）":"🔀 打亂順序"}</button>
+        <button class="nf-chip" data-nfall="1">${Object.keys(s.open).length?"全部蓋起來":"全部翻開"}</button>
+      </div>
+      <div class="nf-chips" style="margin-top:0;">${NF_CATS.map(c=>`<button class="nf-chip ${s.cat===c?"on":""}" data-nfcat="${c}">${c}${c==="不熟"?`（${ngCount}）`:""}</button>`).join("")}</div>
+      <div class="section-desc" style="margin:0 0 8px;">目前 ${list.length} 筆</div>
+      ${rows || `<div class="empty-hint">這個分類沒有資料。</div>`}
+    </div>`;
   }
 
   /* ---------- Dashboard ---------- */
@@ -3247,6 +3313,21 @@
   function bindEvents(){
     root.querySelectorAll("[data-tab]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.tab; render(); }));
     root.querySelectorAll("[data-goto]").forEach(el=>el.addEventListener("click",()=>{ state.tab=el.dataset.goto; render(); }));
+    // 數值速查
+    root.querySelectorAll("[data-nfopen]").forEach(el=>el.addEventListener("click",e=>{
+      if(e.target.closest("[data-nfmark]")) return;
+      const s=nfState(), k=el.dataset.nfopen; if(s.open[k]) delete s.open[k]; else s.open[k]=1; render();
+    }));
+    root.querySelectorAll("[data-nfmark]").forEach(el=>el.addEventListener("click",()=>{
+      const k=el.dataset.nfkey, v=el.dataset.nfmark;
+      if(state.nfMarks[k]===v) delete state.nfMarks[k]; else state.nfMarks[k]=v;
+      delete nfState().open[k];
+      saveData("nf_marks", state.nfMarks); render();
+    }));
+    root.querySelectorAll("[data-nfdir]").forEach(el=>el.addEventListener("click",()=>{ const s=nfState(); s.dir=el.dataset.nfdir; s.open={}; nfSavePrefs(); render(); }));
+    root.querySelectorAll("[data-nfcat]").forEach(el=>el.addEventListener("click",()=>{ const s=nfState(); s.cat=el.dataset.nfcat; s.open={}; nfSavePrefs(); render(); window.scrollTo(0,0); }));
+    root.querySelectorAll("[data-nforder]").forEach(el=>el.addEventListener("click",()=>{ const s=nfState(); if(s.order==="rand") s.order="num"; else { s.order="rand"; s.seed=(Date.now()%233280)||1; } s.open={}; nfSavePrefs(); render(); }));
+    root.querySelectorAll("[data-nfall]").forEach(el=>el.addEventListener("click",()=>{ const s=nfState(); if(Object.keys(s.open).length) s.open={}; else nfList().forEach(f=>s.open[nfKey(f)]=1); render(); }));
 
     const examBadge = document.getElementById("examBadge");
     if(examBadge) examBadge.addEventListener("click",()=>{ state.headerEditing=true; render(); });
