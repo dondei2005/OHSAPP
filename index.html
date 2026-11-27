@@ -4,16 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>職安衛乙級讀書計畫</title>
-<script src="./questions.js?v=20261123"></script>
+<script src="./questions.js?v=20261127"></script>
 <script src="./examA_questions.js"></script>
 <script src="./examA_questions_2.js"></script>
 <script src="./examB_questions.js?v=20261121"></script>
-<script src="./explanations.js?v=20261121"></script>
+<script src="./explanations.js?v=20261127"></script>
 <script src="./study_tips.js?v=20261124"></script>
 <script src="./dedup.js"></script>
 <script src="./topic_sets.js"></script>
 <script src="./calc_variants.js"></script>
-<script src="./practical_questions.js?v=20261123"></script>
+<script src="./practical_questions.js?v=20261127"></script>
 <script src="./practical_blanks.js?v=20261104a"></script>
 <!-- 2026-11-11 拿掉看圖填空分頁：figure_fill.js 不再載入（檔案與 topicStats.prac 紀錄保留） -->
 <script src="./practical_law.js?v=20261106g"></script>
@@ -23,7 +23,7 @@
 <script src="./formula_match.js?v=20261122b"></script>
 <script src="./mnemonics.js?v=20261124"></script>
 <script src="./formula_hard.js?v=20261123"></script>
-<script src="./free_questions.js"></script>
+<script src="./free_questions.js?v=20261127"></script>
 <script src="./num_facts.js?v=20261127"></script>
 </head>
 <body>
@@ -1118,8 +1118,8 @@
     const tips = tipKeys.map(k=>T.topics[k]).filter(Boolean);
     const fq = freeInfo(q);
     return `<div class="quiz-explain">
-      ${fq ? `<div class="quiz-explain-ans" style="color:#A8631F;">🎁 送分題（115.7.1 修法，新舊答案不同，選哪個都算對）</div><div class="quiz-explain-body">新法答案：${esc(fq.now)}<br>修法前答案：${esc(fq.old)}</div>` : ""}
-      <div class="quiz-explain-ans">✅ ${fq?"新法答案":"正確答案"}${q._inv?"（反向題）":""}：${esc(ans)}</div>
+      ${fq ? `<div class="quiz-explain-ans" style="color:#A8631F;">🎁 送分題（${esc(fq.reason||"115.7.1 修法，新舊答案不同，選哪個都算對")}）</div><div class="quiz-explain-body">${esc(fq.nowLabel||"新法答案")}：${esc(fq.now)}<br>${esc(fq.oldLabel||"修法前答案")}：${esc(fq.old)}</div>` : ""}
+      <div class="quiz-explain-ans">✅ ${fq?(fq.reason?"題庫答案":"新法答案"):"正確答案"}${q._inv?"（反向題）":""}：${esc(ans)}</div>
       ${q._inv ? `<div class="quiz-explain-body" style="color:#7a4410;">🔄 本題題幹已反轉${q._origText?`（原題：${esc(q._origText)}）`:""}，原題的正解是：${esc(q.options.map((o,i)=>i).filter(i=>!q.answer.includes(i)).map(i=>`(${String.fromCharCode(65+i)}) ${q.options[i]}`).join("、"))}；這次反過來問，所以答案是其餘選項。下面的詳解是照原題寫的。</div>` : ""}
       ${ex ? `<div class="quiz-explain-title">📖 詳解</div><div class="quiz-explain-body">${esc(ex)}</div>` : ""}
       ${note ? `<div class="quiz-explain-title">${ex?"📝 備註":"📖 詳解"}</div><div class="quiz-explain-body">${esc(note)}</div>` : ""}
