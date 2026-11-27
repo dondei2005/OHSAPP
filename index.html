@@ -374,6 +374,10 @@
     str = str.replace(new RegExp('百分之('+cnd+')','g'), '$1%');          // 百分之六 → 六%
     str = str.replace(new RegExp('('+cnd+')分之('+cnd+')','g'), '$2/$1'); // 五分之一 → 一/五
     // 阿拉伯數字＋萬/千/百（如「15萬」「3百萬」）先換算成完整數字，再處理純中文數字
+    // 複合寫法先合併：「4萬3千」→43000、「1萬2千5百」→12500、「3千5百」→3500（2026-11-27）
+    const R = x => String(Math.round(x*1e6)/1e6);
+    str = str.replace(/(\d+(?:\.\d+)?)萬(?:(\d+(?:\.\d+)?)千)?(?:(\d+(?:\.\d+)?)百)?(?!萬)/g, (m,a,b,c)=>R(parseFloat(a)*10000+(b?parseFloat(b)*1000:0)+(c?parseFloat(c)*100:0)));
+    str = str.replace(/(\d+(?:\.\d+)?)千(?:(\d+(?:\.\d+)?)百)?(?![萬千])/g, (m,a,b)=>R(parseFloat(a)*1000+(b?parseFloat(b)*100:0)));
     let prev;
     do{ prev = str; str = str.replace(/(\d+(?:\.\d+)?)\s*([萬千百])/g, (m,n,u)=>String(parseFloat(n)*({'萬':10000,'千':1000,'百':100}[u]))); }while(str!==prev);
     str = cnNumToArabic(str);
@@ -490,7 +494,12 @@
     if(q._cv) return calcVarCorrect(q, input);
     if(q.numeric){
       const a = extractNumbers(q.answer), b = extractNumbers(input);
-      return a.length>0 && a.length===b.length && a.every((v,i)=>v===b[i]);
+      if(a.length>0 && a.length===b.length && a.every((v,i)=>v===b[i])) return true;
+      // 答案寫「約…」「…左右」的概數：只有一個數字時，差 3% 以內也算對（例如「約4萬3千人」填 43173）
+      if(/約|左右|大約/.test(String(q.answer)) && a.length===1 && b.length===1){
+        const x=+a[0], y=+b[0]; return x!==0 && Math.abs(x-y)/Math.abs(x) <= 0.03;
+      }
+      return false;
     }
     if(normalizeFillAnswer(input) === normalizeFillAnswer(q.answer)) return true;
     // 答案本身只有數字（頂多帶%、℃、m³之類符號）時，只比數字：寫「3」「3年」「三」都算對
