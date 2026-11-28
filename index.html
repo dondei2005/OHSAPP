@@ -2899,10 +2899,17 @@
     if(cur<ch.length) parts.push({t:ch.slice(cur).join("")});
     return parts;
   }
-  // 2026-11-24 口訣組／名詞解釋第 2 關改填空：所有可挖空的關鍵詞（z）都挖掉，連接詞、虛字、標點直接顯示
+  // 2026-11-24 口訣組／名詞解釋第 2 關改填空；2026-11-28 改成每項只隨機挖 1 個關鍵詞（z），其餘照原文顯示
+  //  挖哪個詞存在 state.mnemo.pick（這一輪固定，再練一次會重新抽）
   function mnFillParts(m, i){
     const body = mnLead(m, mnemoItem(m.pairs[i][1]));
     const ks = mnWordsPos(body).filter(t=>t.z).map(t=>({id:mnwId(t), s:t.s, e:t.e}));
+    const s = state.mnemo;
+    if(s && s.id===m.id && ks.length){
+      s.pick = s.pick || {};
+      if(s.pick[i]==null || s.pick[i]>=ks.length) s.pick[i] = Math.floor(Math.random()*ks.length);
+      return mnClozeParts(m, i, [ks[s.pick[i]]]);
+    }
     return mnClozeParts(m, i, ks);
   }
   // 交卷前把填空組回整句，沿用原本的逐詞比對評分與錯詞本
@@ -3130,7 +3137,7 @@
         ${isT?"":`<div class="mn-phrase">${esc(m.mnemonic)}</div>`}
         ${m.ask?`<div class="section-desc" style="margin:6px 0 0;font-weight:700;color:#A8631F;">${esc(m.ask)}</div>`:""}
         <div class="section-desc" style="margin:6px 0 8px;">100 分平均分給每一項${m.pairs.some(mnemoFree)?"（「其他…」那項不計分）":""}，每項 ${Math.round(100/(m.pairs.filter(p=>!mnemoFree(p)).length||1)*10)/10} 分。條文依法規用語切成關鍵詞（勞動場所、中央主管機關、控制措施…各算一詞），按比例扣分：短項目（4 個詞以內）錯 1 個詞扣該項一半；長條文每錯 1 個詞扣「2 ÷ 關鍵詞數」（例：30 個詞的定義，錯 1 詞扣約 7%）。順序錯扣錯詞的一半，詞裡只錯 1 個字扣錯詞的 1/4。連接詞和虛字（及、或、和、與、並、之、的、暨、且、等、所、者、於、而、則、即、亦、乃、係）、標點符號和空白不算錯；同義詞（${MN_SYN.map(g=>g.join("＝")).join("、")}）也不扣分，會用綠色註記。</div>
-        <div class="section-desc" style="margin:0 0 8px;font-weight:700;color:#2F6B4F;">✏️ 填空模式：連接詞、虛字和標點已經寫好，只要把空格的關鍵詞填回去。</div>
+        <div class="section-desc" style="margin:0 0 8px;font-weight:700;color:#2F6B4F;">✏️ 填空模式：每一項隨機挖掉 1 個關鍵詞，把空格填回去就好（每次練挖的詞不一樣）。</div>
         ${m.pairs.map((p,i)=>`<div class="mn-tk">${esc(mnemoNum(p[1]))}${esc(p[0])}</div>${mnAsk(m, p[0])}
           <div style="line-height:2.2;font-size:15px;margin:2px 0 10px;">${mnFillParts(m, i).map(x=>x.t!=null ? esc(x.t) : (()=>{ const k = i+":"+x.b, n = [...mnemoNorm(x.a)].length;
             return `<input class="text-input" data-mnfill="${k}" value="${esc((s.fin||{})[k]||"")}" autocomplete="off" placeholder="${n} 字" style="display:inline-block;width:${Math.max(4, n*1.3+1.5)}em;max-width:100%;margin:2px 3px;padding:4px 6px;font-size:16px;">`; })()).join("")}</div>`).join("")}
