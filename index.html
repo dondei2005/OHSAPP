@@ -2369,14 +2369,14 @@
           ${svgRing(p.cov, "#5B6B82", `做過 ${p.seen}/${p.total} 題`)}
           ${svgRing(p.acc, allSt.color, p.acc===null ? "尚無作答記錄" : state.calcSub==="sk" ? `${allSt.icon} 已算對 ${p.accC}/${p.accT} 題` : `${allSt.icon} ${LAW?"寫對":"算對"} ${p.accC}/${p.accT}`)}
         </div>
-        <button class="primary-btn" data-skstart="all" style="margin:10px 0 4px;">🎲 隨機 ${Math.min(PRAC_ROUND,POOL.length)} 題（沒做過的優先）</button>
+        <button class="primary-btn" data-skstart="all" style="margin:10px 0 4px;">🎲 ${state.calcSub==="sk"?"出 ":"隨機 "}${Math.min(PRAC_ROUND,POOL.length)} 題（${state.calcSub==="sk"?"沒做過→錯最多的優先":"沒做過的優先"}）</button>
         ${wrong.length ? `<button class="primary-btn" data-skstart="wrong" style="margin:4px 0;background:#B5532F;">🔁 ${LAW?"寫錯":"算錯"}的題目（${wrong.length} 題）</button>` : ""}
         <div class="sub-title">${PAST?"各次考題（新到舊）":"各類題型"}</div>
         <div class="toggle-row" style="margin:6px 0 8px;flex-wrap:wrap;">
           ${pracSortBtn('default',PAST?'依考試次數':'依原順序')}${pracSortBtn('acc','正確率低→高')}${pracSortBtn('accDesc','正確率高→低')}
           ${pracSortBtn('cov','刷題率低→高')}${pracSortBtn('covDesc','刷題率高→低')}
         </div>
-        <div class="section-desc" style="margin-top:0;">點任一${PAST?"次":"類"}開始練（每輪最多 ${PRAC_ROUND} 題，沒做過的優先）。</div>
+        <div class="section-desc" style="margin-top:0;">點任一${PAST?"次":"類"}開始練（每輪最多 ${PRAC_ROUND} 題，${state.calcSub==="sk"?"沒做過的優先，再來是「錯的次數−對的次數」越大越先出（一樣就隨機），對的次數比錯的多的題目完全隨機":"沒做過的優先"}）。</div>
         ${topics.map((t,i)=>{
           const list = POOL.filter(q=>q.topic===t);
           return {t, i, n:list.length, ...pracProg(list)};
@@ -2390,7 +2390,16 @@
     if(!list.length) return;
     const fresh = shuffleArr(list.filter(q=>!(st[q.id]&&st[q.id].n>0))), done = shuffleArr(list.filter(q=>st[q.id]&&st[q.id].n>0));
     const label = mode==="wrong" ? (pracIsLaw()?"寫錯的題目":"算錯的題目") : mode.startsWith("t:") ? mode.slice(2) : "隨機";
-    state.prac = {ids: (mode==="wrong" ? shuffleArr(list.slice()) : fresh.concat(done)).slice(0, PRAC_ROUND).map(q=>q.id), idx:0, shown:false, c:0, n:0, label, done:false};
+    // 2026-11-28 術科計算題（sk）出題順序：沒做過的優先 → 錯次數−對次數 大的優先（同分隨機）→ 對比錯多的完全隨機
+    let order;
+    if(state.calcSub==="sk"){
+      const sc = q=>{ const r = st[q.id]; return (r.n-(r.c||0)) - (r.c||0); };
+      const hard = done.filter(q=>sc(q)>=0), easy = done.filter(q=>sc(q)<0);
+      const groups = {}; hard.forEach(q=>{ (groups[sc(q)] = groups[sc(q)]||[]).push(q); });
+      const hardSorted = Object.keys(groups).map(Number).sort((a,b)=>b-a).flatMap(k=>shuffleArr(groups[k]));
+      order = fresh.concat(hardSorted, shuffleArr(easy));
+    } else order = mode==="wrong" ? shuffleArr(list.slice()) : fresh.concat(done);
+    state.prac = {ids: order.slice(0, PRAC_ROUND).map(q=>q.id), idx:0, shown:false, c:0, n:0, label, done:false};
     saveData("prac", state.prac);
     render(); window.scrollTo(0,0);
   }
