@@ -13,8 +13,8 @@
 <script src="./dedup.js"></script>
 <script src="./topic_sets.js"></script>
 <script src="./calc_variants.js"></script>
-<script src="./practical_questions.js?v=20261128"></script>
-<script src="./practical_blanks.js?v=20261104a"></script>
+<script src="./practical_questions.js?v=20261128b"></script>
+<script src="./practical_blanks.js?v=20261128"></script>
 <!-- 2026-11-11 拿掉看圖填空分頁：figure_fill.js 不再載入（檔案與 topicStats.prac 紀錄保留） -->
 <script src="./practical_law.js?v=20261106g"></script>
 <script src="./practical_past.js?v=20261106g"></script>
@@ -2209,9 +2209,10 @@
     if(b.n!=null){
       const t = v.normalize("NFKC").replace(/[,，\s]/g,"").replace(/[−–—]/g,"-");
       const m = t.match(/[-+]?\d*\.?\d+/); if(!m) return false;
-      const x = parseFloat(m[0]), a = parseFloat(b.n), d = (String(b.n).split(".")[1]||"").length;
-      const tol = b.tol!=null ? b.tol : 0.5*Math.pow(10,-d)+1e-9;
-      return Math.abs(x-a) <= tol;
+      const x = parseFloat(m[0]);
+      return [b.n, ...(b.alt||[])].some(n=>{ const a = parseFloat(n), d = (String(n).split(".")[1]||"").length;
+        const tol = b.tol!=null ? b.tol : 0.5*Math.pow(10,-d)+1e-9;
+        return Math.abs(x-a) <= tol; });
     }
     const norm = x=>String(x).normalize("NFKC").replace(/[\s()（）]/g,"");
     return [b.t, ...(b.x||[])].some(a=>norm(a)===norm(v));
@@ -2462,7 +2463,7 @@
       return `${top}
         <div class="result-card" style="margin-top:8px;">${s.guess?'🎲 猜對的，記為還要再練（不算正解，已放進「算錯的題目」）':s.fixed?'✅ 已改成算對':allOk?'✅ 全部答對，記為算對':`❌ 有 ${s.res?s.res.filter(x=>!x).length:B.length} 格不對，記為算錯`}</div>
         ${B.map((b,i)=>{ const ok = s.res && s.res[i]; if(czIn) return "";
-          return `<div class="section-desc" style="margin:4px 0;">${ok?'✅':'❌'} <b>${esc(b.l)}</b>：你填 ${esc(inp[i]||'（空白）')}${ok?'':`　→ 正確 <b>${esc(b.n!=null?b.n:b.t)}</b> ${esc(b.u||'')}`}</div>`; }).join("")}
+          return `<div class="section-desc" style="margin:4px 0;">${ok?'✅':'❌'} <b>${esc(b.l)}</b>：你填 ${esc(inp[i]||'（空白）')}${ok?'':`　→ 正確 <b>${esc(b.n!=null?b.n:b.t)}</b> ${esc(b.u||'')}${b.alt?`（${esc(b.alt.join("、"))} 也算對）`:''}`}</div>`; }).join("")}
         ${explain}
         <button class="primary-btn" id="skNextBtn" style="margin-top:10px;">${s.idx+1>=s.ids.length?'看結果 →':'下一題 →'}</button>
         ${(allOk || s.fixed) && !s.guess && state.calcSub==="sk" ? `<button class="primary-btn" id="skGuessBtn" style="margin-top:8px;background:#A8631F;font-size:13px;">🎲 猜對的，還要再練（不算正解）</button>` : ""}
